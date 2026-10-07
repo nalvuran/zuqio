@@ -2,7 +2,7 @@ import { firebaseConfig, APP_NAME } from './firebase-config.js';
 import { QUESTIONS } from './questions.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getDatabase, ref, get, set, update, remove, onValue, onDisconnect, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { getDatabase, ref, get, set, update, remove, onValue, onDisconnect, serverTimestamp, query, orderByChild, equalTo } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 const fb = initializeApp(firebaseConfig);
 const auth = getAuth(fb);
@@ -156,7 +156,7 @@ V.home = () => `
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px"></div>
     <div class="stack" style="gap:14px">
-      <button class="btn primary big" data-act="soon" data-n="Hızlı oyna"><span class="ic">${ICON.play}</span><span class="lb">HIZLI OYNA</span></button>
+      <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">HIZLI OYNA</span></button>
       <button class="btn purple big" data-go="friends"><span class="ic">${ICON.users}</span><span class="lb">ARKADAŞLARINLA OYNA</span></button>
       <button class="btn outline big" data-act="soon" data-n="Liderlik tablosu"><span class="ic">${ICON.trophy}</span><span class="lb">LİDERLİK TABLOSU</span></button>
     </div>
@@ -214,8 +214,33 @@ const myJ = key => { const j = S.R && S.R.jokers && S.R.jokers[uid()]; return j 
 const ansOf = (R, qi) => (R.answers && R.answers[qi]) || {};
 const hostOnline = () => { const h = S.R && S.R.players && S.R.players[S.R.host]; return !h || h.online !== false; };
 
+const QUICK_MIN = 2, QUICK_FULL = 6, QUICK_WAIT = 15000, QUICK_MAX = 8;
+function quickStartIn() {
+  const R = S.R; if (!R || !R.quick || typeof R.autoAt !== 'number') return null;
+  return Math.max(0, Math.ceil((R.autoAt + QUICK_WAIT - now()) / 1000));
+}
+
+V.quickLobby = () => {
+  const R = S.R, ps = players(R).filter(p => p.online !== false), sec = quickStartIn();
+  return `
+  <div class="screen">
+    <div class="top">${backBtn('data-act="leave"', 'Vazgeç')}<span class="tag">Hızlı oyun</span></div>
+    <div class="card stack" style="align-items:center;gap:8px;text-align:center">
+      <h2 id="qmtitle">${ps.length < QUICK_MIN ? 'Rakip aranıyor…' : 'Rakipler bulundu!'}</h2>
+      <p class="muted" id="qmsub">${ps.length < QUICK_MIN ? 'Biri katılınca oyun kısa süre içinde başlayacak.' : `Oyun <b>${sec != null ? sec : '…'}</b> saniye içinde başlıyor`}</p>
+    </div>
+    <div class="row between" style="margin:18px 0 10px"><b>Oyuncular</b><span class="muted small">${ps.length} / ${QUICK_MAX}</span></div>
+    <div class="plist">
+      ${ps.map(p => `<div class="pitem">${avatar(p.av)}<b>${esc(p.name)}</b>${p.id === uid() ? '<span class="tag" style="margin-left:auto">Sen</span>' : ''}</div>`).join('')}
+    </div>
+    <div class="grow"></div>
+    <p class="demo">10 soru · karışık kategoriler</p>
+  </div>`;
+};
+
 V.lobby = () => {
   const R = S.R, ps = players(R), host = isHost();
+  if (R.quick) return V.quickLobby();
   return `
   <div class="screen">
     <div class="top">${backBtn('data-act="leave"', 'Odadan çık')}<span class="tag">${host ? 'Oda sahibi sensin' : 'Oyun bekleniyor'}</span></div>
@@ -348,7 +373,10 @@ V.final = () => {
     <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av)}<b>${esc(p.name)}</b><span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
     <div class="grow" style="min-height:20px"></div>
     <div class="stack">
-      ${isHost()
+      ${R.quick
+        ? `<button class="btn primary big" data-act="quickagain"><span class="ic">${ICON.play}</span><span class="lb">YENİ HIZLI OYUN</span></button>
+           <button class="btn ghost" data-act="leave">Ana menü</button>`
+        : isHost()
         ? `<button class="btn primary big" data-act="again" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">TEKRAR OYNA</span></button>
            <button class="btn ghost" data-act="leave">Odayı kapat</button>`
         : `<p class="status">Oda sahibi yeni bir oyun başlatabilir.</p><button class="btn ghost" data-act="leave">Odadan çık</button>`}
@@ -375,6 +403,10 @@ function tick() {
     if (bar) bar.style.width = clamp(r / dl * 100, 0, 100) + '%';
     if (st) st.textContent = statusText();
     if (r <= 0 && S.q && !S.q.timeUpShown) { S.q.timeUpShown = true; render(); }
+  }
+  if (S.screen === 'lobby' && S.R && S.R.quick) {
+    const sub = document.getElementById('qmsub'), sec = quickStartIn();
+    if (sub && sec != null) { const b = sub.querySelector('b'); if (b && b.textContent !== String(sec)) b.textContent = sec; }
   }
   if (S.screen === 'count' && S.R) { const el = document.getElementById('cnt'); if (el && el.textContent !== String(countNum())) { el.textContent = countNum(); buzz(20); } }
 }
@@ -459,7 +491,12 @@ function markOnline() {
 
 function onRoom(R) {
   if (!S.code) return;
-  if (!R) { leaveLocal(); toast('Oda kapatıldı'); go('home'); return; }
+  if (!R) {
+    const wasQuickLobby = S.R && S.R.quick && S.R.status === 'lobby';
+    leaveLocal();
+    if (wasQuickLobby) { toast('Oda kapandı, yeni rakip aranıyor'); quickPlay(); return; }
+    toast('Oda kapatıldı'); go('home'); return;
+  }
   if (!R.players || !R.players[uid()]) { leaveLocal(); toast('Odadan çıktın'); go('home'); return; }
   S.R = R;
   const map = {lobby: 'lobby', countdown: 'count', question: 'question', reveal: 'reveal', final: 'final'};
@@ -482,16 +519,17 @@ function onRoom(R) {
 
 function genCode() { return String(Math.floor(100000 + Math.random() * 900000)); }
 
-async function createRoom() {
-  if (S.busy) return; S.busy = true; render();
+async function createRoom(opts = {}) {
+  if (S.busy && !opts.quick) return; S.busy = true; render();
   try {
     let code = null;
     for (let i = 0; i < 6 && !code; i++) { const c = genCode(); const s = await get(ref(db, 'rooms/' + c)); if (!s.exists()) code = c; }
     if (!code) throw new Error('no-code');
-    await set(ref(db, 'rooms/' + code), {
+    const extra = opts.quick ? {quick: true, qm: 'open'} : {};
+    await set(ref(db, 'rooms/' + code), Object.assign(extra, {
       host: uid(), status: 'lobby', count: 10, createdAt: serverTimestamp(),
       players: {[uid()]: {name: S.me.name, av: S.me.av, online: true, joinedAt: serverTimestamp()}}
-    });
+    }));
     S.busy = false; enterRoom(code);
   } catch (e) { console.error(e); S.busy = false; render(); toast('Oda açılamadı, tekrar dene'); }
 }
@@ -511,10 +549,42 @@ async function joinRoom(code, silent) {
   } catch (e) { console.error(e); S.busy = false; if (!silent) render(); toast('Odaya katılılamadı'); return false; }
 }
 
+async function quickPlay() {
+  if (S.code) return;
+  S.busy = true; if (S.screen === 'home') render();
+  try {
+    const snap = await get(query(ref(db, 'rooms'), orderByChild('qm'), equalTo('open')));
+    const t = now(), list = [];
+    snap.forEach(ch => {
+      const R = ch.val(); if (!R || R.status !== 'lobby' || !R.quick) return;
+      const ps = Object.values(R.players || {}), online = ps.filter(p => p.online !== false).length;
+      const host = R.players && R.players[R.host];
+      if (!host || host.online === false) return;
+      if ((R.createdAt || 0) < t - 15 * 60 * 1000) return;
+      if (online >= QUICK_MAX) return;
+      list.push({code: ch.key, online});
+    });
+    list.sort((a, b) => b.online - a.online);
+    for (const c of list) {
+      try {
+        await set(ref(db, `rooms/${c.code}/players/${uid()}`), {name: S.me.name, av: S.me.av, online: true, joinedAt: serverTimestamp()});
+        S.busy = false; enterRoom(c.code); return;
+      } catch (e) { /* oda bu arada başlamış olabilir, sıradakini dene */ }
+    }
+    S.busy = false;
+    await createRoom({quick: true});
+  } catch (e) { console.error(e); S.busy = false; render(); toast('Hızlı oyun başlatılamadı, tekrar dene'); }
+}
+
 async function leaveRoom() {
   const R = S.R; if (!R) { leaveLocal(); go('home'); return; }
+  if (isHost() && R.quick && R.status !== 'lobby') {
+    const code = S.code, me = uid(); leaveLocal(); go('home');
+    try { await set(ref(db, `rooms/${code}/players/${me}/online`), false); } catch (e) {}
+    return;
+  }
   if (isHost()) {
-    if (!confirm('Odayı kapatırsan herkes odadan çıkar. Emin misin?')) return;
+    if (!R.quick && !confirm('Odayı kapatırsan herkes odadan çıkar. Emin misin?')) return;
     const code = S.code; leaveLocal(); go('home');
     try { await remove(ref(db, 'keys/' + code)); await remove(ref(db, 'rooms/' + code)); } catch (e) { console.error(e); }
   } else {
@@ -589,7 +659,7 @@ async function startGame() {
     S.keys = {a: keys};
     const scores = {}; Object.keys(R.players || {}).forEach(id => { scores[id] = 0; });
     await update(roomRef(), {status: 'countdown', countAt: serverTimestamp(), questions: pub, qi: -1, qk: '-1',
-      qStartAt: null, qDur: null, answers: null, reveal: null, jokers: null, scores});
+      qStartAt: null, qDur: null, answers: null, reveal: null, jokers: null, scores, qm: null, autoAt: null});
   } catch (e) { console.error(e); toast('Oyun başlatılamadı'); }
   S.busy = false;
 }
@@ -632,6 +702,13 @@ function hostStep() {
   const R = S.R;
   if (!R || !isHost() || S.hostBusy) return;
   const n = now();
+  if (R.status === 'lobby' && R.quick) {
+    const online = players(R).filter(p => p.online !== false).length;
+    if (online >= QUICK_MIN && typeof R.autoAt !== 'number') doHost(() => update(roomRef(), {autoAt: serverTimestamp()}));
+    else if (online < QUICK_MIN && typeof R.autoAt === 'number') doHost(() => update(roomRef(), {autoAt: null}));
+    else if (typeof R.autoAt === 'number' && (n >= R.autoAt + QUICK_WAIT || online >= QUICK_FULL)) doHost(startGame);
+    return;
+  }
   if (R.status === 'countdown' && typeof R.countAt === 'number' && n >= R.countAt + 3200) doHost(nextQ);
   else if (R.status === 'question' && typeof R.qStartAt === 'number') {
     const qi = R.qi, A = ansOf(R, qi);
@@ -690,6 +767,8 @@ app.addEventListener('click', e => {
   else if (a === 'logout') { if (confirm('Çıkış yapmak istiyor musun?')) { leaveLocal(); signOut(auth); } }
   else if (a === 'soon') toast(el.dataset.n + ' çok yakında');
   else if (a === 'create') createRoom();
+  else if (a === 'quick') quickPlay();
+  else if (a === 'quickagain') { const code = S.code, me = uid(); leaveLocal(); set(ref(db, `rooms/${code}/players/${me}/online`), false).catch(() => {}); quickPlay(); }
   else if (a === 'joincode') joinRoom((document.getElementById('code').value || '').replace(/\D/g, ''));
   else if (a === 'share') shareCode();
   else if (a === 'leave') leaveRoom();
