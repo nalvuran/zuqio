@@ -1,8 +1,8 @@
 // Zuqio service worker: önce ağdan dener (güncellemeler hemen gelsin),
 // bağlantı yoksa son kaydedilen sürümü gösterir.
-const CACHE = 'zuqio-v1';
+const CACHE = 'zuqio-v2';
 const ASSETS = ['./', 'index.html', 'app.js', 'questions.js', 'firebase-config.js', 'manifest.webmanifest',
-  'ic0.png', 'ic1.png', 'ic2.png', 'ic3.png', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
+  'ic0.png', 'ic1.png', 'ic2.png', 'ic3.png', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'google-g.svg'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).catch(() => {}));

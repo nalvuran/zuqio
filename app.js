@@ -258,8 +258,10 @@ V.lobby = () => {
     ${host ? `
       <span class="small muted" style="margin-bottom:8px">Soru sayısı</span>
       <div class="chips" style="margin-bottom:14px">${[5, 10, 15].map(n => `<button class="${(R.count || 10) === n ? 'on' : ''}" data-act="count" data-n="${n}">${n}</button>`).join('')}</div>
+      <span class="small muted" style="margin-bottom:8px">Zorluk</span>
+      <div class="chips" style="margin-bottom:14px">${['mix', 'k', 'o', 'z'].map(v => `<button class="${(R.diff || 'mix') === v ? 'on' : ''}" data-act="diff" data-v="${v}">${DIFF_LABEL[v]}</button>`).join('')}</div>
       <button class="btn primary big" data-act="start" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">OYUNU BAŞLAT</span></button>`
-    : `<p class="status">Oda sahibinin oyunu başlatması bekleniyor…</p>`}
+    : `<p class="status">${R.count || 10} soru · ${DIFF_LABEL[R.diff || 'mix']}<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`}
   </div>`;
 };
 
@@ -613,22 +615,57 @@ function niceRound(n, up) {
   return (up ? Math.ceil(n / mag) : Math.floor(n / mag)) * mag;
 }
 
-function buildGame(count) {
-  const pool = shuffle(QUESTIONS).slice(0, count);
+const DIFF_LABEL = {mix: 'Karışık', k: 'Kolay', o: 'Orta', z: 'Zor'};
+function qid(q) { let h = 0; const t = q.q; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+function loadSeen() { try { return new Set(JSON.parse(ls.get('zuqio-seen') || '[]')); } catch (e) { return new Set(); } }
+function saveSeen(set) { ls.set('zuqio-seen', JSON.stringify([...set].slice(-1500))); }
+
+// Oyun için soru seç: seçilen zorluğa uygun, bu cihazda daha önce görülmemişleri öne al, kategorileri dengele.
+function pickQuestions(count, diff) {
+  const seen = loadSeen();
+  const plan = diff === 'mix' ? {k: 0.4, o: 0.4, z: 0.2} : {[diff]: 1};
+  const keys = Object.keys(plan), want = {};
+  let sum = 0;
+  keys.forEach(d => { want[d] = Math.round(count * plan[d]); sum += want[d]; });
+  while (sum < count) { want[keys[sum % keys.length]]++; sum++; }
+  while (sum > count) { const d = keys.find(x => want[x] > 0); want[d]--; sum--; }
+  const chosen = [], usedCat = {}, taken = new Set();
+  const take = (d, k) => {
+    for (let i = 0; i < k; i++) {
+      let best = null, bestScore = Infinity;
+      for (const q of QUESTIONS) {
+        if (taken.has(q) || (d && q.d !== d)) continue;
+        const sc = (seen.has(qid(q)) ? 1000 : 0) + (usedCat[q.cat] || 0) * 12 + Math.random() * 10;
+        if (sc < bestScore) { bestScore = sc; best = q; }
+      }
+      if (!best) return;
+      taken.add(best); chosen.push(best); usedCat[best.cat] = (usedCat[best.cat] || 0) + 1;
+    }
+  };
+  keys.forEach(d => take(d, want[d]));
+  if (chosen.length < count) take(null, count - chosen.length);
+  chosen.forEach(q => seen.add(qid(q)));
+  if (seen.size >= QUESTIONS.length) seen.clear(); // havuzun tamamı görüldüyse baştan başla
+  saveSeen(seen);
+  return shuffle(chosen);
+}
+
+function buildGame(count, diff) {
+  const pool = pickQuestions(count, diff);
   const pub = [], keys = [];
   for (const q of pool) {
     if (q.t === 'mc') {
       const order = shuffle([0, 1, 2, 3]);
       const o = order.map(i => q.o[i]), a = order.indexOf(0);
       const h = shuffle([0, 1, 2, 3].filter(i => i !== a)).slice(0, 2);
-      pub.push({t: 'mc', cat: q.cat, q: q.q, o, h}); keys.push(a);
+      pub.push({t: 'mc', cat: q.cat, d: q.d, q: q.q, o, h}); keys.push(a);
     } else {
       const w = q.tolAbs ? q.tolAbs * 0.8 : q.a * 0.3;
       const lo0 = Math.max(0, q.a - w * Math.random());
       const lo = q.tolAbs ? Math.floor(lo0) : Math.min(niceRound(lo0, false), q.a);
       const hi = q.tolAbs ? Math.ceil(lo0 + w) : Math.max(niceRound(lo0 + w, true), q.a);
       const f = v => q.tolAbs ? String(v) : fmt(v);
-      const item = {t: 'num', cat: q.cat, q: q.q, unit: q.unit, hint: `${f(lo)} ile ${f(hi)} ${q.unit} arasında`};
+      const item = {t: 'num', cat: q.cat, d: q.d, q: q.q, unit: q.unit, hint: `${f(lo)} ile ${f(hi)} ${q.unit} arasında`};
       if (q.tolAbs) item.tolAbs = q.tolAbs;
       pub.push(item); keys.push(q.a);
     }
@@ -654,7 +691,7 @@ function hostAction(fn, cond) {
 async function startGame() {
   const R = S.R; S.busy = true; render();
   try {
-    const {pub, keys} = buildGame(R.count || 10);
+    const {pub, keys} = buildGame(R.count || 10, R.diff || 'mix');
     await set(ref(db, 'keys/' + S.code), {a: keys});
     S.keys = {a: keys};
     const scores = {}; Object.keys(R.players || {}).forEach(id => { scores[id] = 0; });
@@ -773,6 +810,7 @@ app.addEventListener('click', e => {
   else if (a === 'share') shareCode();
   else if (a === 'leave') leaveRoom();
   else if (a === 'count') update(roomRef(), {count: +el.dataset.n}).catch(() => toast('Değiştirilemedi'));
+  else if (a === 'diff') update(roomRef(), {diff: el.dataset.v}).catch(() => toast('Değiştirilemedi'));
   else if (a === 'start') startGame();
   else if (a === 'pick') answer(+el.dataset.i);
   else if (a === 'sendnum') {
