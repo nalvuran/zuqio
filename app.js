@@ -37,7 +37,28 @@ const AV = [
   {c:'#FF5FA2', b:'blob',    f:'blush'},
   {c:'#17C3B2', b:'pill',    f:'cool'}
 ];
+const PREMIUM_NAMES = {8:'Yıldız', 9:'Kalp', 10:'Damla', 11:'Bulut', 12:'Robot', 13:'Kedi', 14:'Hayalet', 15:'Kral'};
+function avPremium(i) {
+  const k = '#1C1240';
+  const dots = y => `<circle cx="18.5" cy="${y}" r="2.3" fill="${k}"/><circle cx="29.5" cy="${y}" r="2.3" fill="${k}"/>`;
+  const eyes = y => `<circle cx="18" cy="${y}" r="4" fill="#fff"/><circle cx="30" cy="${y}" r="4" fill="#fff"/><circle cx="18.6" cy="${y + .6}" r="2.1" fill="${k}"/><circle cx="30.6" cy="${y + .6}" r="2.1" fill="${k}"/>`;
+  const smile = y => `<path d="M19.5 ${y}Q24 ${y + 4.5} 28.5 ${y}" fill="none" stroke="${k}" stroke-width="2.1" stroke-linecap="round"/>`;
+  let g = '';
+  switch (i) {
+    case 8: g = `<polygon points="24,7.5 29,18.6 41.1,19.9 32.1,28.1 34.6,40.1 24,34 13.4,40.1 15.9,28.1 6.9,19.9 19,18.6" fill="#FFC21A" stroke="#FFC21A" stroke-width="4" stroke-linejoin="round"/>${dots(25)}${smile(29)}`; break;
+    case 9: g = `<path d="M24 40C8 29 6 18 13 13.5C18 10.5 22 13 24 17C26 13 30 10.5 35 13.5C42 18 40 29 24 40Z" fill="#FF4D8D"/>${dots(22)}${smile(26.5)}<circle cx="14.5" cy="26" r="2.4" fill="#FFB3D1"/><circle cx="33.5" cy="26" r="2.4" fill="#FFB3D1"/>`; break;
+    case 10: g = `<path d="M24 6C32 17 38 23 38 29A14 14 0 0 1 10 29C10 23 16 17 24 6Z" fill="#2CC4F0"/>${eyes(29)}${smile(35)}`; break;
+    case 11: g = `<g fill="#A8D4FF"><circle cx="16" cy="28" r="9"/><circle cx="25" cy="23" r="11"/><circle cx="33" cy="29" r="8"/><rect x="9" y="28" width="30" height="11" rx="5"/></g><path d="M14.5 29Q18 32.5 21.5 29M26.5 29Q30 32.5 33.5 29" fill="none" stroke="${k}" stroke-width="2.1" stroke-linecap="round"/><ellipse cx="24" cy="34.5" rx="2.2" ry="1.8" fill="${k}"/>`; break;
+    case 12: g = `<line x1="24" y1="13" x2="24" y2="7.5" stroke="${k}" stroke-width="2.4" stroke-linecap="round"/><circle cx="24" cy="6.5" r="2.6" fill="#FF5A5F"/><circle cx="9" cy="26" r="2.4" fill="#3B4CB8"/><circle cx="39" cy="26" r="2.4" fill="#3B4CB8"/><rect x="10" y="13" width="28" height="27" rx="7" fill="#5E7CE2"/><rect x="14" y="20" width="8.5" height="7.5" rx="2.2" fill="#fff"/><rect x="25.5" y="20" width="8.5" height="7.5" rx="2.2" fill="#fff"/><rect x="16.5" y="22" width="4" height="4" rx="1" fill="${k}"/><rect x="28" y="22" width="4" height="4" rx="1" fill="${k}"/><rect x="17" y="32" width="14" height="3.4" rx="1.7" fill="${k}"/>`; break;
+    case 13: g = `<polygon points="10,21 11.5,6.5 21.5,13" fill="#FF8A1F" stroke="#FF8A1F" stroke-width="2.4" stroke-linejoin="round"/><polygon points="38,21 36.5,6.5 26.5,13" fill="#FF8A1F" stroke="#FF8A1F" stroke-width="2.4" stroke-linejoin="round"/><circle cx="24" cy="26" r="15" fill="#FF8A1F"/>${eyes(24.5)}<polygon points="22.3,29.2 25.7,29.2 24,31.4" fill="#FF6B8A"/><path d="M24 31.4Q21.5 35 18.5 33.4M24 31.4Q26.5 35 29.5 33.4" fill="none" stroke="${k}" stroke-width="1.8" stroke-linecap="round"/><path d="M8.5 28.5L14.5 29.5M8.5 33L14.5 32M39.5 28.5L33.5 29.5M39.5 33L33.5 32" stroke="${k}" stroke-width="1.2" stroke-linecap="round"/>`; break;
+    case 14: g = `<path d="M9 40V22A15 15 0 0 1 39 22V40L34 36L29 40L24 36L19 40L14 36Z" fill="#B9A7FF"/><ellipse cx="18.5" cy="23" rx="2.6" ry="3.4" fill="${k}"/><ellipse cx="29.5" cy="23" rx="2.6" ry="3.4" fill="${k}"/><ellipse cx="24" cy="30.5" rx="2.7" ry="3.2" fill="${k}"/><circle cx="13.5" cy="28" r="2.2" fill="#E3D9FF"/><circle cx="34.5" cy="28" r="2.2" fill="#E3D9FF"/>`; break;
+    case 15: g = `<circle cx="24" cy="28" r="14" fill="#7B5CFF"/><polygon points="14,19 16.5,8 21,13.5 24,6.5 27,13.5 31.5,8 34,19" fill="#FFC21A" stroke="#E39A00" stroke-width="1.4" stroke-linejoin="round"/>${eyes(28)}${smile(33.5)}`; break;
+    default: g = '';
+  }
+  return `<svg viewBox="3 3 42 42" aria-hidden="true">${g}</svg>`;
+}
 function avSVG(i){
+  if (i >= 8) return avPremium(i);
   const a = AV[((i % 8) + 8) % 8], c = a.c, k = '#1C1240';
   const body = {
     rect:`<rect x="8" y="9" width="32" height="31" rx="9" fill="${c}"/>`,
@@ -81,7 +102,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.3 (test)';
+const APP_VERSION = '0.5 (test)';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '') => `<div class="avatar ${cls}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -130,6 +151,7 @@ const SFX = {
       case 'timeup':  T(300, 0, 0.28, 'sine', 0.14, 140); break;
       case 'win':     T(523, 0, 0.14); T(659, 0.13, 0.14); T(784, 0.26, 0.14); T(1047, 0.39, 0.5); break;
       case 'end':     T(392, 0, 0.2); T(330, 0.18, 0.34); break;
+      case 'coin':    T(988, 0, 0.07, 'square', 0.07); T(1319, 0.07, 0.22, 'square', 0.07); break;
     }
   }
 };
@@ -149,6 +171,104 @@ onValue(ref(db, '.info/serverTimeOffset'), s => { S.offset = s.val() || 0; });
 onValue(ref(db, '.info/connected'), s => { if (s.val()) markOnline(); });
 
 function go(screen) { S.screen = screen; render(); app.scrollTop = 0; }
+
+/* ================= jeton, günlük ödül, mağaza ================= */
+const COIN = `<svg class="coin" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#FFC21A" stroke="#E39A00" stroke-width="1.5"/><circle cx="12" cy="12" r="6.6" fill="none" stroke="#E39A00" stroke-width="1.3"/><path d="M12 8.4l1.1 2.4 2.6.3-1.9 1.8.5 2.6-2.3-1.3-2.3 1.3.5-2.6-1.9-1.8 2.6-.3z" fill="#E39A00"/></svg>`;
+const DAILY = [10, 10, 15, 15, 20, 25, 50];
+const QUESTION_REWARD = {right: 20, wrong: 5};
+const SHOP = [
+  {id: 'av8', av: 8, price: 60}, {id: 'av9', av: 9, price: 60}, {id: 'av10', av: 10, price: 80}, {id: 'av11', av: 11, price: 80},
+  {id: 'av12', av: 12, price: 100}, {id: 'av13', av: 13, price: 100}, {id: 'av14', av: 14, price: 120}, {id: 'av15', av: 15, price: 150}
+];
+const coins = () => (S.me && S.me.wallet && S.me.wallet.coins) || 0;
+const owned = id => !!(S.me && S.me.owned && S.me.owned[id]);
+const dayIdx = () => Math.floor((now() + 10800000) / 86400000); // Türkiye saatine göre gün numarası
+
+function dailyState() {
+  const w = (S.me && S.me.wallet) || {}, t = dayIdx();
+  const claimed = w.claimDay === t, cont = w.claimDay === t - 1;
+  const next = claimed ? w.streak : (cont ? (w.streak % 7) + 1 : 1);
+  const done = claimed ? w.streak : (cont && w.streak < 7 ? w.streak : 0);
+  return {claimed, next, done, qDone: w.qDay === t, qRes: w.qRes};
+}
+
+// Günün sorusu: herkese aynı, tarihe göre belirlenir (İngilizce hariç, çoktan seçmeli)
+function dailyQuestion() {
+  const t = dayIdx(), pool = QUESTIONS.filter(q => q.t === 'mc' && q.cat !== 'İngilizce');
+  const q = pool[((t * 2654435761) >>> 0) % pool.length];
+  let seed = (t * 1103515245 + 12345) >>> 0;
+  const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const idx = [0, 1, 2, 3];
+  for (let i = 3; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [idx[i], idx[j]] = [idx[j], idx[i]]; }
+  return {q, o: idx.map(i => q.o[i]), a: idx.indexOf(0)};
+}
+
+async function freshWallet() {
+  const s = await get(ref(db, 'users/' + uid()));
+  const v = s.val() || {};
+  S.me = Object.assign({}, S.me, v);
+  return v.wallet || {};
+}
+
+async function claimDaily() {
+  if (S.busy) return;
+  S.busy = true; render();
+  try {
+    const w = await freshWallet(), t = dayIdx();
+    if (w.claimDay === t) { toast('Bugünün ödülünü zaten aldın'); S.busy = false; render(); return; }
+    const streak = w.claimDay === t - 1 ? (w.streak % 7) + 1 : 1, amt = DAILY[streak - 1];
+    await update(ref(db, 'users/' + uid()), {'wallet/coins': (w.coins || 0) + amt, 'wallet/claimDay': t, 'wallet/streak': streak});
+    SFX.play('coin'); buzz(30); toast(`+${amt} jeton kazandın!`);
+  } catch (e) { console.error(e); toast('Ödül alınamadı, tekrar dene'); }
+  S.busy = false; render();
+}
+
+async function answerDaily(i) {
+  if (S.busy) return;
+  const st = dailyState(); if (st.qDone) return;
+  const dq = dailyQuestion(), right = i === dq.a, amt = right ? QUESTION_REWARD.right : QUESTION_REWARD.wrong;
+  S.busy = true; S.dqPick = {day: dayIdx(), i}; render();
+  try {
+    const w = await freshWallet(), t = dayIdx();
+    if (w.qDay === t) { S.busy = false; render(); return; }
+    await update(ref(db, 'users/' + uid()), {'wallet/coins': (w.coins || 0) + amt, 'wallet/qDay': t, 'wallet/qRes': right ? 1 : 0});
+    SFX.play(right ? 'correct' : 'wrong'); buzz(right ? [30, 40, 30] : 120);
+    toast(right ? `Doğru! +${amt} jeton` : `Yanlış, ama +${amt} jeton kazandın`);
+  } catch (e) { console.error(e); S.dqPick = null; toast('Cevap kaydedilemedi, tekrar dene'); }
+  S.busy = false; render();
+}
+
+async function buyItem(id) {
+  const it = SHOP.find(x => x.id === id); if (!it || S.busy) return;
+  const w = await freshWallet();
+  if (owned(id)) return;
+  if ((w.coins || 0) < it.price) { toast(`Yeterli jetonun yok (${it.price} gerekli)`); render(); return; }
+  if (!confirm(`${PREMIUM_NAMES[it.av]} avatarını ${it.price} jetona almak istiyor musun?`)) return;
+  S.busy = true;
+  try {
+    await update(ref(db, 'users/' + uid()), {'wallet/coins': (w.coins || 0) - it.price, ['owned/' + id]: true});
+    S.me = Object.assign({}, S.me, {wallet: Object.assign({}, w, {coins: (w.coins || 0) - it.price}), owned: Object.assign({}, S.me.owned, {[id]: true})});
+    SFX.play('coin'); toast(`${PREMIUM_NAMES[it.av]} artık senin!`);
+  } catch (e) { console.error(e); toast('Satın alınamadı, tekrar dene'); }
+  S.busy = false; render();
+}
+
+async function equipItem(id) {
+  const it = SHOP.find(x => x.id === id); if (!it || !owned(id)) return;
+  try { await update(ref(db, 'users/' + uid()), {av: it.av}); S.me = Object.assign({}, S.me, {av: it.av}); toast('Avatarın değişti'); }
+  catch (e) { console.error(e); toast('Değiştirilemedi'); }
+  render();
+}
+
+let unsubMe = null;
+function watchMe() {
+  if (unsubMe) unsubMe();
+  unsubMe = onValue(ref(db, 'users/' + uid()), snap => {
+    const v = snap.val(); if (!v) return;
+    S.me = v;
+    if (['home', 'daily', 'shop', 'settings'].includes(S.screen) && !S.busy) render();
+  });
+}
 
 /* ================= ekranlar ================= */
 const V = {};
@@ -180,7 +300,7 @@ V.profile = () => `
       <input class="field" id="pnm" maxlength="16" autocomplete="nickname" value="${esc(S.draft)}">
       <span class="small muted">Avatarını seç</span>
       <div class="avpick" role="radiogroup" aria-label="Avatar">
-        ${AV.map((a, i) => `<button role="radio" aria-checked="${S.pick === i}" aria-label="Avatar ${i + 1}" class="${S.pick === i ? 'on' : ''}" data-act="av" data-i="${i}">${avSVG(i)}</button>`).join('')}
+        ${[0, 1, 2, 3, 4, 5, 6, 7].concat(SHOP.filter(s => owned(s.id)).map(s => s.av)).map(i => `<button role="radio" aria-checked="${S.pick === i}" aria-label="Avatar ${i + 1}" class="${S.pick === i ? 'on' : ''}" data-act="av" data-i="${i}">${avSVG(i)}</button>`).join('')}
       </div>
     </div>
     <div class="grow" style="min-height:16px"></div>
@@ -192,7 +312,7 @@ V.profile = () => `
 
 V.home = () => `
   <div class="screen">
-    <div class="top"><span></span><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle">${esc(S.me.name)}${avatar(S.me.av)}</button></div>
+    <div class="top"><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton">${COIN}<b>${coins()}</b></button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle">${esc(S.me.name)}${avatar(S.me.av)}</button></div>
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px"></div>
     <div class="stack" style="gap:14px">
@@ -202,10 +322,51 @@ V.home = () => `
     </div>
     <nav class="bottomnav" aria-label="Diğer">
       <button data-go="settings">${ICON.gear}AYARLAR</button>
-      <button data-act="soon" data-n="Mağaza">${ICON.shop}MAĞAZA</button>
+      <button data-go="shop">${ICON.shop}MAĞAZA</button>
       <button data-go="how">${ICON.help}NASIL OYNANIR?</button>
-      <button data-act="soon" data-n="Günlük ödül">${ICON.gift}GÜNLÜK ÖDÜL</button>
+      <button data-go="daily" class="${(() => { const s = dailyState(); return !s.claimed || !s.qDone ? 'hasdot' : ''; })()}">${ICON.gift}GÜNLÜK ÖDÜL</button>
     </nav>
+  </div>`;
+
+V.daily = () => {
+  const st = dailyState(), dq = dailyQuestion(), pick = S.dqPick && S.dqPick.day === dayIdx() ? S.dqPick.i : null;
+  const nextAmt = DAILY[st.claimed ? st.next % 7 : st.next - 1];
+  return `
+  <div class="screen">
+    <div class="top">${backBtn('data-go="home"')}<span class="coinbar">${COIN}<b>${coins()}</b></span></div>
+    <div class="stack" style="gap:14px">
+      <h2>Günlük ödül</h2>
+      <div class="days" aria-label="7 günlük seri">${DAILY.map((amt, i) => `<div class="day ${i + 1 <= st.done ? 'done' : ''} ${!st.claimed && i + 1 === st.next ? 'today' : ''}"><span class="n">${i + 1}. gün</span>${COIN}<b>${amt}</b></div>`).join('')}</div>
+      <button class="btn primary big" data-act="claim" ${st.claimed || S.busy ? 'disabled' : ''}><span class="ic">${ICON.gift}</span><span class="lb">${st.claimed ? 'BUGÜNÜN ÖDÜLÜ ALINDI' : `ÖDÜLÜ AL · +${DAILY[st.next - 1]}`}</span></button>
+      <p class="small muted" style="text-align:center">${st.claimed ? `Yarın gel, +${nextAmt} jeton seni bekliyor. Seri bozulmasın!` : 'Her gün gelirsen ödül büyür, 7. gün en büyük ödül.'}</p>
+      <div class="card stack" style="gap:10px">
+        <div class="row between"><span class="tag">Günün sorusu</span><span class="small muted">Doğru +${QUESTION_REWARD.right} · Yanlış +${QUESTION_REWARD.wrong}</span></div>
+        <p class="qtext" style="font-size:1.2rem">${esc(dq.q.q)}</p>
+        <div class="answers dqa">${dq.o.map((o, i) => {
+          const cls = ['ans', 'c' + i];
+          if (st.qDone) { if (i === dq.a) cls.push('right'); else if (pick === i) cls.push('wrongpick'); else cls.push('dim'); }
+          return `<button class="${cls.join(' ')}" data-act="dqpick" data-i="${i}" ${st.qDone || S.busy ? 'disabled' : ''}>${icon(i)}<span>${esc(o)}</span></button>`;
+        }).join('')}</div>
+        ${st.qDone ? `<p class="small muted" style="text-align:center">${st.qRes === 1 ? 'Doğru bildin!' : 'Doğru cevap yeşil çerçeveli.'} Yeni soru yarın.</p>` : ''}
+      </div>
+    </div>
+  </div>`;
+};
+
+V.shop = () => `
+  <div class="screen">
+    <div class="top">${backBtn('data-go="home"')}<span class="coinbar">${COIN}<b>${coins()}</b></span></div>
+    <div class="stack" style="gap:14px">
+      <h2>Mağaza</h2>
+      <p class="muted">Jetonlarınla yeni avatarlar aç. Avatarlar sadece görünüştür, oyunda avantaj sağlamaz.</p>
+      <div class="shopgrid">${SHOP.map(it => {
+        const own = owned(it.id), cur = S.me.av === it.av;
+        return `<button class="shopitem ${own ? 'own' : ''} ${cur ? 'cur' : ''}" data-act="${own ? 'equip' : 'buy'}" data-id="${it.id}" ${cur ? 'disabled' : ''}>
+          <div class="avatar">${avSVG(it.av)}</div><b>${PREMIUM_NAMES[it.av]}</b>
+          <span class="price">${own ? (cur ? 'Kullanılıyor' : 'Kullan') : COIN + it.price}</span></button>`;
+      }).join('')}</div>
+      <p class="small muted">Jetonları her gün giriş yaparak ve günün sorusunu cevaplayarak kazanırsın. Daha fazla ürün yakında.</p>
+    </div>
   </div>`;
 
 V.settings = () => `
@@ -266,6 +427,7 @@ V.how = () => `
         <p><b>Oda aç, kodu paylaş.</b> Arkadaşların 6 haneli kodla ya da gönderdiğin bağlantıyla katılır.</p>
         <p><b>Hızlı ve doğru cevap ver.</b> Ne kadar erken bilirsen o kadar çok puan alırsın.</p>
         <p><b>Tahmin sorularında</b> şık yok: sayını yaz, doğruya ne kadar yakınsan o kadar çok puan.</p>
+        <p><b>Jeton kazan:</b> her gün Günlük ödül’ü al ve günün sorusunu cevapla. Jetonlarla Mağaza’dan yeni avatarlar açarsın. Jetonlar oyunda avantaj sağlamaz.</p>
         <p><b>Jokerlerin</b> her oyunda birer kez kullanılır: yarı yarıya, çifte puan, buz ve tahmin sorularında ipucu.</p>
       </div>
     </div>
@@ -520,7 +682,7 @@ getRedirectResult(auth).catch(() => {});
 
 onAuthStateChanged(auth, async u => {
   S.user = u;
-  if (!u) { S.me = null; go('login'); return; }
+  if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } S.me = null; go('login'); return; }
   try {
     const snap = await get(ref(db, 'users/' + u.uid));
     if (snap.exists()) { S.me = snap.val(); afterLogin(); }
@@ -533,6 +695,7 @@ onAuthStateChanged(auth, async u => {
 });
 
 async function afterLogin() {
+  watchMe();
   const code = S.pendingCode || ls.get('zuqio-room');
   S.pendingCode = null;
   if (code) { const ok = await joinRoom(code, true); if (ok) return; }
@@ -559,9 +722,10 @@ async function saveProfile() {
   if (!v) { toast('Bir ad yaz'); return; }
   S.busy = true; render();
   try {
-    const data = {name: v, av: S.pick, plan: (S.me && S.me.plan) || 'free', createdAt: (S.me && S.me.createdAt) || serverTimestamp()};
-    await set(ref(db, 'users/' + uid()), data);
-    S.me = {name: v, av: S.pick, plan: data.plan, createdAt: S.me && S.me.createdAt};
+    const data = {name: v, av: S.pick, plan: (S.me && S.me.plan) || 'free'};
+    if (!(S.me && S.me.createdAt)) data.createdAt = serverTimestamp();
+    await update(ref(db, 'users/' + uid()), data);   // update: cüzdan ve satın alınanlar silinmesin
+    S.me = Object.assign({}, S.me, {name: v, av: S.pick, plan: data.plan});
     const first = S.firstProfile; S.firstProfile = false; S.busy = false;
     toast('Profil kaydedildi');
     if (first) afterLogin(); else go('home');
@@ -925,6 +1089,10 @@ app.addEventListener('click', e => {
   else if (a === 'saveprof') saveProfile();
   else if (a === 'logout') { if (confirm('Çıkış yapmak istiyor musun?')) { leaveLocal(); signOut(auth); } }
   else if (a === 'soon') toast(el.dataset.n + ' çok yakında');
+  else if (a === 'claim') claimDaily();
+  else if (a === 'dqpick') answerDaily(+el.dataset.i);
+  else if (a === 'buy') buyItem(el.dataset.id);
+  else if (a === 'equip') equipItem(el.dataset.id);
   else if (a === 'tsound') { S.sound = !S.sound; ls.set('zuqio-sound', S.sound ? '1' : '0'); if (S.sound) SFX.play('correct'); render(); }
   else if (a === 'thaptic') { S.haptic = !S.haptic; ls.set('zuqio-haptic', S.haptic ? '1' : '0'); if (S.haptic) buzz(40); render(); }
   else if (a === 'create') createRoom();

@@ -175,6 +175,28 @@ input.field{width:100%; min-height:56px; padding:0 16px; border-radius:16px; bor
 .chips button.on{background:var(--yellow); color:#3A2200; border-color:var(--yellow)}
 .pitem.off{opacity:.45}
 .glogo{width:22px; height:22px}
+.coin{width:18px; height:18px; flex:0 0 auto}
+.coinchip,.coinbar{display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 14px; border-radius:999px; background:rgba(255,255,255,.1); font-weight:800; color:#fff}
+.days{display:grid; grid-template-columns:repeat(7,1fr); gap:5px}
+.day{display:flex; flex-direction:column; align-items:center; gap:3px; padding:8px 0; border-radius:12px; background:var(--surface); border:1.5px solid var(--line)}
+.day .n{color:var(--muted); font-size:.64rem; line-height:1; white-space:nowrap}
+.day b{font-size:.95rem; line-height:1}
+.day.done{opacity:.5}
+.day.done .n::after{content:'✓'; margin-left:2px}
+.day.today{border-color:var(--yellow); box-shadow:0 0 0 3px rgba(255,194,26,.25)}
+.shopgrid{display:grid; grid-template-columns:repeat(2,1fr); gap:12px}
+.shopitem{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; padding:14px 8px; min-height:156px; border-radius:18px; background:var(--surface); border:1.5px solid var(--line); color:#fff}
+.shopitem .avatar{width:76px; height:76px}
+.shopitem .price{display:inline-flex; align-items:center; gap:5px; font-weight:800; color:var(--yellow)}
+.shopitem.own .price{color:var(--muted)}
+.shopitem.cur{border-color:var(--yellow)}
+.shopitem:active:not(:disabled){transform:scale(.97)}
+.dqa .ans{min-height:84px}
+.ans.right{outline:3px solid #5BD07A; outline-offset:2px; opacity:1}
+.ans.wrongpick{outline:3px solid #ff6b6b; outline-offset:2px; opacity:1}
+.bottomnav button{position:relative}
+.bottomnav .hasdot::after{content:''; position:absolute; top:6px; left:calc(50% + 10px); width:11px; height:11px; border-radius:50%; background:var(--red); border:2px solid #170941}
+.avpick{grid-template-columns:repeat(4,1fr)}
 .chips.wrap{flex-wrap:wrap}
 .chips.wrap button{flex:0 0 auto; padding:0 16px}
 .infocard{margin-top:12px; padding:12px 16px}
