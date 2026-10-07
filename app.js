@@ -80,7 +80,8 @@ const fmt = n => Math.round(n).toLocaleString('tr-TR');
 const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
+const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
+const APP_VERSION = '0.3 (test)';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '') => `<div class="avatar ${cls}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -95,11 +96,50 @@ function toast(msg) {
   document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
 }
 
+/* ================= ses efektleri (dışarıdan dosya yok, tarayıcıda üretilir) ================= */
+const SFX = {
+  ctx: null,
+  init() {
+    try {
+      if (!this.ctx) { const C = window.AudioContext || window.webkitAudioContext; if (!C) return; this.ctx = new C(); }
+      if (this.ctx.state === 'suspended') this.ctx.resume();
+    } catch (e) {}
+  },
+  tone(f, t0, dur, type, vol, f2) {
+    const c = this.ctx; if (!c) return;
+    const o = c.createOscillator(), g = c.createGain(), t = c.currentTime + t0;
+    o.type = type; o.frequency.setValueAtTime(f, t);
+    if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(c.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  },
+  play(name) {
+    if (!S.sound || !this.ctx || this.ctx.state !== 'running') return;
+    const T = (f, t, d, type = 'triangle', v = 0.15, f2) => this.tone(f, t, d, type, v, f2);
+    switch (name) {
+      case 'tick':    T(880, 0, 0.07, 'square', 0.05); break;
+      case 'go':      T(660, 0, 0.12); T(990, 0.1, 0.22); break;
+      case 'tap':     T(520, 0, 0.07, 'triangle', 0.12); break;
+      case 'pop':     T(620, 0, 0.09, 'sine', 0.1, 980); break;
+      case 'joker':   T(600, 0, 0.08); T(900, 0.08, 0.08); T(1250, 0.16, 0.16); break;
+      case 'correct': T(523, 0, 0.14); T(659, 0.1, 0.14); T(784, 0.2, 0.3); break;
+      case 'wrong':   T(240, 0, 0.3, 'sawtooth', 0.09, 110); break;
+      case 'timeup':  T(300, 0, 0.28, 'sine', 0.14, 140); break;
+      case 'win':     T(523, 0, 0.14); T(659, 0.13, 0.14); T(784, 0.26, 0.14); T(1047, 0.39, 0.5); break;
+      case 'end':     T(392, 0, 0.2); T(330, 0.18, 0.34); break;
+    }
+  }
+};
+
 /* ================= durum ================= */
 const S = {
   user: null, me: null, screen: 'loading', code: null, R: null, keys: null,
   offset: 0, unsubRoom: null, lastKey: '', hostBusy: false, q: null,
-  pick: 0, draft: '', firstProfile: false, pendingCode: null, wake: null, busy: false
+  pick: 0, draft: '', firstProfile: false, pendingCode: null, wake: null, busy: false,
+  sound: ls.get('zuqio-sound') !== '0', haptic: ls.get('zuqio-haptic') !== '0', lastN: null
 };
 const uid = () => S.user && S.user.uid;
 const now = () => Date.now() + S.offset;
@@ -161,11 +201,35 @@ V.home = () => `
       <button class="btn outline big" data-act="soon" data-n="Liderlik tablosu"><span class="ic">${ICON.trophy}</span><span class="lb">LİDERLİK TABLOSU</span></button>
     </div>
     <nav class="bottomnav" aria-label="Diğer">
-      <button data-act="soon" data-n="Ayarlar">${ICON.gear}AYARLAR</button>
+      <button data-go="settings">${ICON.gear}AYARLAR</button>
       <button data-act="soon" data-n="Mağaza">${ICON.shop}MAĞAZA</button>
       <button data-go="how">${ICON.help}NASIL OYNANIR?</button>
       <button data-act="soon" data-n="Günlük ödül">${ICON.gift}GÜNLÜK ÖDÜL</button>
     </nav>
+  </div>`;
+
+V.settings = () => `
+  <div class="screen">
+    <div class="top">${backBtn('data-go="home"')}</div>
+    <div class="stack" style="gap:14px">
+      <h2>Ayarlar</h2>
+      <div class="card stack" style="gap:0;padding:0 16px">
+        <div class="setrow"><div><b>Ses efektleri</b><span class="small muted">Doğru, yanlış ve geri sayım sesleri</span></div>
+          <button class="switch ${S.sound ? 'on' : ''}" role="switch" aria-checked="${S.sound}" aria-label="Ses efektleri" data-act="tsound"></button></div>
+        <div class="setrow"><div><b>Titreşim</b><span class="small muted">${'vibrate' in navigator ? 'Cevap verince ve süre azalınca titrer' : 'Bu cihaz web uygulamalarında titreşimi desteklemiyor'}</span></div>
+          <button class="switch ${S.haptic && 'vibrate' in navigator ? 'on' : ''}" role="switch" aria-checked="${S.haptic && 'vibrate' in navigator}" aria-label="Titreşim" data-act="thaptic" ${'vibrate' in navigator ? '' : 'disabled'}></button></div>
+      </div>
+      <div class="card stack" style="gap:0;padding:0 16px">
+        <button class="setrow" data-act="openprofile"><div><b>Profili düzenle</b><span class="small muted">${esc(S.me.name)}</span></div>${avatar(S.me.av)}</button>
+        <button class="setrow" data-go="how"><div><b>Nasıl oynanır?</b></div><span class="muted">›</span></button>
+      </div>
+      <div class="card stack" style="gap:4px">
+        <b>${esc(APP_NAME)}</b>
+        <span class="small muted">Sürüm ${APP_VERSION}</span>
+        <span class="small muted">Şu an test aşamasındayız. Gördüğün hataları ve önerilerini bize ilet, birlikte geliştirelim.</span>
+      </div>
+      <button class="btn ghost" data-act="logout">Çıkış yap</button>
+    </div>
   </div>`;
 
 V.friends = () => `
@@ -401,6 +465,8 @@ function tick() {
     const r = remaining(), dl = S.R.qDur || 20000;
     const hex = document.getElementById('hex'), bar = document.getElementById('tbar'), st = document.getElementById('st');
     const frozen = S.q && S.q.frozenUntil > now();
+    const sec = Math.ceil(r / 1000), A0 = ansOf(S.R, S.R.qi), answered = !!A0[uid()] || (S.q && S.q.sent != null);
+    if (S.q && !frozen && !answered && sec <= 5 && sec > 0 && S.q.lastSec !== sec) { S.q.lastSec = sec; SFX.play('tick'); }
     if (hex) { hex.textContent = Math.ceil(r / 1000); hex.className = 'hex' + (frozen ? ' ice' : r < 5000 ? ' low' : ''); }
     if (bar) bar.style.width = clamp(r / dl * 100, 0, 100) + '%';
     if (st) st.textContent = statusText();
@@ -410,7 +476,7 @@ function tick() {
     const sub = document.getElementById('qmsub'), sec = quickStartIn();
     if (sub && sec != null) { const b = sub.querySelector('b'); if (b && b.textContent !== String(sec)) b.textContent = sec; }
   }
-  if (S.screen === 'count' && S.R) { const el = document.getElementById('cnt'); if (el && el.textContent !== String(countNum())) { el.textContent = countNum(); buzz(20); } }
+  if (S.screen === 'count' && S.R) { const el = document.getElementById('cnt'); if (el && el.textContent !== String(countNum())) { el.textContent = countNum(); buzz(20); SFX.play('tick'); } }
 }
 setInterval(() => { tick(); hostStep(); }, 150);
 
@@ -470,7 +536,7 @@ async function saveProfile() {
 /* ================= oda ================= */
 function enterRoom(code) {
   if (S.unsubRoom) S.unsubRoom();
-  S.code = code; S.R = null; S.keys = null; S.lastKey = ''; S.q = null;
+  S.code = code; S.R = null; S.keys = null; S.lastKey = ''; S.q = null; S.lastN = null;
   ls.set('zuqio-room', code);
   markOnline();
   S.unsubRoom = onValue(roomRef(), snap => onRoom(snap.val()), err => { console.error(err); toast('Odaya erişilemedi'); leaveLocal(); go('home'); });
@@ -500,14 +566,25 @@ function onRoom(R) {
     toast('Oda kapatıldı'); go('home'); return;
   }
   if (!R.players || !R.players[uid()]) { leaveLocal(); toast('Odadan çıktın'); go('home'); return; }
+  const np = Object.keys(R.players || {}).length;
+  if (S.lastN != null && np > S.lastN && R.status === 'lobby') SFX.play('pop');
+  S.lastN = np;
   S.R = R;
   const map = {lobby: 'lobby', countdown: 'count', question: 'question', reveal: 'reveal', final: 'final'};
   const scr = map[R.status] || 'lobby';
   const key = R.status + ':' + (R.qi != null ? R.qi : '');
   if (key !== S.lastKey) {
     S.lastKey = key;
-    if (R.status === 'question') S.q = {qi: R.qi, frozenUntil: 0, sent: null, timeUpShown: false};
-    if (R.status === 'reveal') { const g = (R.reveal && R.reveal[R.qi] && R.reveal[R.qi].gains || {})[uid()] || 0; buzz(g > 0 ? [30, 40, 30] : 120); }
+    if (R.status === 'question') { S.q = {qi: R.qi, frozenUntil: 0, sent: null, timeUpShown: false, lastSec: null}; SFX.play('go'); }
+    if (R.status === 'reveal') {
+      const g = (R.reveal && R.reveal[R.qi] && R.reveal[R.qi].gains || {})[uid()] || 0;
+      buzz(g > 0 ? [30, 40, 30] : 120);
+      SFX.play(g > 0 ? 'correct' : (ansOf(R, R.qi)[uid()] ? 'wrong' : 'timeup'));
+    }
+    if (R.status === 'final') {
+      const sc = R.scores || {}, mine = sc[uid()] || 0, top = Math.max(0, ...Object.values(sc));
+      SFX.play(mine > 0 && mine >= top ? 'win' : 'end');
+    }
     S.screen = scr; render(); app.scrollTop = 0; return;
   }
   if (S.screen !== scr) { S.screen = scr; render(); return; }
@@ -770,7 +847,7 @@ async function playAgain() {
 /* ================= oyuncu eylemleri ================= */
 async function answer(v) {
   const R = S.R; if (!R || R.status !== 'question' || !S.q || S.q.sent != null || remaining() <= 0) return;
-  S.q.sent = v; buzz(30); render();
+  S.q.sent = v; buzz(30); SFX.play('tap'); render();
   try { await set(ref(db, `rooms/${S.code}/answers/${R.qi}/${uid()}`), {v, t: serverTimestamp()}); }
   catch (e) { console.error(e); S.q.sent = null; render(); toast('Cevap gönderilemedi, süre dolmuş olabilir'); }
 }
@@ -778,7 +855,7 @@ async function answer(v) {
 async function useJoker(key) {
   const R = S.R; if (!R || R.status !== 'question' || myJ(key) != null || (S.q && S.q.sent != null)) return;
   if (key === 'freeze') S.q.frozenUntil = now() + 8000;
-  buzz(20);
+  buzz(20); SFX.play('joker');
   try {
     await set(ref(db, `rooms/${S.code}/jokers/${uid()}/${key}`), R.qi);
     if (key === 'double') toast('Çifte puan açık: bu soruda puanın ikiye katlanacak');
@@ -794,6 +871,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 
 /* ================= olaylar ================= */
 app.addEventListener('click', e => {
+  SFX.init();
   const el = e.target.closest('[data-act],[data-go]'); if (!el || el.disabled) return;
   if (el.dataset.go) { go(el.dataset.go); return; }
   const a = el.dataset.act;
@@ -803,6 +881,8 @@ app.addEventListener('click', e => {
   else if (a === 'saveprof') saveProfile();
   else if (a === 'logout') { if (confirm('Çıkış yapmak istiyor musun?')) { leaveLocal(); signOut(auth); } }
   else if (a === 'soon') toast(el.dataset.n + ' çok yakında');
+  else if (a === 'tsound') { S.sound = !S.sound; ls.set('zuqio-sound', S.sound ? '1' : '0'); if (S.sound) SFX.play('correct'); render(); }
+  else if (a === 'thaptic') { S.haptic = !S.haptic; ls.set('zuqio-haptic', S.haptic ? '1' : '0'); if (S.haptic) buzz(40); render(); }
   else if (a === 'create') createRoom();
   else if (a === 'quick') quickPlay();
   else if (a === 'quickagain') { const code = S.code, me = uid(); leaveLocal(); set(ref(db, `rooms/${code}/players/${me}/online`), false).catch(() => {}); quickPlay(); }
