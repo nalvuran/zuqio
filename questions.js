@@ -1,3 +1,5 @@
+import { EN } from './questions-en.js';
+
 // Zuqio soru havuzu.
 //  m(kategori, zorluk, soru, doğru, yanlış1, yanlış2, yanlış3)  → çoktan seçmeli (ilk şık doğrudur, oyunda karıştırılır)
 //  n(kategori, zorluk, soru, cevap, birim, [yıl toleransı])      → tahmin sorusu (sayı yazılır)
@@ -5,7 +7,7 @@
 const m = (cat, d, q, ...o) => ({t: 'mc', cat, d, q, o});
 const n = (cat, d, q, a, unit, tolAbs) => tolAbs ? {t: 'num', cat, d, q, a, unit, tolAbs} : {t: 'num', cat, d, q, a, unit};
 
-export const QUESTIONS = [
+const BASE = [
   /* ================= Genel kültür ================= */
   m('Genel kültür','k','Hangi renk, sarı ile mavinin karışımından elde edilir?','Yeşil','Turuncu','Mor','Kahverengi'),
   m('Genel kültür','k','Trafik ışıklarında “geç” anlamına gelen renk hangisidir?','Yeşil','Kırmızı','Sarı','Mavi'),
@@ -420,3 +422,6 @@ export const QUESTIONS = [
   n('Dil ve deyimler','z','Yunan alfabesinde kaç harf vardır?',24,'harf'),
   n('Dil ve deyimler','z','Dünyada yaklaşık kaç dil konuşulmaktadır?',7000,'dil')
 ];
+
+// İngilizce kategorisi ayrı dosyada; “Karışık” modda yer almaz, yalnızca seçilince gelir.
+export const QUESTIONS = [...BASE, ...EN];

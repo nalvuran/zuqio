@@ -139,7 +139,7 @@ const S = {
   user: null, me: null, screen: 'loading', code: null, R: null, keys: null,
   offset: 0, unsubRoom: null, lastKey: '', hostBusy: false, q: null,
   pick: 0, draft: '', firstProfile: false, pendingCode: null, wake: null, busy: false,
-  sound: ls.get('zuqio-sound') !== '0', haptic: ls.get('zuqio-haptic') !== '0', lastN: null
+  sound: ls.get('zuqio-sound') !== '0', haptic: ls.get('zuqio-haptic') !== '0', lastN: null, catsOpen: false, catSel: new Set()
 };
 const uid = () => S.user && S.user.uid;
 const now = () => Date.now() + S.offset;
@@ -278,6 +278,14 @@ const myJ = key => { const j = S.R && S.R.jokers && S.R.jokers[uid()]; return j 
 const ansOf = (R, qi) => (R.answers && R.answers[qi]) || {};
 const hostOnline = () => { const h = S.R && S.R.players && S.R.players[S.R.host]; return !h || h.online !== false; };
 
+const CATS = [...new Set(QUESTIONS.map(q => q.cat))].sort((x, y) => (x === 'İngilizce') - (y === 'İngilizce'));
+const NON_EN = CATS.filter(c => c !== 'İngilizce');
+const roomCats = R => R && R.cats ? R.cats.split('|').filter(c => CATS.includes(c)) : null;
+function catSummary(R) {
+  const c = roomCats(R);
+  if (!c || !c.length) return 'Tümü (İngilizce hariç)';
+  return c.length <= 2 ? c.join(', ') : c.length + ' kategori';
+}
 const QUICK_MIN = 2, QUICK_FULL = 6, QUICK_WAIT = 15000, QUICK_MAX = 8;
 function quickStartIn() {
   const R = S.R; if (!R || !R.quick || typeof R.autoAt !== 'number') return null;
@@ -302,9 +310,34 @@ V.quickLobby = () => {
   </div>`;
 };
 
+V.cats = () => {
+  const R = S.R, sel = S.catSel, all = NON_EN.every(c => sel.has(c)) && !sel.has('İngilizce');
+  const diff = R.diff || 'mix', want = R.count || 10;
+  const chosen = [...sel], n = poolFor(chosen).filter(q => diff === 'mix' || q.d === diff).length;
+  return `
+  <div class="screen">
+    <div class="top">${backBtn('data-act="catsdone"', 'Geri')}</div>
+    <div class="stack" style="gap:14px">
+      <h2>Kategoriler</h2>
+      <p class="muted">Oyunda hangi konulardan soru çıksın?</p>
+      <div class="chips wrap">
+        <button class="${all ? 'on' : ''}" data-act="catall">Hepsi</button>
+        ${NON_EN.map(c => `<button class="${sel.has(c) ? 'on' : ''}" data-act="cattoggle" data-i="${CATS.indexOf(c)}">${esc(c)}</button>`).join('')}
+      </div>
+      <b style="margin-top:6px">Dil öğrenme</b>
+      <div class="chips wrap"><button class="${sel.has('İngilizce') ? 'on' : ''}" data-act="cattoggle" data-i="${CATS.indexOf('İngilizce')}">İngilizce</button></div>
+      <p class="small muted">İngilizce’de Kolay = A1–A2 (Türkçe sorular), Orta = B1–B2, Zor = C1. Cevaptan sonra kısa bir “Öğren” notu gösterilir. “Hepsi” seçeneğine İngilizce dahil değildir.</p>
+      <p class="small ${n < want * 2 ? '' : 'muted'}" style="${n < want * 2 ? 'color:var(--yellow)' : ''}">${chosen.length ? `Bu seçimde ${n} soru var.${n < want * 2 ? ' Soru az olabilir, tekrarlar çıkabilir; zorluğu “Karışık” yapmayı dene.' : ''}` : 'En az bir kategori seç.'}</p>
+    </div>
+    <div class="grow" style="min-height:16px"></div>
+    <button class="btn primary big" data-act="catsdone" ${chosen.length ? '' : 'disabled'}><span class="ic">${ICON.play}</span><span class="lb">TAMAM</span></button>
+  </div>`;
+};
+
 V.lobby = () => {
   const R = S.R, ps = players(R), host = isHost();
   if (R.quick) return V.quickLobby();
+  if (S.catsOpen && host) return V.cats();
   return `
   <div class="screen">
     <div class="top">${backBtn('data-act="leave"', 'Odadan çık')}<span class="tag">${host ? 'Oda sahibi sensin' : 'Oyun bekleniyor'}</span></div>
@@ -324,8 +357,9 @@ V.lobby = () => {
       <div class="chips" style="margin-bottom:14px">${[5, 10, 15].map(n => `<button class="${(R.count || 10) === n ? 'on' : ''}" data-act="count" data-n="${n}">${n}</button>`).join('')}</div>
       <span class="small muted" style="margin-bottom:8px">Zorluk</span>
       <div class="chips" style="margin-bottom:14px">${['mix', 'k', 'o', 'z'].map(v => `<button class="${(R.diff || 'mix') === v ? 'on' : ''}" data-act="diff" data-v="${v}">${DIFF_LABEL[v]}</button>`).join('')}</div>
+      <button class="card setrow" style="margin-bottom:14px;padding:10px 16px" data-act="opencats"><div><b>Kategoriler</b><span class="small muted">${esc(catSummary(R))}</span></div><span class="muted">›</span></button>
       <button class="btn primary big" data-act="start" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">OYUNU BAŞLAT</span></button>`
-    : `<p class="status">${R.count || 10} soru · ${DIFF_LABEL[R.diff || 'mix']}<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`}
+    : `<p class="status">${R.count || 10} soru · ${DIFF_LABEL[R.diff || 'mix']} · ${esc(catSummary(R))}<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`}
   </div>`;
 };
 
@@ -378,7 +412,7 @@ V.question = () => {
     <div class="qhead">
       <div class="stack" style="gap:6px">
         <span class="small muted">Soru ${qi + 1} / ${R.questions.length}</span>
-        <span><span class="tag">${esc(q.cat)}${isNum ? ' · Tahmin' : ''}</span></span>
+        <span><span class="tag">${esc(q.cat)}${q.sub ? ' · ' + esc(q.sub) : ''}${isNum ? ' · Tahmin' : ''}</span></span>
       </div>
       <div class="hex" id="hex">${Math.ceil(remaining() / 1000)}</div>
     </div>
@@ -417,6 +451,7 @@ V.reveal = () => {
   return `
   <div class="screen">
     <div class="verdict ${cls}"><b>${title}</b><p>${sub}</p></div>
+    ${rv.info ? `<div class="card infocard"><b>${q.cat === 'İngilizce' ? 'Öğren' : 'Biliyor muydun?'}</b><p>${esc(rv.info)}</p></div>` : ''}
     <div class="row between" style="margin:20px 0 10px"><b>Sıralama</b><span class="small muted">Soru ${qi + 1} / ${R.questions.length}</span></div>
     <div class="stack" style="gap:8px">${rankList(R, qi)}</div>
     <div class="grow" style="min-height:16px"></div>
@@ -544,6 +579,7 @@ function enterRoom(code) {
 }
 
 function leaveLocal() {
+  S.catsOpen = false;
   if (S.unsubRoom) S.unsubRoom();
   if (S.code && uid()) { try { onDisconnect(ref(db, `rooms/${S.code}/players/${uid()}/online`)).cancel(); } catch (e) {} }
   S.unsubRoom = null; S.code = null; S.R = null; S.keys = null; S.lastKey = ''; S.q = null;
@@ -693,13 +729,18 @@ function niceRound(n, up) {
 }
 
 const DIFF_LABEL = {mix: 'Karışık', k: 'Kolay', o: 'Orta', z: 'Zor'};
-function qid(q) { let h = 0; const t = q.q; for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+function qid(q) { let h = 0; const t = q.q + '|' + (q.t === 'mc' ? q.o[0] : q.a); for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
 function loadSeen() { try { return new Set(JSON.parse(ls.get('zuqio-seen') || '[]')); } catch (e) { return new Set(); } }
 function saveSeen(set) { ls.set('zuqio-seen', JSON.stringify([...set].slice(-1500))); }
 
 // Oyun için soru seç: seçilen zorluğa uygun, bu cihazda daha önce görülmemişleri öne al, kategorileri dengele.
-function pickQuestions(count, diff) {
+function poolFor(cats) {
+  return QUESTIONS.filter(q => cats && cats.length ? cats.includes(q.cat) : q.cat !== 'İngilizce');
+}
+function pickQuestions(count, diff, cats) {
+  const pool = poolFor(cats);
   const seen = loadSeen();
+  if (pool.filter(q => !seen.has(qid(q))).length < count) pool.forEach(q => seen.delete(qid(q))); // havuz tükendiyse yeni tur başlar
   const plan = diff === 'mix' ? {k: 0.4, o: 0.4, z: 0.2} : {[diff]: 1};
   const keys = Object.keys(plan), want = {};
   let sum = 0;
@@ -710,7 +751,7 @@ function pickQuestions(count, diff) {
   const take = (d, k) => {
     for (let i = 0; i < k; i++) {
       let best = null, bestScore = Infinity;
-      for (const q of QUESTIONS) {
+      for (const q of pool) {
         if (taken.has(q) || (d && q.d !== d)) continue;
         const sc = (seen.has(qid(q)) ? 1000 : 0) + (usedCat[q.cat] || 0) * 12 + Math.random() * 10;
         if (sc < bestScore) { bestScore = sc; best = q; }
@@ -722,20 +763,21 @@ function pickQuestions(count, diff) {
   keys.forEach(d => take(d, want[d]));
   if (chosen.length < count) take(null, count - chosen.length);
   chosen.forEach(q => seen.add(qid(q)));
-  if (seen.size >= QUESTIONS.length) seen.clear(); // havuzun tamamı görüldüyse baştan başla
   saveSeen(seen);
   return shuffle(chosen);
 }
 
-function buildGame(count, diff) {
-  const pool = pickQuestions(count, diff);
-  const pub = [], keys = [];
+function buildGame(count, diff, cats) {
+  const pool = pickQuestions(count, diff, cats);
+  const pub = [], keys = [], infos = [];
   for (const q of pool) {
     if (q.t === 'mc') {
       const order = shuffle([0, 1, 2, 3]);
       const o = order.map(i => q.o[i]), a = order.indexOf(0);
       const h = shuffle([0, 1, 2, 3].filter(i => i !== a)).slice(0, 2);
-      pub.push({t: 'mc', cat: q.cat, d: q.d, q: q.q, o, h}); keys.push(a);
+      const item = {t: 'mc', cat: q.cat, d: q.d, q: q.q, o, h};
+      if (q.sub) item.sub = q.sub;
+      pub.push(item); keys.push(a); infos.push(q.info || '');
     } else {
       const w = q.tolAbs ? q.tolAbs * 0.8 : q.a * 0.3;
       const lo0 = Math.max(0, q.a - w * Math.random());
@@ -744,10 +786,10 @@ function buildGame(count, diff) {
       const f = v => q.tolAbs ? String(v) : fmt(v);
       const item = {t: 'num', cat: q.cat, d: q.d, q: q.q, unit: q.unit, hint: `${f(lo)} ile ${f(hi)} ${q.unit} arasında`};
       if (q.tolAbs) item.tolAbs = q.tolAbs;
-      pub.push(item); keys.push(q.a);
+      pub.push(item); keys.push(q.a); infos.push(q.info || '');
     }
   }
-  return {pub, keys};
+  return {pub, keys, infos};
 }
 
 function doHost(fn) {
@@ -768,9 +810,9 @@ function hostAction(fn, cond) {
 async function startGame() {
   const R = S.R; S.busy = true; render();
   try {
-    const {pub, keys} = buildGame(R.count || 10, R.diff || 'mix');
-    await set(ref(db, 'keys/' + S.code), {a: keys});
-    S.keys = {a: keys};
+    const {pub, keys, infos} = buildGame(R.count || 10, R.diff || 'mix', R.cats ? R.cats.split('|') : null);
+    await set(ref(db, 'keys/' + S.code), {a: keys, i: infos});
+    S.keys = {a: keys, i: infos};
     const scores = {}; Object.keys(R.players || {}).forEach(id => { scores[id] = 0; });
     await update(roomRef(), {status: 'countdown', countAt: serverTimestamp(), questions: pub, qi: -1, qk: '-1',
       qStartAt: null, qDur: null, answers: null, reveal: null, jokers: null, scores, qm: null, autoAt: null});
@@ -808,7 +850,9 @@ async function reveal() {
     }
     gains[id] = g; up['scores/' + id] = ((R.scores && R.scores[id]) || 0) + g;
   }
-  up['reveal/' + qi] = {a, gains};
+  const rvObj = {a, gains}, info = S.keys.i && S.keys.i[qi];
+  if (info) rvObj.info = info;
+  up['reveal/' + qi] = rvObj;
   await update(roomRef(), up);
 }
 
@@ -891,6 +935,15 @@ app.addEventListener('click', e => {
   else if (a === 'leave') leaveRoom();
   else if (a === 'count') update(roomRef(), {count: +el.dataset.n}).catch(() => toast('Değiştirilemedi'));
   else if (a === 'diff') update(roomRef(), {diff: el.dataset.v}).catch(() => toast('Değiştirilemedi'));
+  else if (a === 'opencats') { const c = roomCats(S.R); S.catSel = new Set(c && c.length ? c : NON_EN); S.catsOpen = true; render(); app.scrollTop = 0; }
+  else if (a === 'catall') { S.catSel = new Set(NON_EN); render(); }
+  else if (a === 'cattoggle') { const c = CATS[+el.dataset.i]; if (S.catSel.has(c)) S.catSel.delete(c); else S.catSel.add(c); render(); }
+  else if (a === 'catsdone') {
+    const sel = S.catSel; S.catsOpen = false;
+    const isAll = NON_EN.every(c => sel.has(c)) && !sel.has('İngilizce');
+    if (sel.size) update(roomRef(), {cats: isAll ? null : CATS.filter(c => sel.has(c)).join('|')}).catch(() => toast('Değiştirilemedi'));
+    render(); app.scrollTop = 0;
+  }
   else if (a === 'start') startGame();
   else if (a === 'pick') answer(+el.dataset.i);
   else if (a === 'sendnum') {
