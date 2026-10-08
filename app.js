@@ -140,7 +140,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 51';
+const APP_VERSION = '0.5 (test) · yapı 52';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -604,7 +604,7 @@ V.home = () => `
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px">${a2Link()}</div>
     <div class="stack" style="gap:14px">
-      <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">HIZLI OYNA</span></button>
+      <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">RAKİP BUL</span></button>
       <button class="btn purple big" data-go="friends"><span class="ic">${ICON.users}</span><span class="lb">ARKADAŞLARINLA OYNA</span></button>
       <button class="btn outline big" data-act="bot" ${S.busy ? 'disabled' : ''}><span class="ic">🤖</span><span class="lb">BİLGİSAYARA KARŞI OYNA</span></button>
     </div>
@@ -769,7 +769,7 @@ V.rooms = () => {
       <p class="muted">Oyuncu bekleyen herkese açık odalar. Dokun, katıl.</p>
       ${L == null ? '<p class="status">Yükleniyor…</p>' : !L.length ? `<div class="card stack" style="gap:10px;text-align:center"><b>Şu an açık oda yok</b>
         <p class="small muted">Kendin bir oda açıp "Herkese açık" yapabilir ya da hızlı oyunla rakip arayabilirsin.</p>
-        <button class="btn primary" data-act="quick">Hızlı oyna</button></div>`
+        <button class="btn primary" data-act="quick">Rakip bul</button></div>`
       : L.map(o => `<button class="card roomcard" data-act="joinopen" data-code="${o.code}" ${S.busy ? 'disabled' : ''}>
           <div class="row" style="gap:12px">${avatar(o.host.av, '', o.host.fr)}<div class="stack" style="gap:2px;flex:1;text-align:left">
             <b>${esc(o.host.name)} odası</b>
@@ -1178,7 +1178,7 @@ V.final = () => {
            <button class="btn outline" data-act="quickfrombot">Gerçek rakip ara</button>
            <button class="btn ghost" data-act="leave">Ana menü</button>`
         : R.quick
-        ? `<button class="btn primary big" data-act="quickagain"><span class="ic">${ICON.play}</span><span class="lb">YENİ HIZLI OYUN</span></button>
+        ? `<button class="btn primary big" data-act="quickagain"><span class="ic">${ICON.play}</span><span class="lb">YENİ RAKİP BUL</span></button>
            <button class="btn ghost" data-act="leave">Ana menü</button>`
         : isHost()
         ? `<button class="btn primary big" data-act="again" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">TEKRAR OYNA</span></button>
