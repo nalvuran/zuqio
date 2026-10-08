@@ -167,7 +167,7 @@ export const PACKS = [
     mp("Bilecik ilinin plaka kodu kaçtır?", "11", "21", "13", "01"),
     mp("Malatya ilinin plaka kodu kaçtır?", "44", "45", "43", "46")
   ]},
-  {id: 'baskent', name: 'Dünya başkentleri', icon: 'target', desc: 'Ülkelerin başkentlerini ne kadar biliyorsun?', qs: [
+  {id: 'baskent', name: 'Dünya başkentleri', icon: 'target', desc: 'Başkentleri ne kadar biliyorsun?', qs: [
     mb("Bosna Hersek ülkesinin başkenti hangisidir?", "Saraybosna", "Kopenhag", "Amsterdam", "Minsk"),
     mb("Sofya hangi ülkenin başkentidir?", "Bulgaristan", "Portekiz", "Bosna Hersek", "İspanya"),
     mb("İsviçre ülkesinin başkenti hangisidir?", "Bern", "Kişinev", "Saraybosna", "Amsterdam"),
