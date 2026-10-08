@@ -165,10 +165,12 @@ const buzz = ms => { try {
       hapLbl.innerHTML = '<input type="checkbox" switch tabindex="-1">';
       document.body.appendChild(hapLbl);
     }
-    hapLbl.click();
+    const tot = Array.isArray(ms) ? ms.reduce((a, b) => a + b, 0) : ms;
+    const n = tot >= 100 ? 5 : tot >= 60 ? 4 : tot >= 25 ? 3 : 2;   // art arda dokunuş = daha güçlü his
+    for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 95';
+const APP_VERSION = '0.5 (test) · yapı 96';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
