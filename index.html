@@ -278,6 +278,11 @@ html::after{content:""; position:fixed; left:0; right:0; top:0; height:env(safe-
 .shieldic{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:#3A2496; color:var(--yellow)}
 .shieldic svg{width:32px; height:32px; fill:none; stroke:currentColor; stroke-width:1.8}
 /* tepkiler */
+
+#rotlock{display:none;position:fixed;inset:0;z-index:99999;background:#22105A;color:#fff;align-items:center;justify-content:center;text-align:center;font-weight:700}
+#rotlock div{font-size:2.4rem}
+#rotlock p{font-size:1rem;margin-top:8px}
+@media (orientation:landscape) and (max-height:500px){#rotlock{display:flex}}
 .qmbar{width:100%;height:8px;border-radius:99px;background:rgba(255,255,255,.14);overflow:hidden;margin-top:6px}
 .qmbar i{display:block;height:100%;background:var(--yellow);border-radius:99px;transition:width .3s linear}
 .reactbar{display:flex; gap:6px; overflow-x:auto; padding:10px 0 4px; scrollbar-width:none}
@@ -321,6 +326,7 @@ textarea.field{min-height:64px; padding-top:12px; resize:vertical; font:inherit}
 </style>
 </head>
 <body>
+<div id="rotlock" aria-hidden="true"><div>📱<p>Zuqio dikey oynanır.<br>Telefonu dik tut.</p></div></div>
 <div id="app"><div class="screen"><p class="status" style="margin:auto">Yükleniyor…</p></div></div>
 <noscript><p style="padding:20px;color:#fff">Zuqio'yu oynamak için JavaScript'i açman gerekiyor.</p></noscript>
 <script>
@@ -347,6 +353,7 @@ textarea.field{min-height:64px; padding-top:12px; resize:vertical; font:inherit}
   fix(); window.addEventListener('resize', fix); window.addEventListener('orientationchange', function(){ setTimeout(fix, 300); });
 })();
 </script>
+<script>try{screen.orientation&&screen.orientation.lock&&screen.orientation.lock('portrait').catch(function(){})}catch(e){}</script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
