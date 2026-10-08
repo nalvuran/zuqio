@@ -1,0 +1,66 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 16" },
+        "av": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 15" },
+        "plan": { ".validate": "newData.val() === 'free' || newData.val() === data.val()" },
+        "createdAt": { ".validate": "newData.isNumber()" },
+        "wallet": {
+          "coins": { ".validate": "newData.isNumber() && newData.val() >= 0 && ((!data.exists() && newData.val() <= 60) || (data.exists() && (newData.val() <= data.val() || (newData.val() <= data.val() + 60 && (newData.parent().child('claimDay').val() !== data.parent().child('claimDay').val() || newData.parent().child('qDay').val() !== data.parent().child('qDay').val())))))" },
+          "claimDay": { ".validate": "newData.isNumber() && (!data.exists() || newData.val() > data.val()) && newData.val() <= (now + 10800000) / 86400000" },
+          "qDay": { ".validate": "newData.isNumber() && (!data.exists() || newData.val() > data.val()) && newData.val() <= (now + 10800000) / 86400000" },
+          "streak": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 7" },
+          "qRes": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        },
+        "owned": {
+          "$item": { ".validate": "newData.val() === true && $item.matches(/^av[0-9]+$/) && newData.parent().parent().child('wallet').child('coins').val() < data.parent().parent().child('wallet').child('coins').val()" }
+        },
+        "$other": { ".validate": false }
+      }
+    },
+    "rooms": {
+      ".read": "auth != null && query.orderByChild === 'qm' && query.equalTo === 'open'",
+      ".indexOn": ["qm"],
+      "$code": {
+        ".read": "auth != null",
+        ".write": "auth != null && (data.exists() ? data.child('host').val() === auth.uid : (newData.child('host').val() === auth.uid && $code.matches(/^[0-9]{6}$/)))",
+        "players": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($code).exists() && (data.exists() || root.child('rooms').child($code).child('status').val() === 'lobby')",
+            "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 16" },
+            "av": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 15" },
+            "online": { ".validate": "newData.isBoolean()" },
+            "joinedAt": { ".validate": "newData.isNumber()" },
+            "$other": { ".validate": false }
+          }
+        },
+        "answers": {
+          "$qi": {
+            "$uid": {
+              ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('rooms').child($code).child('status').val() === 'question' && root.child('rooms').child($code).child('qk').val() === $qi && root.child('rooms').child($code).child('players').child($uid).exists()",
+              ".validate": "newData.hasChildren(['v', 't']) && newData.child('v').isNumber() && newData.child('t').val() === now && now <= root.child('rooms').child($code).child('qStartAt').val() + root.child('rooms').child($code).child('qDur').val() + 9000"
+            }
+          }
+        },
+        "jokers": {
+          "$uid": {
+            "$key": {
+              ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('rooms').child($code).child('status').val() === 'question'",
+              ".validate": "($key === 'half' || $key === 'hint' || $key === 'double' || $key === 'freeze') && newData.val() === root.child('rooms').child($code).child('qi').val()"
+            }
+          }
+        }
+      }
+    },
+    "keys": {
+      "$code": {
+        ".read": "auth != null && root.child('rooms').child($code).child('host').val() === auth.uid",
+        ".write": "auth != null && root.child('rooms').child($code).child('host').val() === auth.uid"
+      }
+    }
+  }
+}
