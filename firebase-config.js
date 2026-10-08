@@ -7,7 +7,7 @@ export const firebaseConfig = {
   projectId: "zuqio-app",
   storageBucket: "zuqio-app.firebasestorage.app",
   messagingSenderId: "442374192216",
-  appCheckKey: "6LcSxeUtAAAAALWg2jxdmSFYkk_uC7ldxlnZ1NR9",
+  appCheckKey: "6Ld8veUtAAAAAB0Yku5BN-8TZEaqlRTTZrz5SKBs",
   appId: "1:442374192216:web:133f867dc34ed28fe7de2d"
 };
 
