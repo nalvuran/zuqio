@@ -170,7 +170,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 102';
+const APP_VERSION = '0.5 (test) · yapı 103';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -834,7 +834,7 @@ V.how = () => `
         <p><b>${ic('users')}Arkadaşlarınla Oyna:</b> Oda aç, 6 haneli kodu ya da bağlantıyı arkadaşlarınla paylaş. Bir odaya en fazla 32 kişi katılabilir.</p>
         <p><b>${ic('doc')}Notlarınla Çalış:</b> Ders notunu, kitabını ya da kılavuzunu PDF olarak yükle. Zuqio önce kısa bir özet çıkarır. Özeti onaylayınca 5 ya da 10 soru hazırlanır ve soru başına 15, 30 ya da 45 saniye seçebilirsin. Sorular oyun başlayana kadar görünmez. Tek başına çalışabilir ya da arkadaşlarınla oda açıp birlikte çözebilirsin.</p>
         <p><b>${ic('bot')}Bilgisayara Karşı Oyna:</b> Kategori, zorluk ve soru sayısını seç, bilgisayar oyuncularla yarış.</p>
-        <p><b>${ic('bolt')}Hızlı Ve Doğru Cevap:</b> Ne kadar erken cevap verirsen o kadar çok puan alırsın.</p>
+        <p><b>${ic('bolt')}Hızlı ve Doğru Cevap:</b> Ne kadar erken cevap verirsen o kadar çok puan alırsın.</p>
         <p><b>${ic('target')}Tahmin Soruları:</b> Şık yoktur. Sayıyı yaz, doğruya ne kadar yakınsan o kadar çok puan alırsın.</p>
         <p><b>${ic('list')}Konu Paketleri:</b> Tek bir konuya odaklanan hazır sorulardır. Örneğin Türkiye plakaları.</p>
         <p><b>${ic('gift')}Jeton Kazan:</b> Her gün günlük ödülü al ve günün sorusunu cevapla. Jetonlarla mağazadan yeni avatarlar açabilirsin. Jetonlar oyunda avantaj sağlamaz.</p>
