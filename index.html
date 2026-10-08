@@ -205,6 +205,10 @@ input.field,textarea.field,select.field{width:100%; min-height:56px; padding:0 1
 /* oda ekranı: her şey tek ekrana sığsın; oyuncu listesi kalan boşluğu alır ve gerekirse kayar */
 .screen.lobby{min-height:0; height:100%; flex:1 1 0; padding-top:8px; padding-bottom:calc(22px + var(--vgap,0px))}
 .lobby .top{margin-bottom:6px}
+.codecard{position:relative}
+.copybtn{position:absolute; right:8px; bottom:8px; width:34px; height:34px; border-radius:10px; display:grid; place-items:center; color:var(--muted); background:rgba(255,255,255,.07)}
+.copybtn svg{width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+.copybtn:active{transform:scale(.9); color:#fff}
 .lobby .codecard{padding:8px 12px !important; gap:0 !important}
 .lobby .code{font-size:2.3rem; line-height:1.15}
 .lobby .codecard .btn{min-height:34px}

@@ -850,6 +850,7 @@ V.lobby = () => {
       <span class="small muted">Oda kodu</span>
       <div class="code">${S.code}</div>
       <button class="btn ghost" data-act="share">Kodu paylaş</button>
+      <button class="copybtn" data-act="copycode" aria-label="Kodu kopyala"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
     </div>
     <div class="row between" style="margin:18px 0 10px"><b>Oyuncular</b><span class="muted small">${ps.length} kişi</span></div>
     <div class="plist">
@@ -1364,6 +1365,15 @@ async function leaveRoom() {
   }
 }
 
+async function copyCode() {
+  const code = String(S.code || '');
+  try { await navigator.clipboard.writeText(code); }
+  catch (e) {
+    try { const t = document.createElement('textarea'); t.value = code; t.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+    catch (e2) { toast('Kod: ' + code); return; }
+  }
+  buzz(15); toast('Kod kopyalandı');
+}
 async function shareCode() {
   const url = location.origin + location.pathname + '?oda=' + S.code;
   const text = `${APP_NAME}'da odama gel! Kod: ${S.code}`;
@@ -1762,6 +1772,7 @@ app.addEventListener('click', e => {
   else if (a === 'quickagain') { const code = S.code, me = uid(); leaveLocal(); set(ref(db, `rooms/${code}/players/${me}/online`), false).catch(() => {}); quickPlay(); }
   else if (a === 'joincode') joinRoom((document.getElementById('code').value || '').replace(/\D/g, ''));
   else if (a === 'share') shareCode();
+  else if (a === 'copycode') copyCode();
   else if (a === 'leave') leaveRoom();
   else if (a === 'count') update(roomRef(), {count: +el.dataset.n}).catch(() => toast('Değiştirilemedi'));
   else if (a === 'diff') update(roomRef(), {diff: el.dataset.v}).catch(() => toast('Değiştirilemedi'));
