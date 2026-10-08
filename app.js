@@ -165,6 +165,7 @@ const buzz = ms => { try {
       hapLbl.setAttribute('aria-hidden', 'true');
       hapLbl.style.cssText = 'position:fixed;left:-99px;top:-99px;width:1px;height:1px;opacity:0;pointer-events:none';
       hapLbl.innerHTML = '<input type="checkbox" switch tabindex="-1">';
+      hapLbl.firstChild.addEventListener('focus', ev => { try { ev.target.blur(); } catch (e) {} });
       document.body.appendChild(hapLbl);
     }
     const tot = Array.isArray(ms) ? ms.reduce((a, b) => a + b, 0) : ms;
@@ -172,7 +173,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 113';
+const APP_VERSION = '0.5 (test) · yapı 114';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -2076,7 +2077,7 @@ document.addEventListener('visibilitychange', () => {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.code) { S.wake = null; wakeOn(); markOnline(); } });
 
 /* ================= olaylar ================= */
-document.addEventListener('focusin', e => { if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) document.body.classList.add('kb'); });
+document.addEventListener('focusin', e => { if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) && !(e.target.type === 'checkbox' && e.target.hasAttribute('switch'))) document.body.classList.add('kb'); });
 document.addEventListener('focusout', () => document.body.classList.remove('kb'));
 app.addEventListener('click', e => {
   SFX.init(); if (S.music && !MUSIC.on) MUSIC.start();
