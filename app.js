@@ -194,20 +194,27 @@ const SFX = {
    Dosya yok: müzik tarayıcıda anlık üretilir (telif derdi yok, internet harcamaz).
    Yumuşak bir akor döngüsü + bas + seyrek, yankılı notalar. */
 const MUSIC = {
-  on: false, master: null, bus: null, timer: null, next: 0, step: 0, level: 0.55,
-  // Fmaj7 – Dm7 – B♭maj7 – C6 (Hz, oktav 3-4)
-  chords: [[174.6, 220.0, 261.6, 329.6], [146.8, 174.6, 220.0, 261.6], [116.5, 146.8, 174.6, 220.0], [130.8, 164.8, 196.0, 220.0]],
-  bass: [87.3, 73.4, 58.3, 65.4],
+  on: false, master: null, bus: null, noise: null, timer: null, next: 0, step: 0, level: 0.5,
+  bpm: 112,
+  // C – G – Am – F (neşeli pop döngüsü), oktav 3-4
+  chords: [[261.6, 329.6, 392.0], [246.9, 293.7, 392.0], [220.0, 261.6, 329.6], [220.0, 261.6, 349.2]],
+  bass: [[65.4, 98.0], [98.0, 73.4], [55.0, 82.4], [87.3, 65.4]],
+  // 16 adımlık melodi kalıbı: akorun notalarının indeksleri (-1 = sus); 2 oktav yukarıda çalınır
+  mel: [0, -1, 1, 2, -1, 1, 2, -1, 0, -1, 2, 1, -1, 2, 1, -1],
   setup() {
     const c = SFX.ctx; if (!c || this.master) return;
     this.master = c.createGain(); this.master.gain.value = 0.0001;
-    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
-    const dl = c.createDelay(1); dl.delayTime.value = 0.42;
-    const fb = c.createGain(); fb.gain.value = 0.32;
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200;
+    const dl = c.createDelay(1); dl.delayTime.value = 60 / this.bpm * 0.75;
+    const fb = c.createGain(); fb.gain.value = 0.22;
+    const wet = c.createGain(); wet.gain.value = 0.35;
     this.bus = c.createGain(); this.bus.gain.value = 1;
     this.bus.connect(lp); lp.connect(this.master);
-    lp.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(this.master);
+    lp.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(wet); wet.connect(this.master);
     this.master.connect(c.destination);
+    const len = Math.floor(c.sampleRate * 0.05), buf = c.createBuffer(1, len, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    this.noise = buf;
   },
   note(f, t, dur, type, vol, atk) {
     const c = SFX.ctx, o = c.createOscillator(), g = c.createGain();
@@ -217,17 +224,27 @@ const MUSIC = {
     g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
     o.connect(g); g.connect(this.bus); o.start(t); o.stop(t + dur + 0.05);
   },
+  hat(t, vol) {
+    const c = SFX.ctx, src = c.createBufferSource(), hp = c.createBiquadFilter(), g = c.createGain();
+    src.buffer = this.noise; hp.type = 'highpass'; hp.frequency.value = 7000;
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.045);
+    src.connect(hp); hp.connect(g); g.connect(this.master); src.start(t); src.stop(t + 0.06);
+  },
   schedule() {
     const c = SFX.ctx; if (!c || c.state !== 'running') return;
-    const eighth = 60 / 72 / 2;
+    const sx = 60 / this.bpm / 4; // 16'lık
     if (this.next < c.currentTime) this.next = c.currentTime + 0.05;
-    while (this.next < c.currentTime + 0.5) {
-      const t = this.next, bar = Math.floor(this.step / 8) % 4, pos = this.step % 8;
-      const ch = this.chords[bar];
-      if (pos === 0) ch.forEach(f => this.note(f, t, eighth * 8.6, 'sine', 0.035, 0.9));
-      if (pos === 0 || pos === 4) this.note(this.bass[bar], t, eighth * 3.5, 'sine', 0.07, 0.05);
-      if (pos !== 0 && Math.random() < 0.3) this.note(ch[Math.floor(Math.random() * 4)] * 4, t, 0.9, 'triangle', 0.018, 0.01);
-      this.next += eighth; this.step++;
+    while (this.next < c.currentTime + 0.4) {
+      const t = this.next, bar = Math.floor(this.step / 16) % 4, pos = this.step % 16, ch = this.chords[bar];
+      // kısa, zıplayan akor vuruşları (2. ve 4. vuruş)
+      if (pos === 4 || pos === 12) ch.forEach(f => this.note(f, t, sx * 3, 'triangle', 0.022, 0.01));
+      // bas: kök – beşli, sekizlik
+      if (pos % 4 === 0) this.note(this.bass[bar][pos % 8 === 0 ? 0 : 1], t, sx * 2.5, 'sine', 0.085, 0.01);
+      // melodi
+      const m = this.mel[pos]; if (m >= 0 && (bar !== 3 || pos < 12)) this.note(ch[m] * 2, t, sx * 1.8, 'square', 0.011, 0.005);
+      // hafif zil
+      if (pos % 2 === 0) this.hat(t, pos % 4 === 2 ? 0.035 : 0.015);
+      this.next += sx; this.step++;
     }
   },
   start() {
@@ -476,12 +493,11 @@ V.home = () => `
     <div class="stack" style="gap:14px">
       <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">HIZLI OYNA</span></button>
       <button class="btn purple big" data-go="friends"><span class="ic">${ICON.users}</span><span class="lb">ARKADAŞLARINLA OYNA</span></button>
-      <button class="btn outline big" data-act="openboard"><span class="ic">${ICON.trophy}</span><span class="lb">LİDERLİK TABLOSU</span></button>
     </div>
     <nav class="bottomnav" aria-label="Diğer">
       <button data-go="settings">${ICON.gear}AYARLAR</button>
       <button data-go="shop">${ICON.shop}MAĞAZA</button>
-      <button data-go="how">${ICON.help}NASIL OYNANIR?</button>
+      <button data-act="openboard">${ICON.trophy}LİDERLİK</button>
       <button data-go="daily" class="${(() => { const s = dailyState(); return !s.claimed || !s.qDone ? 'hasdot' : ''; })()}">${ICON.gift}GÜNLÜK ÖDÜL</button>
     </nav>
   </div>`;
