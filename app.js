@@ -143,7 +143,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 75';
+const APP_VERSION = '0.5 (test) · yapı 76';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1723,6 +1723,7 @@ async function playAgain() {
 
 /* ================= kendi quizini yaz ================= */
 const QZ_MIN = 1, QZ_MAX = 30;
+const stOf = q => (q.status === 'draft' && q.src === 'pdf') ? ['Hazır', 'ok'] : (QZ_ST[q.status] || QZ_ST.draft);
 const QZ_ST = {draft: ['Taslak', ''], pending: ['Onay bekliyor', 'wait'], approved: ['Onaylandı ✓', 'ok'], rejected: ['Reddedildi', 'bad']};
 async function loadMyQuizzes() {
   try {
@@ -1762,7 +1763,7 @@ V.quizzes = () => {
       <button class="btn primary big" data-act="qznew"><span class="ic">${ICON.plus || '+'}</span><span class="lb">YENİ ZUQIO</span></button>
       <button class="btn purple big" data-act="pdfnew"><span class="ic">📄</span><span class="lb">PDF’TEN ÜRET</span></button>
       ${S.myQuizzes == null ? '<p class="status">Yükleniyor…</p>' : !list.length ? '<div class="card"><p class="small muted">Henüz bir Zuqio’n yok.</p></div>' : list.map(q => {
-        const st = QZ_ST[q.status] || QZ_ST.draft, n = Object.keys(q.qs || {}).length;
+        const st = stOf(q), n = Object.keys(q.qs || {}).length;
         return `<div class="card stack" style="gap:8px">
           <div class="row between"><b>${esc(q.title)}</b><span class="qzst ${st[1]}">${st[0]}</span></div>
           <span class="small muted">${esc(q.cat)} · ${n} soru</span>
@@ -1862,7 +1863,7 @@ V.qzedit = () => {
   const Z = S.qz, locked = Z.status === 'pending';
   return `
   <div class="screen">
-    <div class="top">${backBtn('data-act="qzback"')}${Z.id ? `<span class="qzst ${(QZ_ST[Z.status] || QZ_ST.draft)[1]}">${(QZ_ST[Z.status] || QZ_ST.draft)[0]}</span>` : ''}</div>
+    <div class="top">${backBtn('data-act="qzback"')}${Z.id ? `<span class="qzst ${stOf(Z)[1]}">${stOf(Z)[0]}</span>` : ''}</div>
     <div class="stack" style="gap:12px">
       <h2>${Z.src === 'pdf' ? 'Özeti kontrol et' : Z.id ? 'Zuqio’yu düzenle' : 'Yeni Zuqio'}</h2>
       ${locked ? '<div class="card"><p class="small">Bu Zuqio onay bekliyor. Düzenlemek için önce gönderimi geri çek.</p><button class="btn outline" data-act="qzwithdraw" style="margin-top:8px">Gönderimi geri çek</button></div>' : ''}
