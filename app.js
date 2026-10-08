@@ -143,7 +143,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 59';
+const APP_VERSION = '0.5 (test) · yapı 60';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -154,7 +154,7 @@ const ls = {
 };
 function toast(msg) {
   document.querySelectorAll('.toast').forEach(t => t.remove());
-  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; t.setAttribute('role', 'status');
+  const t = document.createElement('div'); t.className = 'toast' + (S.screen === 'question' ? ' toastq' : ''); t.textContent = msg; t.setAttribute('role', 'status');
   document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
 }
 
@@ -1032,11 +1032,11 @@ V.question = () => {
       <div class="hex" id="hex">${Math.ceil(remaining() / 1000)}</div>
     </div>
     <div class="bar"><i id="tbar"></i></div>
-    <p class="qtext">${esc(q.q)}</p>
+    <p class="qtext" style="margin-bottom:18px">${esc(q.q)}</p>
+    ${ans}
     <div class="grow" style="min-height:16px"></div>
     <p class="status" id="st">${statusText()}</p>
     <div class="jokers" role="group" aria-label="Jokerler">${jk(isNum ? 'hint' : 'half')}${jk('double')}${jk('freeze')}${isNum ? '' : jk('second')}</div>
-    ${ans}
   </div>`;
 };
 
