@@ -858,7 +858,7 @@ function planBots(R) {
   }
 }
 
-const QUICK_MIN = 2, QUICK_FULL = 6, QUICK_WAIT = 15000, QUICK_MAX = 8;
+const QUICK_MIN = 2, QUICK_FULL = 6, QUICK_WAIT = 15000, QUICK_SEARCH = 10000, QUICK_MAX = 8;
 function quickStartIn() {
   const R = S.R; if (!R || !R.quick || typeof R.autoAt !== 'number') return null;
   return Math.max(0, Math.ceil((R.autoAt + QUICK_WAIT - now()) / 1000));
@@ -871,13 +871,13 @@ V.quickLobby = () => {
     <div class="top">${backBtn('data-act="leave"', 'Vazgeç')}<span class="tag">Rakip aranıyor</span></div>
     <div class="card stack" style="align-items:center;gap:8px;text-align:center">
       <h2 id="qmtitle">${ps.length < QUICK_MIN ? 'Rakip aranıyor…' : 'Rakipler bulundu!'}</h2>
-      <p class="muted" id="qmsub">${ps.length < QUICK_MIN ? 'Biri katılınca oyun kısa süre içinde başlayacak.' : `Oyun <b>${sec != null ? sec : '…'}</b> saniye içinde başlıyor`}</p>
+      <p class="muted" id="qmsub">${ps.length < QUICK_MIN ? 'Biri katılınca oyun kısa süre içinde başlayacak. 10 saniye içinde rakip bulunamazsa bilgisayara karşı oynayabilirsin.' : `Oyun <b>${sec != null ? sec : '…'}</b> saniye içinde başlıyor`}</p>
     </div>
     <div class="row between plhead" style="margin:18px 0 10px"><b>Oyuncular</b><span class="muted small">${ps.length} / ${QUICK_MAX}</span></div>
     <div class="plist">
       ${ps.map(p => `<div class="pitem">${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>${p.id === uid() ? '<span class="tag" style="margin-left:auto">Sen</span>' : ''}</div>`).join('')}
     </div>
-    ${ps.length < QUICK_MIN && S.qmSince && now() - S.qmSince > QUICK_WAIT ? `
+    ${ps.length < QUICK_MIN && S.qmSince && now() - S.qmSince > QUICK_SEARCH ? `
       <div class="card stack" style="gap:10px;margin-top:16px;text-align:center">
         <b>Şu an rakip bulunamadı</b>
         <p class="small muted">Bilgisayara karşı antrenman yapabilirsin. Bu oyunlar liderlik tablosuna sayılmaz.</p>
@@ -1213,7 +1213,7 @@ function render() {
 
 /* ================= saat ================= */
 function tick() {
-  if (S.screen === 'lobby' && S.R && S.R.quick && S.R.status === 'lobby' && !S.qmOffered && S.qmSince && now() - S.qmSince > QUICK_WAIT
+  if (S.screen === 'lobby' && S.R && S.R.quick && S.R.status === 'lobby' && !S.qmOffered && S.qmSince && now() - S.qmSince > QUICK_SEARCH
       && players(S.R).filter(p => p.online !== false).length < QUICK_MIN) { S.qmOffered = true; render(); return; }
   if (S.screen === 'question' && S.R && S.R.status === 'question') {
     const r = remaining(), dl = S.R.qDur || 20000;
