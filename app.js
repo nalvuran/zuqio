@@ -527,6 +527,7 @@ V.login = () => `
     <div class="stack">
       <button class="btn gbtn" data-act="login" ${S.busy ? 'disabled' : ''}><img class="glogo" src="google-g.svg" alt="" onerror="this.style.display='none'">Google ile devam et</button>
       <p class="small muted" style="text-align:center">Hesabın yoksa ilk girişte otomatik oluşturulur.</p>
+      <p class="small muted" style="text-align:center">Devam ederek <a href="kosullar.html" target="_blank" rel="noopener">Kullanım Koşulları</a>’nı ve <a href="gizlilik.html" target="_blank" rel="noopener">Gizlilik Politikası</a>’nı kabul etmiş olursun.</p>
     </div>
   </div>`;
 
@@ -667,6 +668,8 @@ V.settings = () => `
       <div class="card stack" style="gap:0;padding:0 16px">
         <button class="setrow" data-act="openprofile"><div><b>Profili düzenle</b><span class="small muted">${esc(S.me.name)}</span></div>${avatar(S.me.av, '', S.me.fr)}</button>
         <button class="setrow" data-go="how"><div><b>Nasıl oynanır?</b></div><span class="muted">›</span></button>
+        <a class="setrow" href="gizlilik.html" target="_blank" rel="noopener"><div><b>Gizlilik politikası</b></div><span class="muted">›</span></a>
+        <a class="setrow" href="kosullar.html" target="_blank" rel="noopener"><div><b>Kullanım koşulları</b></div><span class="muted">›</span></a>
       </div>
       <div class="card stack" style="gap:4px">
         <b>${esc(APP_NAME)}</b>
