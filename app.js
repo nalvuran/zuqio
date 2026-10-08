@@ -140,7 +140,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 52';
+const APP_VERSION = '0.5 (test) · yapı 53';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -768,7 +768,7 @@ V.rooms = () => {
       <h2>Açık odalar</h2>
       <p class="muted">Oyuncu bekleyen herkese açık odalar. Dokun, katıl.</p>
       ${L == null ? '<p class="status">Yükleniyor…</p>' : !L.length ? `<div class="card stack" style="gap:10px;text-align:center"><b>Şu an açık oda yok</b>
-        <p class="small muted">Kendin bir oda açıp "Herkese açık" yapabilir ya da hızlı oyunla rakip arayabilirsin.</p>
+        <p class="small muted">Kendin bir oda açıp "Herkese açık" yapabilir ya da "Rakip bul" ile rakip arayabilirsin.</p>
         <button class="btn primary" data-act="quick">Rakip bul</button></div>`
       : L.map(o => `<button class="card roomcard" data-act="joinopen" data-code="${o.code}" ${S.busy ? 'disabled' : ''}>
           <div class="row" style="gap:12px">${avatar(o.host.av, '', o.host.fr)}<div class="stack" style="gap:2px;flex:1;text-align:left">
@@ -868,7 +868,7 @@ V.quickLobby = () => {
   const R = S.R, ps = players(R).filter(p => p.online !== false), sec = quickStartIn();
   return `
   <div class="screen">
-    <div class="top">${backBtn('data-act="leave"', 'Vazgeç')}<span class="tag">Hızlı oyun</span></div>
+    <div class="top">${backBtn('data-act="leave"', 'Vazgeç')}<span class="tag">Rakip aranıyor</span></div>
     <div class="card stack" style="align-items:center;gap:8px;text-align:center">
       <h2 id="qmtitle">${ps.length < QUICK_MIN ? 'Rakip aranıyor…' : 'Rakipler bulundu!'}</h2>
       <p class="muted" id="qmsub">${ps.length < QUICK_MIN ? 'Biri katılınca oyun kısa süre içinde başlayacak.' : `Oyun <b>${sec != null ? sec : '…'}</b> saniye içinde başlıyor`}</p>
@@ -1486,7 +1486,7 @@ async function quickPlay() {
     }
     S.busy = false;
     await createRoom({quick: true});
-  } catch (e) { console.error(e); S.busy = false; render(); toast('Hızlı oyun başlatılamadı, tekrar dene'); }
+  } catch (e) { console.error(e); S.busy = false; render(); toast('Rakip aranamadı, tekrar dene'); }
 }
 
 async function leaveRoom() {
