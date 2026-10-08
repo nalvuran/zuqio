@@ -140,7 +140,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 45';
+const APP_VERSION = '0.5 (test) · yapı 46';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -622,8 +622,8 @@ V.shop = () => {
   let body = '';
   if (tab === 'av') body = `<div class="shopgrid">${SHOP.map(it => {
       const own = owned(it.id), cur = S.me.av === it.av;
-      return `<button class="shopitem ${own ? 'own' : ''} ${cur ? 'cur' : ''}" data-act="${own ? 'equip' : 'buy'}" data-id="${it.id}" ${cur ? 'disabled' : ''}>
-        <div class="avatar">${avSVG(it.av)}</div><b>${PREMIUM_NAMES[it.av]}</b>
+      return `<button class="shopitem ${own ? 'own' : ''} ${cur ? 'cur' : ''}" data-act="${own ? 'equip' : 'buy'}" data-id="${it.id}" aria-label="${esc(PREMIUM_NAMES[it.av])}" ${cur ? 'disabled' : ''}>
+        <div class="avatar">${avSVG(it.av)}</div>
         <span class="price">${own ? (cur ? 'Kullanılıyor' : 'Kullan') : COIN + it.price}</span></button>`;
     }).join('')}</div>`;
   else if (tab === 'fr') body = `<div class="shopgrid">${[{id: 'fr0', name: 'Çerçevesiz', price: 0}].concat(FRAMES).map(it => {
