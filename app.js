@@ -172,7 +172,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 112';
+const APP_VERSION = '0.5 (test) · yapı 113';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -2038,8 +2038,20 @@ async function useJoker(key) {
 /* ================= ekran açık kalsın ================= */
 async function wakeOn() { try { if ('wakeLock' in navigator && !S.wake) S.wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
 function wakeOff() { try { S.wake && S.wake.release(); } catch (e) {} S.wake = null; }
-// alt menüyü parmakla sürükleyince oynamasın (iOS)
-document.addEventListener('touchmove', e => { if (e.target.closest && e.target.closest('.gnav')) e.preventDefault(); }, {passive: false});
+// iOS "yay gibi esneme"yi kapat: kaydırılacak bir şey yoksa ya da en üst/alt uçtaysa sürüklemeyi iptal et (alt menü oynamasın)
+let touchY0 = 0;
+document.addEventListener('touchstart', e => { touchY0 = e.touches[0].clientY; }, {passive: true});
+document.addEventListener('touchmove', e => {
+  if (!e.cancelable) return;
+  if (e.target.closest && e.target.closest('.gnav')) { e.preventDefault(); return; }
+  const dy = e.touches[0].clientY - touchY0;
+  let el = e.target, sc = null;
+  while (el && el !== document.body && el !== document.documentElement) {
+    if (el.scrollHeight > el.clientHeight + 1) { const o = getComputedStyle(el).overflowY; if (o === 'auto' || o === 'scroll') { sc = el; break; } }
+    el = el.parentElement;
+  }
+  if (!sc || (dy > 0 && sc.scrollTop <= 0) || (dy < 0 && sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 1)) e.preventDefault();
+}, {passive: false});
 document.addEventListener('change', e => {
   const t = e.target;
   if (t && t.id === 'pdffile' && S.pdf) {
