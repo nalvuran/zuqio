@@ -172,7 +172,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 108';
+const APP_VERSION = '0.5 (test) · yapı 109';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -994,16 +994,16 @@ V.lobby = () => {
     ${host && R.quiz ? `
       <div class="card setrow" style="margin-bottom:14px;padding:10px 16px"><div><b>${ic('doc')}${esc(R.quizTitle || 'Kendi Zuqio’n')}</b><span class="small muted">${R.quizN || ''} soru · topluluk Zuqio’su</span></div>
         <button class="btn ghost" data-act="quizoff">Hazır sorular</button></div>
-      <button class="btn primary big" data-act="start" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">OYUNU BAŞLAT</span></button>`
+      <button class="btn startbtn big" data-act="start" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">OYUNU BAŞLAT</span></button>`
     : !host && R.quiz ? `<p class="status">${ic('doc')}${esc(R.quizTitle || 'Topluluk Zuqio’su')} · ${R.quizN || ''} soru<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`
     : host ? `
       <span class="small muted lbl" style="margin-bottom:8px">${roomPack(R) ? 'Konu paketi' : 'Kategori'}</span>
       <button class="card setrow catpick" data-act="opencats"><span class="cpic">${ICON[roomPack(R) ? roomPack(R).icon : 'list'] || ICON.list}</span><b class="cpsum">${esc(catSummary(R))}</b><span class="cpchg">Değiştir ›</span></button>
       <span class="small muted lbl" style="margin-bottom:8px">Soru sayısı</span>
-      <div class="chips" style="margin-bottom:10px">${[5, 10, 15].map(n => `<button class="${(R.count || 10) === n ? 'on' : ''}" data-act="count" data-n="${n}">${n}</button>`).join('')}</div>
+      <div class="chips" style="margin-bottom:10px">${[5, 10, 20].map(n => `<button class="${(R.count || 10) === n ? 'on' : ''}" data-act="count" data-n="${n}">${n}</button>`).join('')}</div>
       ${roomPack(R) ? '' : `<span class="small muted lbl" style="margin-bottom:8px">Zorluk</span>
       <div class="chips" style="margin-bottom:10px">${['mix', 'k', 'o', 'z'].map(v => `<button class="${(R.diff || 'mix') === v ? 'on' : ''}" data-act="diff" data-v="${v}">${DIFF_LABEL[v]}</button>`).join('')}</div>`}
-      <button class="btn primary big" data-act="start" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">OYUNU BAŞLAT</span></button>`
+      <button class="btn startbtn big" data-act="start" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">OYUNU BAŞLAT</span></button>`
     : `<p class="status">${R.count || 10} soru · ${roomPack(R) ? '' : DIFF_LABEL[R.diff || 'mix'] + ' · '}${esc(catSummary(R))}<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`}
   </div>`;
 };
