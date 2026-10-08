@@ -458,7 +458,6 @@ function annBanner() {
   const A = S.ann; if (!A || !A.text || ls.get('zuqio-ann') === String(A.t)) return '';
   return `<div class="annmodal" data-act="annclose"><div class="anncard" role="dialog" aria-label="Duyuru" data-stop="1">
     <button class="annx" data-act="annclose" aria-label="Kapat">✕</button>
-    <img class="annicon" src="ic3.png" alt="" width="72" height="72">
     <p>${esc(A.text)}</p></div></div>`;
 }
 let annSub = null;
