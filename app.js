@@ -161,7 +161,7 @@ const S = {
   user: null, me: null, screen: 'loading', code: null, R: null, keys: null,
   offset: 0, unsubRoom: null, lastKey: '', hostBusy: false, q: null,
   pick: 0, draft: '', firstProfile: false, pendingCode: null, wake: null, busy: false,
-  sound: ls.get('zuqio-sound') !== '0', haptic: ls.get('zuqio-haptic') !== '0', lastN: null, catsOpen: false, catSel: new Set()
+  sound: ls.get('zuqio-sound') !== '0', haptic: ls.get('zuqio-haptic') !== '0', lastN: null, catsOpen: false, catSel: new Set(), catAll: true
 };
 const uid = () => S.user && S.user.uid;
 const now = () => Date.now() + S.offset;
@@ -473,26 +473,27 @@ V.quickLobby = () => {
 };
 
 V.cats = () => {
-  const R = S.R, sel = S.catSel, all = NON_EN.every(c => sel.has(c)) && !sel.has('İngilizce');
+  const R = S.R, sel = S.catSel, all = S.catAll;
   const diff = R.diff || 'mix', want = R.count || 10;
-  const chosen = [...sel], n = poolFor(chosen).filter(q => diff === 'mix' || q.d === diff).length;
+  const chosen = all ? null : [...sel], n = poolFor(chosen).filter(q => diff === 'mix' || q.d === diff).length;
+  const on = c => !all && sel.has(c);
   return `
   <div class="screen">
     <div class="top">${backBtn('data-act="catsdone"', 'Geri')}</div>
     <div class="stack" style="gap:14px">
       <h2>Kategoriler</h2>
-      <p class="muted">Oyunda hangi konulardan soru çıksın?</p>
+      <p class="muted">Oyunda hangi konulardan soru çıksın? Bir konuya dokunursan sadece o seçilir, sonra istediğin kadar ekleyebilirsin.</p>
       <div class="chips wrap">
-        <button class="${all ? 'on' : ''}" data-act="catall">Hepsi</button>
-        ${NON_EN.map(c => `<button class="${sel.has(c) ? 'on' : ''}" data-act="cattoggle" data-i="${CATS.indexOf(c)}">${esc(c)}</button>`).join('')}
+        <button class="${all ? 'on' : ''}" aria-pressed="${all}" data-act="catall">Hepsi</button>
+        ${NON_EN.map(c => `<button class="${on(c) ? 'on' : ''}" aria-pressed="${on(c)}" data-act="cattoggle" data-i="${CATS.indexOf(c)}">${esc(c)}</button>`).join('')}
       </div>
       <b style="margin-top:6px">Dil öğrenme</b>
-      <div class="chips wrap"><button class="${sel.has('İngilizce') ? 'on' : ''}" data-act="cattoggle" data-i="${CATS.indexOf('İngilizce')}">İngilizce</button></div>
+      <div class="chips wrap"><button class="${on('İngilizce') ? 'on' : ''}" aria-pressed="${on('İngilizce')}" data-act="cattoggle" data-i="${CATS.indexOf('İngilizce')}">İngilizce</button></div>
       <p class="small muted">İngilizce’de Kolay = A1–A2 (Türkçe sorular), Orta = B1–B2, Zor = C1. Cevaptan sonra kısa bir “Öğren” notu gösterilir. “Hepsi” seçeneğine İngilizce dahil değildir.</p>
-      <p class="small ${n < want * 2 ? '' : 'muted'}" style="${n < want * 2 ? 'color:var(--yellow)' : ''}">${chosen.length ? `Bu seçimde ${n} soru var.${n < want * 2 ? ' Soru az olabilir, tekrarlar çıkabilir; zorluğu “Karışık” yapmayı dene.' : ''}` : 'En az bir kategori seç.'}</p>
+      <p class="small ${n < want * 2 ? '' : 'muted'}" style="${n < want * 2 ? 'color:var(--yellow)' : ''}">Bu seçimde ${n} soru var.${n < want * 2 ? ' Soru az olabilir, tekrarlar çıkabilir; zorluğu “Karışık” yapmayı ya da kategori eklemeyi dene.' : ''}</p>
     </div>
     <div class="grow" style="min-height:16px"></div>
-    <button class="btn primary big" data-act="catsdone" ${chosen.length ? '' : 'disabled'}><span class="ic">${ICON.play}</span><span class="lb">TAMAM</span></button>
+    <button class="btn primary big" data-act="catsdone"><span class="ic">${ICON.play}</span><span class="lb">TAMAM</span></button>
   </div>`;
 };
 
@@ -1103,13 +1104,19 @@ app.addEventListener('click', e => {
   else if (a === 'leave') leaveRoom();
   else if (a === 'count') update(roomRef(), {count: +el.dataset.n}).catch(() => toast('Değiştirilemedi'));
   else if (a === 'diff') update(roomRef(), {diff: el.dataset.v}).catch(() => toast('Değiştirilemedi'));
-  else if (a === 'opencats') { const c = roomCats(S.R); S.catSel = new Set(c && c.length ? c : NON_EN); S.catsOpen = true; render(); app.scrollTop = 0; }
-  else if (a === 'catall') { S.catSel = new Set(NON_EN); render(); }
-  else if (a === 'cattoggle') { const c = CATS[+el.dataset.i]; if (S.catSel.has(c)) S.catSel.delete(c); else S.catSel.add(c); render(); }
+  else if (a === 'opencats') { const c = roomCats(S.R); S.catAll = !(c && c.length); S.catSel = new Set(S.catAll ? [] : c); S.catsOpen = true; render(); app.scrollTop = 0; }
+  else if (a === 'catall') { S.catAll = true; S.catSel = new Set(); render(); }
+  else if (a === 'cattoggle') {
+    // "Hepsi" açıkken ilk dokunuş sadece o kategoriyi seçer; sonrakiler ekler/çıkarır; seçim boşalırsa "Hepsi"ye döner
+    const c = CATS[+el.dataset.i];
+    if (S.catAll) { S.catAll = false; S.catSel = new Set([c]); }
+    else { if (S.catSel.has(c)) S.catSel.delete(c); else S.catSel.add(c); if (!S.catSel.size) S.catAll = true; }
+    render();
+  }
   else if (a === 'catsdone') {
     const sel = S.catSel; S.catsOpen = false;
-    const isAll = NON_EN.every(c => sel.has(c)) && !sel.has('İngilizce');
-    if (sel.size) update(roomRef(), {cats: isAll ? null : CATS.filter(c => sel.has(c)).join('|')}).catch(() => toast('Değiştirilemedi'));
+    const isAll = S.catAll || (NON_EN.every(c => sel.has(c)) && !sel.has('İngilizce'));
+    update(roomRef(), {cats: isAll ? null : CATS.filter(c => sel.has(c)).join('|')}).catch(() => toast('Değiştirilemedi'));
     render(); app.scrollTop = 0;
   }
   else if (a === 'start') startGame();
