@@ -170,7 +170,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 96';
+const APP_VERSION = '0.5 (test) · yapı 97';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -735,11 +735,11 @@ V.settings = () => `
     <div class="stack" style="gap:14px">
       <h2>Ayarlar</h2>
       <div class="card stack" style="gap:0;padding:0 16px">
-        <div class="setrow"><div><b>Müzik</b><span class="small muted">Yumuşak arka plan müziği</span></div>
+        <div class="setrow"><div><b>Müzik</b></div>
           <button class="switch ${S.music ? 'on' : ''}" role="switch" aria-checked="${S.music}" aria-label="Müzik" data-act="tmusic"></button></div>
-        <div class="setrow"><div><b>Ses efektleri</b><span class="small muted">Doğru, yanlış ve geri sayım sesleri</span></div>
+        <div class="setrow"><div><b>Ses efektleri</b></div>
           <button class="switch ${S.sound ? 'on' : ''}" role="switch" aria-checked="${S.sound}" aria-label="Ses efektleri" data-act="tsound"></button></div>
-        <div class="setrow"><div><b>Titreşim</b><span class="small muted">${HAP_OK ? 'Cevap verince ve süre azalınca titrer' : 'Bu cihaz web uygulamalarında titreşimi desteklemiyor'}</span></div>
+        <div class="setrow"><div><b>Titreşim</b>${HAP_OK ? '' : '<span class="small muted">Bu cihaz titreşimi desteklemiyor</span>'}</div>
           <button class="switch ${S.haptic && HAP_OK ? 'on' : ''}" role="switch" aria-checked="${!!(S.haptic && HAP_OK)}" aria-label="Titreşim" data-act="thaptic" ${HAP_OK ? '' : 'disabled'}></button></div>
       </div>
       <div class="card stack" style="gap:0;padding:0 16px">
