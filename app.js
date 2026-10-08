@@ -1,5 +1,6 @@
 import { firebaseConfig, APP_NAME } from './firebase-config.js';
 import { QUESTIONS } from './questions.js';
+import { PACKS } from './questions-packs.js';
 const BASE_QS = QUESTIONS.slice(); // günün sorusu herkeste aynı olsun diye sadece hazır sorulardan seçilir
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, reauthenticateWithPopup, deleteUser } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
@@ -142,7 +143,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 58';
+const APP_VERSION = '0.5 (test) · yapı 59';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -819,8 +820,10 @@ const hostOnline = () => { const h = S.R && S.R.players && S.R.players[S.R.host]
 
 const CATS = [...new Set(QUESTIONS.map(q => q.cat))].sort((x, y) => (x === 'İngilizce') - (y === 'İngilizce'));
 const NON_EN = CATS.filter(c => c !== 'İngilizce');
+const roomPack = R => { const c = R && R.cats; return c && c.startsWith('pk:') ? PACKS.find(p => p.id === c.slice(3)) || null : null; };
 const roomCats = R => R && R.cats ? R.cats.split('|').filter(c => CATS.includes(c)) : null;
 function catSummary(R) {
+  const pk = roomPack(R); if (pk) return pk.icon + ' ' + pk.name;
   const c = roomCats(R);
   if (!c || !c.length) return 'Bilgi yarışması · Tümü';
   if (c.includes('İngilizce')) return 'İngilizce öğrenme';
@@ -895,7 +898,7 @@ V.quickLobby = () => {
 };
 
 V.cats = () => {
-  const R = S.R, en = S.catMode === 'en', sel = S.catSel, all = S.catAll;
+  const R = S.R, en = S.catMode === 'en', pkm = S.catMode === 'pk', sel = S.catSel, all = S.catAll;
   const diff = R.diff || 'mix', want = R.count || 10;
   const chosen = en ? ['İngilizce'] : (all ? null : [...sel]);
   const n = poolFor(chosen).filter(q => diff === 'mix' || q.d === diff).length;
@@ -904,12 +907,15 @@ V.cats = () => {
   <div class="screen">
     <div class="top">${backBtn('data-act="catsdone"', 'Geri')}</div>
     <div class="stack" style="gap:14px">
-      <h2>Kategoriler</h2>
-      <div class="tabs" role="tablist" style="grid-template-columns:1fr 1fr;margin-bottom:0">
-        <button role="tab" aria-selected="${!en}" class="${en ? '' : 'on'}" data-act="catmode" data-m="quiz">Bilgi yarışması</button>
-        <button role="tab" aria-selected="${en}" class="${en ? 'on' : ''}" data-act="catmode" data-m="en">İngilizce öğren</button>
+      <h2>${pkm ? 'Konu paketleri' : 'Kategoriler'}</h2>
+      <div class="tabs" role="tablist" style="margin-bottom:0">
+        <button role="tab" aria-selected="${!en && !pkm}" class="${en || pkm ? '' : 'on'}" data-act="catmode" data-m="quiz">Bilgi yarışması</button>
+        <button role="tab" aria-selected="${pkm}" class="${pkm ? 'on' : ''}" data-act="catmode" data-m="pk">Konu paketleri</button>
+        <button role="tab" aria-selected="${en}" class="${en ? 'on' : ''}" data-act="catmode" data-m="en">İngilizce</button>
       </div>
-      ${en ? `
+      ${pkm ? `
+      <p class="muted">Tek bir konuda yarışın. Paketlerde zorluk seviyesi yok, sorular karışık gelir.</p>
+      ${PACKS.map(p => `<button class="card setrow catrow" style="padding:12px 16px;${S.pkSel === p.id ? 'border-color:var(--yellow)' : ''}" data-act="pkpick" data-id="${p.id}" aria-pressed="${S.pkSel === p.id}"><div><b>${p.icon} ${esc(p.name)}</b><span class="small muted">${esc(p.desc)} · ${p.qs.length} soru</span></div><span class="${S.pkSel === p.id ? '' : 'muted'}">${S.pkSel === p.id ? '✓' : '›'}</span></button>`).join('')}` : en ? `
       <div class="card stack" style="gap:8px">
         <b>İngilizce öğrenme modu</b>
         <p class="small muted">Sorular İngilizce kelime ve kalıplar üzerine. Kolay = A1–A2 (Türkçe sorular), Orta = B1–B2, Zor = C1. Her cevaptan sonra kısa bir “Öğren” notu gösterilir.</p>
@@ -919,7 +925,7 @@ V.cats = () => {
         <button class="${all ? 'on' : ''}" aria-pressed="${all}" data-act="catall">Hepsi</button>
         ${NON_EN.map(c => `<button class="${on(c) ? 'on' : ''}" aria-pressed="${on(c)}" data-act="cattoggle" data-i="${CATS.indexOf(c)}">${esc(c)}</button>`).join('')}
       </div>`}
-      <p class="small ${n < want * 2 ? '' : 'muted'}" style="${n < want * 2 ? 'color:var(--yellow)' : ''}">Bu seçimde ${n} soru var.${n < want * 2 ? (en ? ' Soru az olabilir; zorluğu “Karışık” yapmayı dene.' : ' Soru az olabilir, tekrarlar çıkabilir; zorluğu “Karışık” yapmayı ya da kategori eklemeyi dene.') : ''}</p>
+      ${pkm ? '' : `<p class="small ${n < want * 2 ? '' : 'muted'}" style="${n < want * 2 ? 'color:var(--yellow)' : ''}">Bu seçimde ${n} soru var.${n < want * 2 ? (en ? ' Soru az olabilir; zorluğu “Karışık” yapmayı dene.' : ' Soru az olabilir, tekrarlar çıkabilir; zorluğu “Karışık” yapmayı ya da kategori eklemeyi dene.') : ''}</p>`}
     </div>
     <div class="grow" style="min-height:16px"></div>
     <button class="btn primary big" data-act="catsdone"><span class="ic">${ICON.play}</span><span class="lb">TAMAM</span></button>
@@ -959,11 +965,11 @@ V.lobby = () => {
     : host ? `
       <span class="small muted lbl" style="margin-bottom:8px">Soru sayısı</span>
       <div class="chips" style="margin-bottom:10px">${[5, 10, 15].map(n => `<button class="${(R.count || 10) === n ? 'on' : ''}" data-act="count" data-n="${n}">${n}</button>`).join('')}</div>
-      <span class="small muted lbl" style="margin-bottom:8px">Zorluk</span>
-      <div class="chips" style="margin-bottom:10px">${['mix', 'k', 'o', 'z'].map(v => `<button class="${(R.diff || 'mix') === v ? 'on' : ''}" data-act="diff" data-v="${v}">${DIFF_LABEL[v]}</button>`).join('')}</div>
-      <button class="card setrow catrow" style="margin-bottom:14px;padding:10px 16px" data-act="opencats"><div><b>Kategoriler</b><span class="small muted">${esc(catSummary(R))}</span></div><span class="muted">›</span></button>
+      ${roomPack(R) ? '' : `<span class="small muted lbl" style="margin-bottom:8px">Zorluk</span>
+      <div class="chips" style="margin-bottom:10px">${['mix', 'k', 'o', 'z'].map(v => `<button class="${(R.diff || 'mix') === v ? 'on' : ''}" data-act="diff" data-v="${v}">${DIFF_LABEL[v]}</button>`).join('')}</div>`}
+      <button class="card setrow catrow" style="margin-bottom:14px;padding:10px 16px" data-act="opencats"><div><b>${roomPack(R) ? 'Konu paketi' : 'Kategoriler'}</b><span class="small muted">${esc(catSummary(R))}</span></div><span class="muted">›</span></button>
       <button class="btn primary big" data-act="start" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">OYUNU BAŞLAT</span></button>`
-    : `<p class="status">${R.count || 10} soru · ${DIFF_LABEL[R.diff || 'mix']} · ${esc(catSummary(R))}<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`}
+    : `<p class="status">${R.count || 10} soru · ${roomPack(R) ? '' : DIFF_LABEL[R.diff || 'mix'] + ' · '}${esc(catSummary(R))}<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`}
   </div>`;
 };
 
@@ -1628,6 +1634,8 @@ async function startGame() {
       const qz = (S.myQuizzes || {})[R.quiz] || (await get(ref(db, 'quizzes/' + R.quiz))).val();
       if (!qz || !qz.qs) throw new Error('quiz-missing');
       built = buildGame(0, 'mix', null, shuffle(Object.values(qz.qs)).map(q => Object.assign({cat: qz.cat, d: 'o'}, q)));
+    } else if (roomPack(R)) {
+      const pk = roomPack(R); built = buildGame(0, 'mix', null, shuffle(pk.qs.slice()).slice(0, Math.min(R.count || 10, pk.qs.length)));
     } else built = buildGame(R.count || 10, R.diff || 'mix', R.cats ? R.cats.split('|') : null);
     const {pub, keys, infos} = built;
     await set(ref(db, 'keys/' + S.code), {a: keys, i: infos});
@@ -1945,14 +1953,16 @@ app.addEventListener('click', e => {
   else if (a === 'count') update(roomRef(), {count: +el.dataset.n}).catch(() => toast('Değiştirilemedi'));
   else if (a === 'diff') update(roomRef(), {diff: el.dataset.v}).catch(() => toast('Değiştirilemedi'));
   else if (a === 'opencats') {
-    const c = roomCats(S.R) || [];
-    S.catMode = c.includes('İngilizce') ? 'en' : 'quiz';
+    const c = roomCats(S.R) || [], pk0 = roomPack(S.R);
+    S.pkSel = pk0 ? pk0.id : null;
+    S.catMode = pk0 ? 'pk' : c.includes('İngilizce') ? 'en' : 'quiz';
     const qc = c.filter(x => x !== 'İngilizce');
     S.catAll = !qc.length; S.catSel = new Set(qc);
     S.catsOpen = true; render(); app.scrollTop = 0;
   }
   else if (a === 'openboard') { S.lbTab = S.lbTab || 'd'; S.lbCache = {}; go('board'); loadBoard(); }
   else if (a === 'lbtab') { S.lbTab = el.dataset.t; render(); loadBoard(); }
+  else if (a === 'pkpick') { S.pkSel = S.pkSel === el.dataset.id ? null : el.dataset.id; render(); }
   else if (a === 'catmode') { S.catMode = el.dataset.m; render(); }
   else if (a === 'catall') { S.catAll = true; S.catSel = new Set(); render(); }
   else if (a === 'cattoggle') {
@@ -1966,7 +1976,7 @@ app.addEventListener('click', e => {
     const sel = S.catSel; S.catsOpen = false;
     // Bilgi yarışması ve İngilizce öğrenme birbirini dışlar: ikisi aynı oyunda karışmaz
     const isAll = S.catAll || NON_EN.every(c => sel.has(c));
-    const cats = S.catMode === 'en' ? 'İngilizce' : (isAll ? null : NON_EN.filter(c => sel.has(c)).join('|'));
+    const cats = S.catMode === 'pk' && S.pkSel ? 'pk:' + S.pkSel : S.catMode === 'en' ? 'İngilizce' : (isAll ? null : NON_EN.filter(c => sel.has(c)).join('|'));
     update(roomRef(), {cats}).catch(() => toast('Değiştirilemedi'));
     render(); app.scrollTop = 0;
   }
