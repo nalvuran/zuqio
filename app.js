@@ -156,12 +156,72 @@ const SFX = {
   }
 };
 
+/* ================= arka plan müziği =================
+   Dosya yok: müzik tarayıcıda anlık üretilir (telif derdi yok, internet harcamaz).
+   Yumuşak bir akor döngüsü + bas + seyrek, yankılı notalar. */
+const MUSIC = {
+  on: false, master: null, bus: null, timer: null, next: 0, step: 0, level: 0.55,
+  // Fmaj7 – Dm7 – B♭maj7 – C6 (Hz, oktav 3-4)
+  chords: [[174.6, 220.0, 261.6, 329.6], [146.8, 174.6, 220.0, 261.6], [116.5, 146.8, 174.6, 220.0], [130.8, 164.8, 196.0, 220.0]],
+  bass: [87.3, 73.4, 58.3, 65.4],
+  setup() {
+    const c = SFX.ctx; if (!c || this.master) return;
+    this.master = c.createGain(); this.master.gain.value = 0.0001;
+    const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1400;
+    const dl = c.createDelay(1); dl.delayTime.value = 0.42;
+    const fb = c.createGain(); fb.gain.value = 0.32;
+    this.bus = c.createGain(); this.bus.gain.value = 1;
+    this.bus.connect(lp); lp.connect(this.master);
+    lp.connect(dl); dl.connect(fb); fb.connect(dl); dl.connect(this.master);
+    this.master.connect(c.destination);
+  },
+  note(f, t, dur, type, vol, atk) {
+    const c = SFX.ctx, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + atk);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.bus); o.start(t); o.stop(t + dur + 0.05);
+  },
+  schedule() {
+    const c = SFX.ctx; if (!c || c.state !== 'running') return;
+    const eighth = 60 / 72 / 2;
+    if (this.next < c.currentTime) this.next = c.currentTime + 0.05;
+    while (this.next < c.currentTime + 0.5) {
+      const t = this.next, bar = Math.floor(this.step / 8) % 4, pos = this.step % 8;
+      const ch = this.chords[bar];
+      if (pos === 0) ch.forEach(f => this.note(f, t, eighth * 8.6, 'sine', 0.035, 0.9));
+      if (pos === 0 || pos === 4) this.note(this.bass[bar], t, eighth * 3.5, 'sine', 0.07, 0.05);
+      if (pos !== 0 && Math.random() < 0.3) this.note(ch[Math.floor(Math.random() * 4)] * 4, t, 0.9, 'triangle', 0.018, 0.01);
+      this.next += eighth; this.step++;
+    }
+  },
+  start() {
+    if (!S.music) return;
+    SFX.init(); const c = SFX.ctx; if (!c) return;
+    this.setup();
+    if (!this.timer) { this.next = 0; this.timer = setInterval(() => this.schedule(), 120); this.schedule(); }
+    this.on = true; this.fade(this.target());
+  },
+  stop() {
+    this.on = false; this.fade(0.0001);
+    setTimeout(() => { if (!this.on && this.timer) { clearInterval(this.timer); this.timer = null; } }, 900);
+  },
+  target() { return S.screen === 'question' ? this.level * 0.45 : this.level; },
+  fade(v) {
+    const c = SFX.ctx; if (!c || !this.master) return;
+    const g = this.master.gain, t = c.currentTime;
+    g.cancelScheduledValues(t); g.setValueAtTime(Math.max(g.value, 0.0001), t); g.exponentialRampToValueAtTime(Math.max(v, 0.0001), t + 0.8);
+  },
+  duck() { if (this.on) this.fade(this.target()); }
+};
+
 /* ================= durum ================= */
 const S = {
   user: null, me: null, screen: 'loading', code: null, R: null, keys: null,
   offset: 0, unsubRoom: null, lastKey: '', hostBusy: false, q: null,
   pick: 0, draft: '', firstProfile: false, pendingCode: null, wake: null, busy: false,
-  sound: ls.get('zuqio-sound') !== '0', haptic: ls.get('zuqio-haptic') !== '0', lastN: null, catsOpen: false, catSel: new Set(), catAll: true, catMode: 'quiz'
+  sound: ls.get('zuqio-sound') !== '0', music: ls.get('zuqio-music') !== '0', haptic: ls.get('zuqio-haptic') !== '0', lastN: null, catsOpen: false, catSel: new Set(), catAll: true, catMode: 'quiz'
 };
 const uid = () => S.user && S.user.uid;
 const now = () => Date.now() + S.offset;
@@ -485,6 +545,8 @@ V.settings = () => `
     <div class="stack" style="gap:14px">
       <h2>Ayarlar</h2>
       <div class="card stack" style="gap:0;padding:0 16px">
+        <div class="setrow"><div><b>Müzik</b><span class="small muted">Yumuşak arka plan müziği</span></div>
+          <button class="switch ${S.music ? 'on' : ''}" role="switch" aria-checked="${S.music}" aria-label="Müzik" data-act="tmusic"></button></div>
         <div class="setrow"><div><b>Ses efektleri</b><span class="small muted">Doğru, yanlış ve geri sayım sesleri</span></div>
           <button class="switch ${S.sound ? 'on' : ''}" role="switch" aria-checked="${S.sound}" aria-label="Ses efektleri" data-act="tsound"></button></div>
         <div class="setrow"><div><b>Titreşim</b><span class="small muted">${'vibrate' in navigator ? 'Cevap verince ve süre azalınca titrer' : 'Bu cihaz web uygulamalarında titreşimi desteklemiyor'}</span></div>
@@ -834,6 +896,7 @@ V.final = () => {
 };
 
 function render() {
+  MUSIC.duck();
   if (!V[S.screen]) S.screen = 'home';
   let keep = null; const g = document.getElementById('guess');
   if (g && !g.disabled) keep = g.value;
@@ -1277,11 +1340,15 @@ async function useJoker(key) {
 /* ================= ekran açık kalsın ================= */
 async function wakeOn() { try { if ('wakeLock' in navigator && !S.wake) S.wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
 function wakeOff() { try { S.wake && S.wake.release(); } catch (e) {} S.wake = null; }
+document.addEventListener('visibilitychange', () => {
+  // arka plana geçince müzik ve sesler dursun, geri gelince devam etsin
+  try { if (SFX.ctx) { if (document.visibilityState === 'hidden') SFX.ctx.suspend(); else SFX.ctx.resume(); } } catch (e) {}
+});
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.code) { S.wake = null; wakeOn(); markOnline(); } });
 
 /* ================= olaylar ================= */
 app.addEventListener('click', e => {
-  SFX.init();
+  SFX.init(); if (S.music && !MUSIC.on) MUSIC.start();
   const el = e.target.closest('[data-act],[data-go]'); if (!el || el.disabled) return;
   if (el.dataset.go) { go(el.dataset.go); return; }
   const a = el.dataset.act;
@@ -1298,6 +1365,7 @@ app.addEventListener('click', e => {
   else if (a === 'shoptab') { S.shopTab = el.dataset.t; render(); }
   else if (a === 'react') sendReact(el.dataset.p, +el.dataset.e);
   else if (a === 'equip') equipItem(el.dataset.id);
+  else if (a === 'tmusic') { S.music = !S.music; ls.set('zuqio-music', S.music ? '1' : '0'); if (S.music) MUSIC.start(); else MUSIC.stop(); render(); }
   else if (a === 'tsound') { S.sound = !S.sound; ls.set('zuqio-sound', S.sound ? '1' : '0'); if (S.sound) SFX.play('correct'); render(); }
   else if (a === 'thaptic') { S.haptic = !S.haptic; ls.set('zuqio-haptic', S.haptic ? '1' : '0'); if (S.haptic) buzz(40); render(); }
   else if (a === 'create') createRoom();
