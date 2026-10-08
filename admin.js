@@ -31,7 +31,7 @@ function periods() {
   return {d: 'd' + d, w: 'w' + w, m: 'm' + m};
 }
 
-const S = {user: null, role: null, tab: 'sum', users: {}, bans: {}, reports: {}, quizzes: {}, pool: {}, fix: {}, edit: null, poolTab: 'b', prizeM: 'cur', prizeRows: null, prizes: {}, pq: '', pcat: '', rooms: {}, admins: {}, ann: null, lb: {}, lbTab: 'd', q: '', open: null, subs: []};
+const S = {user: null, role: null, tab: 'sum', users: {}, bans: {}, reports: {}, quizzes: {}, pool: {}, fix: {}, edit: null, poolTab: 'b', prizeM: 'cur', prizeRows: null, bookInfo: null, prizes: {}, pq: '', pcat: '', rooms: {}, admins: {}, ann: null, lb: {}, lbTab: 'd', q: '', open: null, subs: []};
 
 /* ---------------- veri ---------------- */
 function watch(path, key) {
@@ -202,7 +202,8 @@ function vApprove() {
 const monthKey = off => { const x = new Date(Date.now() + 10800000); x.setUTCMonth(x.getUTCMonth() + off, 1); return 'm' + x.getUTCFullYear() + '-' + String(x.getUTCMonth() + 1).padStart(2, '0'); };
 const curPrizeKey = () => monthKey(S.prizeM === 'prev' ? -1 : 0);
 async function loadPrize() {
-  S.prizeRows = null; render();
+  S.prizeRows = null; S.bookInfo = null; render();
+  try { const bk = curPrizeKey(), bn = (await get(ref(db, 'bookfile/' + bk + '/n'))).val(), bs = (await get(ref(db, 'bookfile/' + bk + '/size'))).val(); S.bookInfo = bn ? {n: bn, size: bs || 0} : false; } catch (e) { S.bookInfo = false; }
   try { const v = (await get(ref(db, 'lbp/' + curPrizeKey()))).val() || {}; S.prizeRows = Object.entries(v).map(([id, r]) => Object.assign({id}, r)).sort((x, y) => y.s - x.s).slice(0, 15); }
   catch (e) { console.error(e); S.prizeRows = []; }
   render();
@@ -217,6 +218,10 @@ function vPrize() {
   return `<div class="seg" style="grid-template-columns:repeat(2,1fr)">${[['cur', 'Bu ay'], ['prev', 'Geçen ay']].map(([m, l]) => `<button class="${S.prizeM === m ? 'on' : ''}" data-act="przm" data-t="${m}">${l}</button>`).join('')}</div>
     <p class="muted small">Ödül yarışı: en az 3 gerçek oyunculu odalar, günlük 5.000 puan sınırı. Kazananı kesinleştirmeden önce oyun sayısına ve puanın makul olup olmadığına bak; şüpheli satırı silebilirsin.</p>
     ${win}
+    <div class="card stack"><b>Kitap dosyası (${esc(curPrizeKey())})</b>
+      <div class="small muted">${S.bookInfo === null ? 'Yükleniyor…' : S.bookInfo ? `Yüklü: ${esc(S.bookInfo.n)} · ${Math.round(S.bookInfo.size / 1024)} KB. Kazanan uygulamadan indirebilir.` : 'Henüz yüklenmedi. PDF yükle (en çok 8 MB); kazanan uygulamada “Kitabını indir” düğmesini görür.'}</div>
+      <div class="row gap"><label class="btn primary" style="cursor:pointer">${S.bookBusy ? 'Yükleniyor…' : S.bookInfo ? 'Dosyayı değiştir' : 'PDF yükle'}<input type="file" id="bookfile" accept="application/pdf" hidden></label>
+      ${S.bookInfo ? '<button class="btn danger" data-act="bookdel">Dosyayı sil</button>' : ''}</div></div>
     ${rows == null ? '<p class="muted small">Yükleniyor…</p>' : !rows.length ? '<div class="card"><b>Bu ay henüz puan yok</b></div>' : `<div class="list">${rows.map((r, i) => `<div class="row item"><span class="n">${i + 1}</span>
       <div class="grow"><b>${esc(r.n)}</b><div class="small muted">${esc((S.users[r.id] || {}).email || '')} · ${r.g} oyun</div></div><b>${fmt(r.s)}</b>
       <button class="btn ghost" data-act="prwin" data-id="${r.id}">Kazanan yap</button><button class="btn ghost danger-t" data-act="prdel" data-id="${r.id}">Sil</button></div>`).join('')}</div>`}`;
@@ -344,6 +349,19 @@ app.addEventListener('focusout', () => setTimeout(() => { if (S.dirty) render();
 app.addEventListener('input', e => {
   if (e.target.id === 'psearch') { S.pq = e.target.value; render(); return; }
   if (e.target.dataset && e.target.dataset.e && S.edit) { const k = e.target.dataset.e; if (/^o\d$/.test(k)) S.edit.f.o[+k[1]] = e.target.value; else S.edit.f[k] = e.target.value; return; } if (e.target.id === 'search') { S.q = e.target.value; render(); } });
+app.addEventListener('change', async e => {
+  if (e.target.id !== 'bookfile') return;
+  const f = e.target.files && e.target.files[0]; if (!f) return;
+  if (f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)) { toast('Yalnızca PDF'); return; }
+  if (f.size > 8000000) { toast('Dosya 8 MB’tan büyük'); return; }
+  S.bookBusy = true; render();
+  try {
+    const d = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = () => no(r.error); r.readAsDataURL(f); });
+    await set(ref(db, 'bookfile/' + curPrizeKey()), {n: f.name.slice(0, 100), size: f.size, d, at: Date.now()});
+    S.bookInfo = {n: f.name.slice(0, 100), size: f.size}; toast('Kitap yüklendi');
+  } catch (err) { console.error(err); toast('Yüklenemedi: ' + (err && err.code || 'hata')); }
+  S.bookBusy = false; render();
+});
 app.addEventListener('change', e => { if (e.target.id === 'pcat') { S.pcat = e.target.value; render(); } });
 app.addEventListener('click', async e => {
   if (e.target.classList && e.target.classList.contains('sheet')) { S.open = null; render(); return; }
@@ -365,6 +383,7 @@ app.addEventListener('click', async e => {
       const txt = `Hatalı soru bildirimi\nKategori: ${r.cat}\nSoru: ${r.q}\n${r.opts ? 'Şıklar: ' + r.opts + '\n' : ''}Kayıtlı doğru cevap: ${r.ans}\nNot: ${r.note || '-'}`;
       await navigator.clipboard.writeText(txt); toast('Kopyalandı');
     }
+    else if (a === 'bookdel') { if (!confirm('Kitap dosyası silinsin mi?')) return; await remove(ref(db, 'bookfile/' + curPrizeKey())); S.bookInfo = false; render(); return; }
     else if (a === 'przm') { S.prizeM = el.dataset.t; loadPrize(); return; }
     else if (a === 'prwin') {
       const r = (S.prizeRows || []).find(x => x.id === id), k = curPrizeKey(); if (!r) return;

@@ -53,6 +53,7 @@ const ICON = {
   half:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg>',
   x2:'<svg viewBox="0 0 24 24"><path d="M5 7l6 10M11 7l-6 10M15 9a2 2 0 1 1 4 0c0 2-4 4-4 8h4"/></svg>',
   ice:'<svg viewBox="0 0 24 24"><path d="M12 2v20M4 7l16 10M20 7 4 17M9 4l3 3 3-3M9 20l3-3 3 3"/></svg>',
+  again:'<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>',
   hint:'<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg>',
   play:'<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>',
   users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6.5 6.5 0 0 1 3.5 6"/></svg>',
@@ -128,7 +129,8 @@ const JOKER_INFO = {
   half:   {label:'Yarı yarıya', icon:'half'},
   hint:   {label:'İpucu', icon:'hint'},
   double: {label:'Çifte puan', icon:'x2'},
-  freeze: {label:'Buz', icon:'ice'}
+  freeze: {label:'Buz', icon:'ice'},
+  second: {label:'İkinci şans', icon:'again'}
 };
 const app = document.getElementById('app');
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -469,6 +471,42 @@ function annBanner() {
     <svg class="annleaf" viewBox="0 0 100 100" aria-hidden="true"><path d="M22 78C14 46 34 18 82 16C84 58 62 84 28 82" fill="#fff"/><path d="M20 82C34 62 50 44 68 30" fill="none" stroke="#2A9444" stroke-width="4" stroke-linecap="round"/></svg>
     <p>${esc(A.text)}</p></div></div>`;
 }
+const MONTHS_TR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+const monthLabel = key => { const m = /^m(\d{4})-(\d{2})$/.exec(key || ''); return m ? MONTHS_TR[+m[2] - 1] : ''; };
+function winPop() {
+  const w = S.win; if (!w || ls.get('zuqio-win-' + w.key) === '1') return '';
+  return `<div class="annmodal" data-act="winclose"><div class="anncard" role="dialog" aria-label="Tebrikler" data-stop="1" style="flex-direction:column;gap:18px">
+    <button class="annx" data-act="winclose" aria-label="Kapat">✕</button>
+    <p style="font-size:1.2rem">🎉 Tebrikler!<br>${esc(monthLabel(w.key))} ayının kitap ödülünü kazandın</p>
+    <button class="btn primary" data-act="bookdl" ${S.busyBook ? 'disabled' : ''}>Kitabını indir</button></div></div>`;
+}
+async function checkWin() {
+  try {
+    for (const off of [0, -1]) {
+      const x = new Date(Date.now() + 10800000); x.setUTCMonth(x.getUTCMonth() + off, 1);
+      const key = 'm' + x.getUTCFullYear() + '-' + String(x.getUTCMonth() + 1).padStart(2, '0');
+      const v = (await get(ref(db, 'prizes/' + key))).val();
+      if (v && v.uid === uid()) { S.win = {key, name: v.name}; break; }
+    }
+  } catch (e) { console.error(e); }
+  if (S.win && (S.screen === 'home' || S.screen === 'board')) render();
+}
+async function downloadBook() {
+  const w = S.win; if (!w || S.busyBook) return;
+  S.busyBook = true; toast('Kitap hazırlanıyor…');
+  try {
+    const v = (await get(ref(db, 'bookfile/' + w.key))).val();
+    if (!v || !v.d) { toast('Kitap henüz yüklenmedi, biraz sonra tekrar dene'); S.busyBook = false; return; }
+    const bin = atob(v.d), arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    const url = URL.createObjectURL(new Blob([arr], {type: 'application/pdf'}));
+    const a = document.createElement('a'); a.href = url; a.download = v.n || 'Zuqio-kitap.pdf';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 120000);
+    ls.set('zuqio-win-' + w.key, '1'); toast('Kitap indirildi 🎉');
+  } catch (e) { console.error(e); toast('İndirilemedi, tekrar dene'); }
+  S.busyBook = false; render();
+}
 let annSub = null;
 function watchAnn() { if (annSub) return; annSub = onValue(ref(db, 'announce'), sn => { S.ann = sn.val(); if (S.screen === 'home') render(); }, () => { annSub = null; }); }
 
@@ -514,7 +552,7 @@ V.profile = () => `
 
 V.home = () => `
   <div class="screen">
-    ${annBanner()}
+    ${winPop() || annBanner()}
     <div class="top"><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton">${COIN}<b>${coins()}</b></button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle">${esc(S.me.name)}${avatar(S.me.av, '', S.me.fr)}</button></div>
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px"></div>
@@ -895,6 +933,7 @@ function statusText() {
   const n = ps.filter(p => A[p.id]).length;
   if (S.q && S.q.frozenUntil > now()) return 'Süre donduruldu';
   const mine = A[uid()] || (S.q && S.q.sent != null);
+  if (mine && remaining() > 0 && myJ('second') === R.qi && R.questions[R.qi].t === 'mc' && !(A[uid()] && A[uid()].v2 != null) && !(S.q && S.q.sent2 != null)) return 'İkinci şansını seç: doğruysa yarı puan';
   if (!mine && remaining() <= 0) return 'Süre doldu';
   return mine ? `Cevabın alındı · ${n}/${ps.length} oyuncu cevapladı` : `${n}/${ps.length} oyuncu cevapladı`;
 }
@@ -902,8 +941,10 @@ function statusText() {
 V.question = () => {
   const R = S.R, qi = R.qi, q = R.questions[qi];
   const A = ansOf(R, qi), mineV = A[uid()] ? A[uid()].v : (S.q.sent != null ? S.q.sent : null);
+  const mineV2 = A[uid()] && A[uid()].v2 != null ? A[uid()].v2 : (S.q.sent2 != null ? S.q.sent2 : null);
   const locked = mineV != null || remaining() <= 0;
   const isNum = q.t === 'num';
+  const wait2 = !isNum && myJ('second') === qi && mineV != null && mineV2 == null && remaining() > 0;
   const hidden = myJ('half') === qi ? (q.h || []) : [];
   const ans = isNum
     ? `${myJ('hint') === qi && q.hint ? `<div class="hint">İpucu: cevap ${esc(q.hint)}</div>` : ''}
@@ -914,12 +955,14 @@ V.question = () => {
     : `<div class="answers">${q.o.map((o, i) => {
         const cls = ['ans', 'c' + i];
         if (hidden.includes(i)) cls.push('gone');
-        if (mineV != null) cls.push(mineV === i ? 'mine' : 'dim');
-        return `<button class="${cls.join(' ')}" data-act="pick" data-i="${i}" ${locked ? 'disabled' : ''} aria-label="${SHAPE_NAMES[i]}: ${esc(o)}">${icon(i)}<span>${esc(o)}</span></button>`;
+        if (mineV != null) cls.push(mineV === i || mineV2 === i ? 'mine' : (wait2 ? '' : 'dim'));
+        const off = locked && !(wait2 && i !== mineV);
+        return `<button class="${cls.join(' ')}" data-act="pick" data-i="${i}" ${off ? 'disabled' : ''} aria-label="${SHAPE_NAMES[i]}: ${esc(o)}">${icon(i)}<span>${esc(o)}</span></button>`;
       }).join('')}</div>`;
   const jk = key => {
     const used = myJ(key) != null, active = myJ(key) === qi;
-    return `<button class="joker ${active ? 'on' : ''}" data-act="joker" data-j="${key}" ${used || locked ? 'disabled' : ''}>${ICON[JOKER_INFO[key].icon]}${JOKER_INFO[key].label}</button>`;
+    const off = key === 'second' ? (used || remaining() <= 0 || mineV2 != null) : (used || locked);
+    return `<button class="joker ${active ? 'on' : ''}" data-act="joker" data-j="${key}" ${off ? 'disabled' : ''}>${ICON[JOKER_INFO[key].icon]}${JOKER_INFO[key].label}</button>`;
   };
   return `
   <div class="screen">
@@ -934,7 +977,7 @@ V.question = () => {
     <p class="qtext">${esc(q.q)}</p>
     <div class="grow" style="min-height:16px"></div>
     <p class="status" id="st">${statusText()}</p>
-    <div class="jokers" role="group" aria-label="Jokerler">${jk(isNum ? 'hint' : 'half')}${jk('double')}${jk('freeze')}</div>
+    <div class="jokers" role="group" aria-label="Jokerler">${jk(isNum ? 'hint' : 'half')}${jk('double')}${jk('freeze')}${isNum ? '' : jk('second')}</div>
     ${ans}
   </div>`;
 };
@@ -953,9 +996,10 @@ V.reveal = () => {
   let cls, title, sub;
   if (!mine) { cls = 'bad'; title = 'Süre doldu'; sub = q.t === 'mc' ? `Doğru cevap: ${esc(q.o[a])}` : `Doğru cevap: ${fmtQ(q, a)} ${esc(q.unit)}`; }
   else if (q.t === 'mc') {
-    const ok = mine.v === a;
+    const ok2 = mine.v !== a && mine.v2 === a && myJ('second') === qi && gain > 0;
+    const ok = mine.v === a || ok2;
     cls = ok ? 'good' : 'bad'; title = ok ? `+${fmt(gain)}` : 'Yanlış';
-    sub = ok ? (myJ('double') === qi ? 'Doğru! Çifte puan işe yaradı' : 'Doğru!') : `Doğru cevap: ${esc(q.o[a])}`;
+    sub = ok2 ? 'İkinci şans işe yaradı! (yarı puan)' : ok ? (myJ('double') === qi ? 'Doğru! Çifte puan işe yaradı' : 'Doğru!') : `Doğru cevap: ${esc(q.o[a])}`;
   } else {
     cls = gain >= 700 ? 'good' : gain > 0 ? 'mid' : 'bad';
     title = gain > 0 ? `+${fmt(gain)}` : 'Çok uzak';
@@ -1056,7 +1100,8 @@ V.board = () => {
       <div class="row" style="gap:12px;align-items:center"><img src="kitap-kapak.png" alt="Kitap kapağı" width="64" style="width:64px;height:auto;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.4)"><b>🏆 Bu ayın ödülü: “100 İlginç Bilgi” kitabı</b></div>
       <p class="small" style="margin:0">Ay sonunda ödül puanında 1. olan, kitabın PDF’ini e-postayla alır. Bitmesine <b>${monthLeft()} gün</b> var.</p>
       <p class="small muted" style="margin:0">Sayılan oyunlar: en az 3 gerçek oyuncunun olduğu odalar. Günde en fazla ${fmt(PRIZE_DAILY_CAP)} puan sayılır. Antrenman ve Zuqio’larım oyunları sayılmaz. Kazanan, yönetici kontrolünden sonra kesinleşir.</p>
-      ${S.tabP ? `<p class="small" style="margin:0">Geçen ayın kazananı: <b>${esc(S.tabP.name)}</b> 🎉</p>` : ''}</div>`;
+      ${S.tabP ? `<p class="small" style="margin:0">Geçen ayın kazananı: <b>${esc(S.tabP.name)}</b> 🎉</p>` : ''}
+      ${S.win ? `<button class="btn primary" data-act="bookdl" ${S.busyBook ? 'disabled' : ''}>📥 Kitabını indir (${esc(monthLabel(S.win.key))})</button>` : ''}</div>`;
   return `
   <div class="screen">
     <div class="top">${backBtn('data-go="home"')}</div>
@@ -1146,7 +1191,7 @@ getRedirectResult(auth).catch(() => {});
 onAuthStateChanged(auth, async u => {
   S.user = u;
   if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } if (annSub) { annSub(); annSub = null; } S.me = null; go('login'); return; }
-  watchAnn(); loadApproved().then(loadFixes);
+  watchAnn(); checkWin(); loadApproved().then(loadFixes);
   try {
     const snap = await get(ref(db, 'users/' + u.uid));
     const ban = await get(ref(db, 'bans/' + u.uid)).catch(() => null);
@@ -1263,7 +1308,7 @@ function onRoom(R) {
   if (key !== S.lastKey) {
     S.lastKey = key;
     if (R.status === 'question' && R.bot) planBots(R);
-    if (R.status === 'question') { S.q = {qi: R.qi, frozenUntil: 0, sent: null, timeUpShown: false, lastSec: null}; SFX.play('go'); }
+    if (R.status === 'question') { S.q = {qi: R.qi, frozenUntil: 0, sent: null, sent2: null, timeUpShown: false, lastSec: null}; SFX.play('go'); }
     if (R.status === 'reveal') {
       const g = (R.reveal && R.reveal[R.qi] && R.reveal[R.qi].gains || {})[uid()] || 0;
       buzz(g > 0 ? [30, 40, 30] : 120);
@@ -1280,7 +1325,8 @@ function onRoom(R) {
   if (scr === 'question') {
     // yalnızca durum satırı ve kilitleme değişir; yazılan tahmini kaybetmemek için tam çizim yapma
     const mine = ansOf(R, R.qi)[uid()];
-    if (mine && S.q && S.q.sent == null) { S.q.sent = mine.v; render(); }
+    if (mine && S.q && S.q.sent == null) { S.q.sent = mine.v; if (mine.v2 != null) S.q.sent2 = mine.v2; render(); }
+    else if (mine && S.q && mine.v2 != null && S.q.sent2 == null) { S.q.sent2 = mine.v2; render(); }
     else tick();
   } else render();
 }
@@ -1515,6 +1561,8 @@ async function reveal() {
       const dl = R.qStartAt + R.qDur + (J[id] && J[id].freeze === qi ? 8000 : 0);
       if (x.t <= dl + 1500) {
         g = calcGain(q, a, x.v, clamp((dl - x.t) / R.qDur, 0, 1));
+        if (!g && q.t === 'mc' && J[id] && J[id].second === qi && typeof x.t2 === 'number' && x.v2 === a && x.v2 !== x.v && x.t2 <= dl + 1500)
+          g = Math.round(calcGain(q, a, x.v2, clamp((dl - x.t2) / R.qDur, 0, 1)) / 2);
         if (J[id] && J[id].double === qi) g *= 2;
       }
     }
@@ -1541,7 +1589,8 @@ function hostStep() {
   else if (R.status === 'question' && typeof R.qStartAt === 'number') {
     const qi = R.qi, A = ansOf(R, qi);
     const online = players(R).filter(p => p.online !== false);
-    const answered = online.filter(p => A[p.id]).length;
+    const J0 = R.jokers || {};
+    const answered = online.filter(p => A[p.id] && !(J0[p.id] && J0[p.id].second === qi && A[p.id].v2 == null && R.questions[qi].t === 'mc')).length;
     const anyFreeze = Object.values(R.jokers || {}).some(j => j && j.freeze === qi);
     const end = R.qStartAt + R.qDur + (anyFreeze ? 8000 : 0) + 900;
     if ((online.length > 0 && answered >= online.length && n > R.qStartAt + 600) || n > end) doHost(reveal);
@@ -1711,14 +1760,25 @@ async function reportQuestion() {
 
 /* ================= oyuncu eylemleri ================= */
 async function answer(v) {
-  const R = S.R; if (!R || R.status !== 'question' || !S.q || S.q.sent != null || remaining() <= 0) return;
+  const R = S.R; if (!R || R.status !== 'question' || !S.q || remaining() <= 0) return;
+  if (S.q.sent != null) {
+    const A0 = ansOf(R, R.qi)[uid()];
+    if (R.questions[R.qi].t !== 'mc' || myJ('second') !== R.qi || S.q.sent2 != null || (A0 && A0.v2 != null) || v === S.q.sent) return;
+    S.q.sent2 = v; buzz(30); SFX.play('tap'); render();
+    try {
+      const base = `rooms/${S.code}/answers/${R.qi}/${uid()}`;
+      await set(ref(db, base + '/t2'), serverTimestamp());
+      await set(ref(db, base + '/v2'), v);
+    } catch (e) { console.error(e); S.q.sent2 = null; render(); toast('İkinci cevap gönderilemedi'); }
+    return;
+  }
   S.q.sent = v; buzz(30); SFX.play('tap'); render();
   try { await set(ref(db, `rooms/${S.code}/answers/${R.qi}/${uid()}`), {v, t: serverTimestamp()}); }
   catch (e) { console.error(e); S.q.sent = null; render(); toast('Cevap gönderilemedi, süre dolmuş olabilir'); }
 }
 
 async function useJoker(key) {
-  const R = S.R; if (!R || R.status !== 'question' || myJ(key) != null || (S.q && S.q.sent != null)) return;
+  const R = S.R; if (!R || R.status !== 'question' || myJ(key) != null || (S.q && S.q.sent != null && key !== 'second')) return;
   if (key === 'freeze') S.q.frozenUntil = now() + 8000;
   buzz(20); SFX.play('joker');
   try {
@@ -1727,6 +1787,7 @@ async function useJoker(key) {
     if (S.R === R) { R.jokers = R.jokers || {}; R.jokers[uid()] = Object.assign({}, R.jokers[uid()], {[key]: R.qi}); }
     if (key === 'double') toast('Çifte puan açık: bu soruda puanın ikiye katlanacak');
     if (key === 'freeze') toast('Süre 8 saniyeliğine donduruldu');
+    if (key === 'second') toast(S.q && S.q.sent != null ? 'İkinci şans açık: başka bir şık seç, doğruysa yarı puan alırsın' : 'İkinci şans açık: önce tercihini, sonra yedek şıkkı seç');
   } catch (e) { console.error(e); if (key === 'freeze') S.q.frozenUntil = 0; toast('Joker kullanılamadı'); }
   render();
 }
@@ -1830,6 +1891,8 @@ app.addEventListener('click', e => {
   else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
   else if (a === 'qzplay') { const q = S.myQuizzes[el.dataset.id]; createRoom({quiz: el.dataset.id, quizTitle: q.title, quizN: Object.keys(q.qs || {}).length}); }
   else if (a === 'quizoff') update(roomRef(), {quiz: null, quizTitle: null, quizN: null}).catch(() => toast('Değiştirilemedi'));
+  else if (a === 'bookdl') downloadBook();
+  else if (a === 'winclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; if (S.win) ls.set('zuqio-win-' + S.win.key, '1'); render(); }
   else if (a === 'annclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; if (S.ann) ls.set('zuqio-ann', String(S.ann.t)); render(); }
 });
 app.addEventListener('keydown', e => {
