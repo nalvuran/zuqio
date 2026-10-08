@@ -150,7 +150,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 86';
+const APP_VERSION = '0.5 (test) · yapı 87';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -610,7 +610,7 @@ V.profile = () => `
 V.home = () => `
   <div class="screen">
     ${winPop() || annBanner()}${a2Sheet()}
-    <div class="top"><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton">${COIN}<b>${coins()}</b></button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle">${esc(S.me.name)}${avatar(S.me.av, '', S.me.fr)}</button></div>
+    <div class="top"><button class="gearbtn" data-go="settings" aria-label="Ayarlar">${ICON.gear}</button><div class="row" style="gap:10px"><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton">${COIN}<b>${coins()}</b></button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle">${esc(S.me.name)}${avatar(S.me.av, '', S.me.fr)}</button></div></div>
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px">${a2Link()}</div>
     <div class="stack home-btns" style="gap:14px">
@@ -1217,7 +1217,6 @@ function gnav() {
       <button data-go="shop" class="${on('shop').trim()}">${ICON.shop}MAĞAZA</button>
       <button data-act="openboard" class="${on('board').trim()}">${ICON.trophy}LİDERLİK</button>
       <button data-go="daily" class="${(on('daily') + dot).trim()}">${ICON.gift}GÜNLÜK</button>
-      <button data-go="settings" class="${on('settings').trim()}">${ICON.gear}AYARLAR</button>
     </nav></div>`;
 }
 function render() {
