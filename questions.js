@@ -1,4 +1,8 @@
 import { EN } from './questions-en.js';
+import { EN2 } from './questions-en2.js';
+import { MORE1 } from './questions-more1.js';
+import { MORE2 } from './questions-more2.js';
+import { MORE3 } from './questions-more3.js';
 
 // Zuqio soru havuzu.
 //  m(kategori, zorluk, soru, doğru, yanlış1, yanlış2, yanlış3)  → çoktan seçmeli (ilk şık doğrudur, oyunda karıştırılır)
@@ -424,4 +428,4 @@ const BASE = [
 ];
 
 // İngilizce kategorisi ayrı dosyada; “Karışık” modda yer almaz, yalnızca seçilince gelir.
-export const QUESTIONS = [...BASE, ...EN];
+export const QUESTIONS = [...BASE, ...MORE1, ...MORE2, ...MORE3, ...EN, ...EN2];
