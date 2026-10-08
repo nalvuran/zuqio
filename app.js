@@ -453,6 +453,21 @@ const LOGO = () => `<div class="hero">
   <p class="slogan">Soruyu bil, <span class="y">seçimini yap</span>, <span class="g">kazan</span>!</p>
 </div>`;
 
+function annBanner() {
+  const A = S.ann; if (!A || !A.text || ls.get('zuqio-ann') === String(A.t)) return '';
+  return `<div class="annbar"><span>📣</span><p>${esc(A.text)}</p><button data-act="annclose" aria-label="Kapat">✕</button></div>`;
+}
+let annSub = null;
+function watchAnn() { if (annSub) return; annSub = onValue(ref(db, 'announce'), sn => { S.ann = sn.val(); if (S.screen === 'home') render(); }, () => { annSub = null; }); }
+
+V.banned = () => `
+  <div class="screen"><div class="grow"></div>${LOGO()}
+    <div class="card stack" style="gap:8px;text-align:center;margin-top:24px">
+      <b>Hesabın askıya alındı</b>
+      <p class="small muted">${S.banned && S.banned.why ? esc(S.banned.why) : 'Kurallara aykırı davranış nedeniyle hesabın şu an oyun oynayamıyor.'}</p>
+    </div>
+    <div class="grow"></div><button class="btn ghost" data-act="logout">Çıkış yap</button></div>`;
+
 V.loading = () => `<div class="screen"><div class="grow"></div>${LOGO()}<div class="grow"></div><p class="status">Yükleniyor…</p></div>`;
 
 V.login = () => `
@@ -487,6 +502,7 @@ V.profile = () => `
 
 V.home = () => `
   <div class="screen">
+    ${annBanner()}
     <div class="top"><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton">${COIN}<b>${coins()}</b></button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle">${esc(S.me.name)}${avatar(S.me.av, '', S.me.fr)}</button></div>
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px"></div>
@@ -1032,10 +1048,17 @@ getRedirectResult(auth).catch(() => {});
 
 onAuthStateChanged(auth, async u => {
   S.user = u;
-  if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } S.me = null; go('login'); return; }
+  if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } if (annSub) { annSub(); annSub = null; } S.me = null; go('login'); return; }
+  watchAnn();
   try {
     const snap = await get(ref(db, 'users/' + u.uid));
-    if (snap.exists()) { S.me = snap.val(); afterLogin(); }
+    const ban = await get(ref(db, 'bans/' + u.uid)).catch(() => null);
+    if (ban && ban.exists()) { S.banned = ban.val(); go('banned'); return; }
+    if (snap.exists()) {
+      S.me = snap.val();
+      update(ref(db, 'users/' + u.uid), {email: u.email || '', seen: serverTimestamp()}).catch(() => {});
+      afterLogin();
+    }
     else {
       S.firstProfile = true; S.pick = Math.floor(Math.random() * 8);
       S.draft = (u.displayName || '').split(' ')[0].slice(0, 16);
@@ -1084,7 +1107,7 @@ async function saveProfile() {
   if (!v) { toast('Bir ad yaz'); return; }
   S.busy = true; render();
   try {
-    const data = {name: v, av: S.pick, plan: (S.me && S.me.plan) || 'free'};
+    const data = {name: v, av: S.pick, plan: (S.me && S.me.plan) || 'free', email: (S.user && S.user.email) || '', seen: serverTimestamp()};
     if (!(S.me && S.me.createdAt)) data.createdAt = serverTimestamp();
     await update(ref(db, 'users/' + uid()), data);   // update: cüzdan ve satın alınanlar silinmesin
     S.me = Object.assign({}, S.me, {name: v, av: S.pick, plan: data.plan});
@@ -1420,6 +1443,24 @@ async function playAgain() {
   S.busy = false;
 }
 
+/* ================= hatalı soru bildirimi ================= */
+async function reportQuestion() {
+  const R = S.R; if (!R || !R.questions) return;
+  const qi = R.qi, q = R.questions[qi]; S.reported = S.reported || {};
+  const key = (R.gid || S.code) + ':' + qi;
+  if (S.reported[key]) { toast('Bu soruyu zaten bildirdin, teşekkürler!'); return; }
+  const note = prompt('Sorunun neresi hatalı? (isteğe bağlı)', '');
+  if (note === null) return;
+  const rv = R.reveal && R.reveal[qi], a = rv ? rv.a : null;
+  const ans = a == null ? '' : (q.t === 'mc' ? q.o[a] : String(a) + ' ' + (q.unit || ''));
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  try {
+    await set(ref(db, 'reports/' + id), {q: q.q.slice(0, 400), cat: q.cat || '', ans: String(ans).slice(0, 120), opts: q.t === 'mc' ? q.o.join(' | ').slice(0, 300) : '',
+      note: note.trim().slice(0, 300), by: uid(), name: S.me.name, t: serverTimestamp()});
+    S.reported[key] = true; toast('Teşekkürler! Bildirim yöneticiye iletildi.');
+  } catch (e) { console.error(e); toast('Bildirim gönderilemedi'); }
+}
+
 /* ================= oyuncu eylemleri ================= */
 async function answer(v) {
   const R = S.R; if (!R || R.status !== 'question' || !S.q || S.q.sent != null || remaining() <= 0) return;
@@ -1519,7 +1560,8 @@ app.addEventListener('click', e => {
   else if (a === 'joker') useJoker(el.dataset.j);
   else if (a === 'next') hostAction(nextQ, () => S.R && S.R.status === 'reveal');
   else if (a === 'again') playAgain();
-  else if (a === 'report') toast('Teşekkürler! Bildirim özelliği yakında yönetici paneline bağlanacak.');
+  else if (a === 'report') reportQuestion();
+  else if (a === 'annclose') { if (S.ann) ls.set('zuqio-ann', String(S.ann.t)); render(); }
 });
 app.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
