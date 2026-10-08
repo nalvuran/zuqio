@@ -1,5 +1,6 @@
 import { firebaseConfig, APP_NAME } from './firebase-config.js';
 import { QUESTIONS } from './questions.js';
+const BASE_QS = QUESTIONS.slice(); // günün sorusu herkeste aynı olsun diye sadece hazır sorulardan seçilir
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getDatabase, ref as fbRef, get as fbGet, set as fbSet, update as fbUpdate, remove as fbRemove, onValue as fbOnValue, onDisconnect as fbOnDisconnect, serverTimestamp, query, orderByChild, equalTo, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
@@ -319,7 +320,7 @@ function dailyState() {
 
 // Günün sorusu: herkese aynı, tarihe göre belirlenir (İngilizce hariç, çoktan seçmeli)
 function dailyQuestion() {
-  const t = dayIdx(), pool = QUESTIONS.filter(q => q.t === 'mc' && q.cat !== 'İngilizce');
+  const t = dayIdx(), pool = BASE_QS.filter(q => q.t === 'mc' && q.cat !== 'İngilizce');
   const q = pool[((t * 2654435761) >>> 0) % pool.length];
   let seed = (t * 1103515245 + 12345) >>> 0;
   const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
@@ -642,6 +643,7 @@ V.friends = () => `
         <button class="btn" data-go="join">${ICON.key}Kodla katıl</button>
         <button class="btn" data-act="soon" data-n="Açık odalar">${ICON.list}Açık odalar</button>
       </div>
+      <button class="btn outline" data-act="myquizzes">📝 Quizlerim<span class="small muted" style="margin-left:6px">· kendi sorularını yaz</span></button>
       <button class="btn outline" data-act="bot" ${S.busy ? 'disabled' : ''}>🤖 Bilgisayara karşı oyna<span class="small muted" style="margin-left:6px">· antrenman</span></button>
     </div>
   </div>`;
@@ -806,7 +808,12 @@ V.lobby = () => {
     </div>
     ${reactBar()}
     <div class="grow" style="min-height:20px"></div>
-    ${host ? `
+    ${host && R.quiz ? `
+      <div class="card setrow" style="margin-bottom:14px;padding:10px 16px"><div><b>📝 ${esc(R.quizTitle || 'Kendi quizin')}</b><span class="small muted">${R.quizN || ''} soru · topluluk quizi</span></div>
+        <button class="btn ghost" data-act="quizoff">Hazır sorular</button></div>
+      <button class="btn primary big" data-act="start" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">OYUNU BAŞLAT</span></button>`
+    : !host && R.quiz ? `<p class="status">📝 ${esc(R.quizTitle || 'Topluluk quizi')} · ${R.quizN || ''} soru<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`
+    : host ? `
       <span class="small muted" style="margin-bottom:8px">Soru sayısı</span>
       <div class="chips" style="margin-bottom:14px">${[5, 10, 15].map(n => `<button class="${(R.count || 10) === n ? 'on' : ''}" data-act="count" data-n="${n}">${n}</button>`).join('')}</div>
       <span class="small muted" style="margin-bottom:8px">Zorluk</span>
@@ -925,7 +932,7 @@ function periods() {
   return {d: 'd' + d, w: 'w' + w, m: 'm' + m};
 }
 async function claimBoard(R) {
-  if (R.bot) return; // bilgisayara karşı oyunlar antrenmandır, tabloya sayılmaz
+  if (R.bot || R.quiz) return; // antrenman ve kendi quiz oyunları tabloya sayılmaz
   const me = uid(), gid = R.gid, mine = (R.scores || {})[me] || 0;
   if (!gid || !mine || S.lbDone === gid || S.lbBusy === gid) return;
   S.lbBusy = gid;
@@ -989,7 +996,7 @@ V.final = () => {
   return `
   <div class="screen">
     <h2 style="text-align:center;margin-top:10px">${myRank === 1 ? 'Kazandın!' : `${myRank}. oldun`}</h2>
-    <p class="muted small" style="text-align:center;margin-top:4px">${R.bot ? 'Antrenman oyunuydu, liderlik tablosuna sayılmaz.' : S.lbDone === R.gid ? 'Puanın günlük, haftalık ve aylık tablolara eklendi.' : (R.scores && R.scores[uid()] ? 'Puanın lider tablolarına ekleniyor…' : '')}</p>
+    <p class="muted small" style="text-align:center;margin-top:4px">${R.bot ? 'Antrenman oyunuydu, liderlik tablosuna sayılmaz.' : R.quiz ? 'Topluluk quizi oyunları liderlik tablosuna sayılmaz.' : S.lbDone === R.gid ? 'Puanın günlük, haftalık ve aylık tablolara eklendi.' : (R.scores && R.scores[uid()] ? 'Puanın lider tablolarına ekleniyor…' : '')}</p>
     <div class="podium">${pod(s[1], 2, 70)}${pod(s[0], 1, 104)}${pod(s[2], 3, 50)}</div>
     <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b><span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
     ${reactBar()}
@@ -1049,7 +1056,7 @@ getRedirectResult(auth).catch(() => {});
 onAuthStateChanged(auth, async u => {
   S.user = u;
   if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } if (annSub) { annSub(); annSub = null; } S.me = null; go('login'); return; }
-  watchAnn();
+  watchAnn(); loadApproved();
   try {
     const snap = await get(ref(db, 'users/' + u.uid));
     const ban = await get(ref(db, 'bans/' + u.uid)).catch(() => null);
@@ -1194,7 +1201,7 @@ async function createRoom(opts = {}) {
     let code = null;
     for (let i = 0; i < 6 && !code; i++) { const c = genCode(); const s = await get(ref(db, 'rooms/' + c)); if (!s.exists()) code = c; }
     if (!code) throw new Error('no-code');
-    const extra = opts.quick ? {quick: true, qm: 'open'} : {};
+    const extra = opts.quick ? {quick: true, qm: 'open'} : (opts.quiz ? {quiz: opts.quiz, quizTitle: opts.quizTitle, quizN: opts.quizN} : {});
     await set(ref(db, 'rooms/' + code), Object.assign(extra, {
       host: uid(), status: 'lobby', count: 10, createdAt: serverTimestamp(),
       players: {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: serverTimestamp()}}
@@ -1321,8 +1328,8 @@ function pickQuestions(count, diff, cats) {
   return shuffle(chosen);
 }
 
-function buildGame(count, diff, cats) {
-  const pool = pickQuestions(count, diff, cats);
+function buildGame(count, diff, cats, fixed) {
+  const pool = fixed || pickQuestions(count, diff, cats);
   const pub = [], keys = [], infos = [];
   for (const q of pool) {
     if (q.t === 'mc') {
@@ -1364,7 +1371,13 @@ function hostAction(fn, cond) {
 async function startGame() {
   const R = S.R; S.busy = true; render();
   try {
-    const {pub, keys, infos} = buildGame(R.count || 10, R.diff || 'mix', R.cats ? R.cats.split('|') : null);
+    let built;
+    if (R.quiz) {
+      const qz = (S.myQuizzes || {})[R.quiz] || (await get(ref(db, 'quizzes/' + R.quiz))).val();
+      if (!qz || !qz.qs) throw new Error('quiz-missing');
+      built = buildGame(0, 'mix', null, shuffle(Object.values(qz.qs)).map(q => Object.assign({cat: qz.cat, d: 'o'}, q)));
+    } else built = buildGame(R.count || 10, R.diff || 'mix', R.cats ? R.cats.split('|') : null);
+    const {pub, keys, infos} = built;
     await set(ref(db, 'keys/' + S.code), {a: keys, i: infos});
     S.keys = {a: keys, i: infos};
     const scores = {}; Object.keys(R.players || {}).forEach(id => { scores[id] = 0; });
@@ -1441,6 +1454,126 @@ async function playAgain() {
       countAt: null, answers: null, reveal: null, jokers: null, scores: null});
   } catch (e) { console.error(e); toast('Yeni oyun başlatılamadı'); }
   S.busy = false;
+}
+
+/* ================= kendi quizini yaz ================= */
+const QZ_MIN = 3, QZ_MAX = 30;
+const QZ_ST = {draft: ['Taslak', ''], pending: ['Onay bekliyor', 'wait'], approved: ['Havuzda ✓', 'ok'], rejected: ['Reddedildi', 'bad']};
+async function loadMyQuizzes() {
+  try {
+    const sn = await get(query(ref(db, 'quizzes'), orderByChild('owner'), equalTo(uid())));
+    S.myQuizzes = sn.val() || {};
+  } catch (e) { console.error(e); S.myQuizzes = S.myQuizzes || {}; toast('Quizler yüklenemedi'); }
+  if (S.screen === 'quizzes') render();
+}
+// onaylanmış topluluk sorularını havuza ekle
+async function loadApproved() {
+  try {
+    const sn = await get(ref(db, 'approvedQs')); const have = new Set(QUESTIONS.map(qid));
+    sn.forEach(c => { const q = c.val(); if (q && q.q && !have.has(qid(q))) { QUESTIONS.push(q); have.add(qid(q)); } });
+  } catch (e) { console.error(e); }
+}
+V.quizzes = () => {
+  const list = Object.entries(S.myQuizzes || {}).map(([id, q]) => Object.assign({id}, q)).sort((a, b) => (b.t || 0) - (a.t || 0));
+  return `
+  <div class="screen">
+    <div class="top">${backBtn('data-go="friends"')}</div>
+    <div class="stack" style="gap:14px">
+      <h2>Quizlerim</h2>
+      <p class="muted">Kendi sorularını yaz, arkadaşlarınla hemen oyna. İstersen havuza gönder; onaylanınca herkesin oyunlarında çıkar.</p>
+      <button class="btn primary big" data-act="qznew"><span class="ic">${ICON.plus || '+'}</span><span class="lb">YENİ QUIZ</span></button>
+      ${S.myQuizzes == null ? '<p class="status">Yükleniyor…</p>' : !list.length ? '<div class="card"><p class="small muted">Henüz quizin yok.</p></div>' : list.map(q => {
+        const st = QZ_ST[q.status] || QZ_ST.draft, n = Object.keys(q.qs || {}).length;
+        return `<div class="card stack" style="gap:8px">
+          <div class="row between"><b>${esc(q.title)}</b><span class="qzst ${st[1]}">${st[0]}</span></div>
+          <span class="small muted">${esc(q.cat)} · ${n} soru</span>
+          ${q.status === 'rejected' && q.why ? `<p class="small" style="color:#FF9DA0">Sebep: ${esc(q.why)}</p>` : ''}
+          <div class="row" style="gap:8px">
+            <button class="btn primary" style="flex:1" data-act="qzplay" data-id="${q.id}" ${n < QZ_MIN ? 'disabled' : ''}>Oda aç ve oyna</button>
+            <button class="btn outline" data-act="qzedit" data-id="${q.id}">Düzenle</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+};
+function blankQ(t) { return t === 'num' ? {t: 'num', q: '', a: '', unit: ''} : {t: 'mc', q: '', o: ['', '', '', '']}; }
+V.qzedit = () => {
+  const Z = S.qz, locked = Z.status === 'pending';
+  return `
+  <div class="screen">
+    <div class="top">${backBtn('data-act="qzback"')}${Z.id ? `<span class="qzst ${(QZ_ST[Z.status] || QZ_ST.draft)[1]}">${(QZ_ST[Z.status] || QZ_ST.draft)[0]}</span>` : ''}</div>
+    <div class="stack" style="gap:12px">
+      <h2>${Z.id ? 'Quizi düzenle' : 'Yeni quiz'}</h2>
+      ${locked ? '<div class="card"><p class="small">Bu quiz onay bekliyor. Düzenlemek için önce gönderimi geri çek.</p><button class="btn outline" data-act="qzwithdraw" style="margin-top:8px">Gönderimi geri çek</button></div>' : ''}
+      <label class="small muted" for="qzt">Quiz adı</label>
+      <input class="field" id="qzt" maxlength="40" value="${esc(Z.title)}" placeholder="Örn. 90'lar dizileri" ${locked ? 'disabled' : ''}>
+      <label class="small muted" for="qzc">Kategori</label>
+      <select class="field" id="qzc" ${locked ? 'disabled' : ''}>${NON_EN.map(c => `<option ${Z.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+      ${Z.qs.map((q, i) => `
+        <div class="card stack qzq" style="gap:8px" data-i="${i}">
+          <div class="row between"><b>${i + 1}. soru · ${q.t === 'num' ? 'Tahmin' : 'Çoktan seçmeli'}</b>${locked ? '' : `<button class="btn ghost" data-act="qzdel" data-i="${i}" aria-label="Soruyu sil">Sil</button>`}</div>
+          <textarea class="field" data-f="q" maxlength="200" rows="2" placeholder="Soru" ${locked ? 'disabled' : ''}>${esc(q.q)}</textarea>
+          ${q.t === 'num' ? `
+            <div class="row" style="gap:8px"><input class="field" data-f="a" inputmode="decimal" placeholder="Doğru sayı" value="${esc(q.a)}" ${locked ? 'disabled' : ''}>
+            <input class="field" data-f="unit" maxlength="20" placeholder="Birim (km, yıl…)" value="${esc(q.unit)}" ${locked ? 'disabled' : ''}></div>`
+          : q.o.map((o, k) => `<input class="field qzo ${k === 0 ? 'right' : ''}" data-f="o${k}" maxlength="60" placeholder="${k === 0 ? 'Doğru cevap' : 'Yanlış şık ' + k}" value="${esc(o)}" ${locked ? 'disabled' : ''}>`).join('')}
+        </div>`).join('')}
+      ${locked || Z.qs.length >= QZ_MAX ? '' : `<div class="row" style="gap:8px">
+        <button class="btn outline" style="flex:1" data-act="qzadd" data-t="mc">+ Çoktan seçmeli</button>
+        <button class="btn outline" style="flex:1" data-act="qzadd" data-t="num">+ Tahmin</button></div>`}
+      <p class="small muted">İlk şık her zaman doğru cevaptır; oyunda şıklar karıştırılır. En az ${QZ_MIN}, en fazla ${QZ_MAX} soru.</p>
+    </div>
+    <div class="grow" style="min-height:16px"></div>
+    ${locked ? '' : `<div class="stack">
+      <button class="btn primary big" data-act="qzsave" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">KAYDET</span></button>
+      ${Z.status !== 'approved' ? `<button class="btn outline" data-act="qzsubmit" ${S.busy ? 'disabled' : ''}>Kaydet ve havuza gönder</button>` : ''}
+      ${Z.id ? '<button class="btn ghost" data-act="qzremove">Quizi sil</button>' : ''}
+    </div>`}
+  </div>`;
+};
+function readQz() {
+  const Z = S.qz; if (!Z || Z.status === 'pending') return;
+  const t = document.getElementById('qzt'), c = document.getElementById('qzc');
+  if (t) Z.title = t.value; if (c) Z.cat = c.value;
+  document.querySelectorAll('.qzq').forEach(el => {
+    const q = Z.qs[+el.dataset.i]; if (!q) return;
+    el.querySelectorAll('[data-f]').forEach(f => {
+      const k = f.dataset.f;
+      if (k[0] === 'o' && k.length === 2) q.o[+k[1]] = f.value; else q[k] = f.value;
+    });
+  });
+}
+function checkQz(Z) {
+  if (!Z.title.trim()) return 'Quize bir ad ver';
+  if (Z.qs.length < QZ_MIN) return `En az ${QZ_MIN} soru ekle`;
+  for (let i = 0; i < Z.qs.length; i++) {
+    const q = Z.qs[i], n = i + 1;
+    if (!q.q.trim()) return `${n}. sorunun metni boş`;
+    if (q.t === 'mc') {
+      const o = q.o.map(x => x.trim());
+      if (o.some(x => !x)) return `${n}. sorunun dört şıkkını da doldur`;
+      if (new Set(o.map(x => x.toLocaleLowerCase('tr-TR'))).size < 4) return `${n}. soruda aynı şık iki kez yazılmış`;
+    } else {
+      if (!isFinite(parseFloat(String(q.a).replace(',', '.')))) return `${n}. sorunun cevabı bir sayı olmalı`;
+      if (!String(q.unit).trim()) return `${n}. soruya bir birim yaz`;
+    }
+  }
+  return null;
+}
+async function saveQz(status) {
+  readQz(); const Z = S.qz, err = checkQz(Z); if (err) { toast(err); return; }
+  const qs = Z.qs.map(q => q.t === 'mc' ? {t: 'mc', q: q.q.trim(), o: q.o.map(x => x.trim())}
+    : {t: 'num', q: q.q.trim(), a: parseFloat(String(q.a).replace(',', '.')), unit: String(q.unit).trim()});
+  const id = Z.id || ('z' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
+  const data = {owner: uid(), name: S.me.name, title: Z.title.trim().slice(0, 40), cat: Z.cat, qs, status, t: serverTimestamp()};
+  S.busy = true; render();
+  try {
+    await set(ref(db, 'quizzes/' + id), data);
+    S.myQuizzes = Object.assign({}, S.myQuizzes, {[id]: Object.assign({}, data, {t: now()})});
+    toast(status === 'pending' ? 'Havuza gönderildi, onay bekliyor' : 'Kaydedildi');
+    S.busy = false; go('quizzes');
+  } catch (e) { console.error(e); S.busy = false; render(); toast('Kaydedilemedi, tekrar dene'); }
 }
 
 /* ================= hatalı soru bildirimi ================= */
@@ -1561,6 +1694,19 @@ app.addEventListener('click', e => {
   else if (a === 'next') hostAction(nextQ, () => S.R && S.R.status === 'reveal');
   else if (a === 'again') playAgain();
   else if (a === 'report') reportQuestion();
+  else if (a === 'myquizzes') { S.myQuizzes = S.myQuizzes || null; go('quizzes'); loadMyQuizzes(); }
+  else if (a === 'qznew') { S.qz = {title: '', cat: NON_EN[0], qs: [blankQ('mc'), blankQ('mc'), blankQ('mc')], status: 'draft'}; go('qzedit'); }
+  else if (a === 'qzedit') { const q = S.myQuizzes[el.dataset.id]; S.qz = {id: el.dataset.id, title: q.title, cat: q.cat, status: q.status, why: q.why,
+      qs: Object.values(q.qs || {}).map(x => x.t === 'num' ? {t: 'num', q: x.q, a: String(x.a), unit: x.unit} : {t: 'mc', q: x.q, o: x.o.slice()})}; go('qzedit'); }
+  else if (a === 'qzback') { go('quizzes'); }
+  else if (a === 'qzadd') { readQz(); S.qz.qs.push(blankQ(el.dataset.t)); render(); setTimeout(() => { const all = document.querySelectorAll('.qzq'); all[all.length - 1].scrollIntoView({behavior: 'smooth', block: 'center'}); }, 30); }
+  else if (a === 'qzdel') { readQz(); S.qz.qs.splice(+el.dataset.i, 1); render(); }
+  else if (a === 'qzsave') saveQz('draft');
+  else if (a === 'qzsubmit') { if (confirm('Quiz onaya gönderilsin mi? Onaylanan sorular herkesin oyunlarında çıkabilir.')) saveQz('pending'); }
+  else if (a === 'qzwithdraw') { (async () => { try { await update(ref(db, 'quizzes/' + S.qz.id), {status: 'draft', t: serverTimestamp()}); S.qz.status = 'draft'; S.myQuizzes[S.qz.id].status = 'draft'; render(); } catch (e) { toast('Geri çekilemedi'); } })(); }
+  else if (a === 'qzremove') { if (confirm('Bu quiz silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
+  else if (a === 'qzplay') { const q = S.myQuizzes[el.dataset.id]; createRoom({quiz: el.dataset.id, quizTitle: q.title, quizN: Object.keys(q.qs || {}).length}); }
+  else if (a === 'quizoff') update(roomRef(), {quiz: null, quizTitle: null, quizN: null}).catch(() => toast('Değiştirilemedi'));
   else if (a === 'annclose') { if (S.ann) ls.set('zuqio-ann', String(S.ann.t)); render(); }
 });
 app.addEventListener('keydown', e => {

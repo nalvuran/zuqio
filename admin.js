@@ -30,7 +30,7 @@ function periods() {
   return {d: 'd' + d, w: 'w' + w, m: 'm' + m};
 }
 
-const S = {user: null, role: null, tab: 'sum', users: {}, bans: {}, reports: {}, rooms: {}, admins: {}, ann: null, lb: {}, lbTab: 'd', q: '', open: null, subs: []};
+const S = {user: null, role: null, tab: 'sum', users: {}, bans: {}, reports: {}, quizzes: {}, pool: {}, rooms: {}, admins: {}, ann: null, lb: {}, lbTab: 'd', q: '', open: null, subs: []};
 
 /* ---------------- veri ---------------- */
 function watch(path, key) {
@@ -38,7 +38,7 @@ function watch(path, key) {
 }
 function startData() {
   watch('users', 'users'); watch('bans', 'bans'); watch('reports', 'reports');
-  watch('rooms', 'rooms'); watch('admins', 'admins');
+  watch('rooms', 'rooms'); watch('admins', 'admins'); watch('quizzes', 'quizzes'); watch('approvedQs', 'pool');
   S.subs.push(onValue(ref(db, 'announce'), sn => { S.ann = sn.val(); render(); }));
   loadLb();
 }
@@ -50,7 +50,7 @@ async function loadLb() {
 }
 
 /* ---------------- ekranlar ---------------- */
-const TABS = {sum: 'Özet', users: 'Üyeler', rep: 'Bildirimler', lb: 'Liderlik', rooms: 'Odalar', ann: 'Duyuru', adm: 'Yöneticiler'};
+const TABS = {sum: 'Özet', apr: 'Onay', users: 'Üyeler', rep: 'Bildirimler', pool: 'Havuz', lb: 'Liderlik', rooms: 'Odalar', ann: 'Duyuru', adm: 'Yöneticiler'};
 
 function vLogin() {
   return `<div class="wrap narrow">
@@ -159,6 +159,34 @@ function vReports() {
     </div>`).join('')}</div>`;
 }
 
+const DL = {k: 'Kolay', o: 'Orta', z: 'Zor'};
+function vApprove() {
+  const list = Object.entries(S.quizzes).map(([id, q]) => Object.assign({id}, q)).filter(q => q.status === 'pending').sort((a, b) => (a.t || 0) - (b.t || 0));
+  if (!list.length) return '<div class="card"><b>Onay bekleyen quiz yok</b><p class="muted small">Oyuncular "Havuza gönder" dediğinde burada görünür.</p></div>';
+  return `<p class="muted small">Soruları düzenleyebilir, istemediklerinin işaretini kaldırabilirsin. Onaylananlar herkesin oyunlarında çıkar.</p>
+  <div class="list">${list.map(z => `<div class="card stack" data-qz="${z.id}">
+    <div class="row between"><b style="font-size:1.1rem">${esc(z.title)}</b><span class="small muted">${dt(z.t)}</span></div>
+    <div class="small muted">${esc(z.name || (S.users[z.owner] || {}).name || '?')} · ${esc(z.cat)} · ${Object.keys(z.qs || {}).length} soru</div>
+    <label class="row small" style="flex-direction:row;gap:8px">Zorluk
+      <select class="field" data-z="d" style="width:auto;min-height:40px">${Object.keys(DL).map(k => `<option value="${k}" ${k === 'o' ? 'selected' : ''}>${DL[k]}</option>`).join('')}</select></label>
+    ${Object.values(z.qs || {}).map((q, i) => `<div class="aq stack" data-i="${i}">
+      <label class="row" style="flex-direction:row;gap:8px;font-weight:700"><input type="checkbox" data-z="on" checked> ${i + 1}. ${q.t === 'num' ? 'Tahmin' : 'Çoktan seçmeli'}</label>
+      <textarea class="field" data-z="q" rows="2">${esc(q.q)}</textarea>
+      ${q.t === 'num' ? `<div class="row"><input class="field" data-z="a" value="${esc(q.a)}"><input class="field" data-z="unit" value="${esc(q.unit)}"></div>`
+        : (q.o || []).map((o, k) => `<input class="field ${k === 0 ? 'ok' : ''}" data-z="o${k}" value="${esc(o)}">`).join('')}
+    </div>`).join('')}
+    <div class="row gap"><button class="btn primary" data-act="approve" data-id="${z.id}">Onayla</button><button class="btn danger" data-act="reject" data-id="${z.id}">Reddet</button></div>
+  </div>`).join('')}</div>`;
+}
+function vPool() {
+  const list = Object.entries(S.pool).map(([id, q]) => Object.assign({id}, q)).sort((a, b) => (b.at || 0) - (a.at || 0));
+  if (!list.length) return '<div class="card"><b>Havuzda henüz topluluk sorusu yok</b></div>';
+  return `<p class="muted small">${list.length} topluluk sorusu havuzda. Uygunsuz ya da hatalı olanı kaldırabilirsin.</p>
+  <div class="list">${list.map(q => `<div class="row item"><div class="grow"><b>${esc(q.q)}</b>
+    <div class="small muted">${esc(q.cat)} · ${DL[q.d] || ''} · ${q.t === 'num' ? `${q.a} ${esc(q.unit)}` : '✓ ' + esc(q.o[0])} · ${esc(q.byName || '')}</div></div>
+    <button class="btn ghost danger-t" data-act="pooldel" data-id="${q.id}">Kaldır</button></div>`).join('')}</div>`;
+}
+
 function lbRows(k, limit, actions) {
   const rows = Object.entries(S.lb[k] || {}).map(([id, r]) => Object.assign({id}, r)).sort((a, b) => b.s - a.s).slice(0, limit);
   return rows.map((r, i) => `<div class="row item"><span class="n">${i + 1}</span><div class="grow"><b>${esc(r.n)}</b><div class="small muted">${r.g} oyun</div></div>
@@ -216,15 +244,18 @@ function vAdmins() {
 }
 
 function render() {
+  const ae = document.activeElement;
+  if (S.tab === 'apr' && S.user && S.role && ae && ae.matches && ae.matches('input,textarea,select') && ae.closest('[data-qz]')) { S.dirty = true; return; }
+  S.dirty = false;
   if (!S.user) { app.innerHTML = vLogin(); return; }
   if (!S.role) { app.innerHTML = vNotAdmin(); return; }
   const keep = document.activeElement && document.activeElement.id;
-  const body = {sum: vSum, users: vUsers, rep: vReports, lb: vLb, rooms: vRooms, ann: vAnn, adm: vAdmins}[S.tab]();
-  const nrep = Object.keys(S.reports).length;
+  const body = {sum: vSum, apr: vApprove, pool: vPool, users: vUsers, rep: vReports, lb: vLb, rooms: vRooms, ann: vAnn, adm: vAdmins}[S.tab]();
+  const nrep = Object.keys(S.reports).length, npend = Object.values(S.quizzes).filter(q => q.status === 'pending').length;
   app.innerHTML = `<div class="wrap">
     <header class="row between"><h1>${esc(APP_NAME)} <span>Yönetim</span></h1><button class="btn ghost" data-act="logout">Çıkış</button></header>
     <nav class="tabs">${Object.keys(TABS).filter(k => k !== 'adm' || S.role === 'super').map(k =>
-      `<button class="${S.tab === k ? 'on' : ''}" data-tab="${k}">${TABS[k]}${k === 'rep' && nrep ? ` <i>${nrep}</i>` : ''}</button>`).join('')}</nav>
+      `<button class="${S.tab === k ? 'on' : ''}" data-tab="${k}">${TABS[k]}${k === 'rep' && nrep ? ` <i>${nrep}</i>` : ''}${k === 'apr' && npend ? ` <i>${npend}</i>` : ''}</button>`).join('')}</nav>
     <main>${body}</main>
     ${S.open ? vUser(S.open) : ''}
   </div>`;
@@ -238,6 +269,7 @@ app.addEventListener('submit', async e => {
   try { await signInWithEmailAndPassword(auth, em, pw); }
   catch (err) { toast(['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found'].includes(err.code) ? 'E-posta veya şifre hatalı' : 'Giriş yapılamadı (' + err.code + ')'); }
 });
+app.addEventListener('focusout', () => setTimeout(() => { if (S.dirty) render(); }, 0));
 app.addEventListener('input', e => { if (e.target.id === 'search') { S.q = e.target.value; render(); } });
 app.addEventListener('click', async e => {
   if (e.target.classList && e.target.classList.contains('sheet')) { S.open = null; render(); return; }
@@ -260,6 +292,26 @@ app.addEventListener('click', async e => {
       await navigator.clipboard.writeText(txt); toast('Kopyalandı');
     }
     else if (a === 'resolve') { await remove(ref(db, 'reports/' + id)); toast('Bildirim kapatıldı'); }
+    else if (a === 'approve') {
+      const card = app.querySelector(`[data-qz="${id}"]`), z = S.quizzes[id], d = card.querySelector('[data-z="d"]').value;
+      const up = {}, src = Object.values(z.qs || {}); let n = 0;
+      card.querySelectorAll('.aq').forEach(el => {
+        if (!el.querySelector('[data-z="on"]').checked) return;
+        const o = src[+el.dataset.i], g = k => { const f = el.querySelector(`[data-z="${k}"]`); return f ? f.value.trim() : ''; };
+        const q = o.t === 'num' ? {t: 'num', q: g('q'), a: parseFloat(g('a').replace(',', '.')), unit: g('unit')} : {t: 'mc', q: g('q'), o: [g('o0'), g('o1'), g('o2'), g('o3')]};
+        if (!q.q || (q.t === 'num' && !isFinite(q.a)) || (q.t === 'mc' && q.o.some(x => !x))) return;
+        Object.assign(q, {cat: z.cat, d, src: id, by: z.owner, byName: z.name || '', at: Date.now()});
+        up['approvedQs/' + id + '_' + el.dataset.i] = q; n++;
+      });
+      if (!n) { toast('En az bir soru seçili olmalı'); return; }
+      up[`quizzes/${id}/status`] = 'approved'; up[`quizzes/${id}/t`] = serverTimestamp(); up[`quizzes/${id}/why`] = null;
+      await update(ref(db), up); toast(`${n} soru havuza eklendi`);
+    }
+    else if (a === 'reject') {
+      const why = prompt('Ret sebebi (oyuncu görecek):', ''); if (why === null) return;
+      await update(ref(db, 'quizzes/' + id), {status: 'rejected', why: why.trim().slice(0, 200) || 'Uygun bulunmadı', t: serverTimestamp()}); toast('Reddedildi');
+    }
+    else if (a === 'pooldel') { if (!confirm('Bu soru havuzdan kaldırılsın mı?')) return; await remove(ref(db, 'approvedQs/' + id)); toast('Kaldırıldı'); }
     else if (a === 'lbtab') { S.lbTab = el.dataset.t; render(); }
     else if (a === 'lbreload') loadLb();
     else if (a === 'lbdel') {
