@@ -172,7 +172,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 111';
+const APP_VERSION = '0.5 (test) · yapı 112';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -2038,6 +2038,8 @@ async function useJoker(key) {
 /* ================= ekran açık kalsın ================= */
 async function wakeOn() { try { if ('wakeLock' in navigator && !S.wake) S.wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
 function wakeOff() { try { S.wake && S.wake.release(); } catch (e) {} S.wake = null; }
+// alt menüyü parmakla sürükleyince oynamasın (iOS)
+document.addEventListener('touchmove', e => { if (e.target.closest && e.target.closest('.gnav')) e.preventDefault(); }, {passive: false});
 document.addEventListener('change', e => {
   const t = e.target;
   if (t && t.id === 'pdffile' && S.pdf) {
