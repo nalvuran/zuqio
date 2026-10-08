@@ -140,7 +140,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 46';
+const APP_VERSION = '0.5 (test) · yapı 47';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -561,6 +561,7 @@ V.home = () => `
     <div class="stack" style="gap:14px">
       <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">HIZLI OYNA</span></button>
       <button class="btn purple big" data-go="friends"><span class="ic">${ICON.users}</span><span class="lb">ARKADAŞLARINLA OYNA</span></button>
+      <button class="btn outline big" data-act="bot" ${S.busy ? 'disabled' : ''}><span class="ic">🤖</span><span class="lb">BİLGİSAYARA KARŞI OYNA</span></button>
     </div>
   </div>`;
 
@@ -694,7 +695,6 @@ V.friends = () => `
         <button class="btn" data-act="openrooms">${ICON.list}Açık odalar</button>
       </div>
       <button class="btn outline" data-act="myquizzes">📝 Zuqio’larım<span class="small muted" style="margin-left:6px">· kendi sorularını yaz</span></button>
-      <button class="btn outline" data-act="bot" ${S.busy ? 'disabled' : ''}>🤖 Bilgisayara karşı oyna<span class="small muted" style="margin-left:6px">· antrenman</span></button>
     </div>
   </div>`;
 
