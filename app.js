@@ -643,7 +643,7 @@ V.friends = () => `
         <button class="btn" data-go="join">${ICON.key}Kodla katıl</button>
         <button class="btn" data-act="soon" data-n="Açık odalar">${ICON.list}Açık odalar</button>
       </div>
-      <button class="btn outline" data-act="myquizzes">📝 Quizlerim<span class="small muted" style="margin-left:6px">· kendi sorularını yaz</span></button>
+      <button class="btn outline" data-act="myquizzes">📝 Zuqio'larım<span class="small muted" style="margin-left:6px">· kendi sorularını yaz</span></button>
       <button class="btn outline" data-act="bot" ${S.busy ? 'disabled' : ''}>🤖 Bilgisayara karşı oyna<span class="small muted" style="margin-left:6px">· antrenman</span></button>
     </div>
   </div>`;
@@ -809,10 +809,10 @@ V.lobby = () => {
     ${reactBar()}
     <div class="grow" style="min-height:20px"></div>
     ${host && R.quiz ? `
-      <div class="card setrow" style="margin-bottom:14px;padding:10px 16px"><div><b>📝 ${esc(R.quizTitle || 'Kendi quizin')}</b><span class="small muted">${R.quizN || ''} soru · topluluk quizi</span></div>
+      <div class="card setrow" style="margin-bottom:14px;padding:10px 16px"><div><b>📝 ${esc(R.quizTitle || 'Kendi Zuqio\'n')}</b><span class="small muted">${R.quizN || ''} soru · topluluk Zuqio'su</span></div>
         <button class="btn ghost" data-act="quizoff">Hazır sorular</button></div>
       <button class="btn primary big" data-act="start" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">OYUNU BAŞLAT</span></button>`
-    : !host && R.quiz ? `<p class="status">📝 ${esc(R.quizTitle || 'Topluluk quizi')} · ${R.quizN || ''} soru<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`
+    : !host && R.quiz ? `<p class="status">📝 ${esc(R.quizTitle || 'Topluluk Zuqio\'su')} · ${R.quizN || ''} soru<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`
     : host ? `
       <span class="small muted" style="margin-bottom:8px">Soru sayısı</span>
       <div class="chips" style="margin-bottom:14px">${[5, 10, 15].map(n => `<button class="${(R.count || 10) === n ? 'on' : ''}" data-act="count" data-n="${n}">${n}</button>`).join('')}</div>
@@ -996,7 +996,7 @@ V.final = () => {
   return `
   <div class="screen">
     <h2 style="text-align:center;margin-top:10px">${myRank === 1 ? 'Kazandın!' : `${myRank}. oldun`}</h2>
-    <p class="muted small" style="text-align:center;margin-top:4px">${R.bot ? 'Antrenman oyunuydu, liderlik tablosuna sayılmaz.' : R.quiz ? 'Topluluk quizi oyunları liderlik tablosuna sayılmaz.' : S.lbDone === R.gid ? 'Puanın günlük, haftalık ve aylık tablolara eklendi.' : (R.scores && R.scores[uid()] ? 'Puanın lider tablolarına ekleniyor…' : '')}</p>
+    <p class="muted small" style="text-align:center;margin-top:4px">${R.bot ? 'Antrenman oyunuydu, liderlik tablosuna sayılmaz.' : R.quiz ? 'Topluluk Zuqio'ları liderlik tablosuna sayılmaz.' : S.lbDone === R.gid ? 'Puanın günlük, haftalık ve aylık tablolara eklendi.' : (R.scores && R.scores[uid()] ? 'Puanın lider tablolarına ekleniyor…' : '')}</p>
     <div class="podium">${pod(s[1], 2, 70)}${pod(s[0], 1, 104)}${pod(s[2], 3, 50)}</div>
     <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b><span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
     ${reactBar()}
@@ -1463,7 +1463,7 @@ async function loadMyQuizzes() {
   try {
     const sn = await get(query(ref(db, 'quizzes'), orderByChild('owner'), equalTo(uid())));
     S.myQuizzes = sn.val() || {};
-  } catch (e) { console.error(e); S.myQuizzes = S.myQuizzes || {}; toast('Quizler yüklenemedi'); }
+  } catch (e) { console.error(e); S.myQuizzes = S.myQuizzes || {}; toast('Zuqio'ların yüklenemedi'); }
   if (S.screen === 'quizzes') render();
 }
 // onaylanmış topluluk sorularını havuza ekle
@@ -1479,10 +1479,10 @@ V.quizzes = () => {
   <div class="screen">
     <div class="top">${backBtn('data-go="friends"')}</div>
     <div class="stack" style="gap:14px">
-      <h2>Quizlerim</h2>
-      <p class="muted">Kendi sorularını yaz, arkadaşlarınla hemen oyna. İstersen havuza gönder; onaylanınca herkesin oyunlarında çıkar.</p>
-      <button class="btn primary big" data-act="qznew"><span class="ic">${ICON.plus || '+'}</span><span class="lb">YENİ QUIZ</span></button>
-      ${S.myQuizzes == null ? '<p class="status">Yükleniyor…</p>' : !list.length ? '<div class="card"><p class="small muted">Henüz quizin yok.</p></div>' : list.map(q => {
+      <h2>Zuqio'larım</h2>
+      <p class="muted">Kendi Zuqio'nu oluştur, arkadaşlarınla hemen oyna. İstersen havuza gönder; onaylanınca herkesin oyunlarında çıkar.</p>
+      <button class="btn primary big" data-act="qznew"><span class="ic">${ICON.plus || '+'}</span><span class="lb">YENİ ZUQIO</span></button>
+      ${S.myQuizzes == null ? '<p class="status">Yükleniyor…</p>' : !list.length ? '<div class="card"><p class="small muted">Henüz bir Zuqio'n yok.</p></div>' : list.map(q => {
         const st = QZ_ST[q.status] || QZ_ST.draft, n = Object.keys(q.qs || {}).length;
         return `<div class="card stack" style="gap:8px">
           <div class="row between"><b>${esc(q.title)}</b><span class="qzst ${st[1]}">${st[0]}</span></div>
@@ -1504,9 +1504,9 @@ V.qzedit = () => {
   <div class="screen">
     <div class="top">${backBtn('data-act="qzback"')}${Z.id ? `<span class="qzst ${(QZ_ST[Z.status] || QZ_ST.draft)[1]}">${(QZ_ST[Z.status] || QZ_ST.draft)[0]}</span>` : ''}</div>
     <div class="stack" style="gap:12px">
-      <h2>${Z.id ? 'Quizi düzenle' : 'Yeni quiz'}</h2>
-      ${locked ? '<div class="card"><p class="small">Bu quiz onay bekliyor. Düzenlemek için önce gönderimi geri çek.</p><button class="btn outline" data-act="qzwithdraw" style="margin-top:8px">Gönderimi geri çek</button></div>' : ''}
-      <label class="small muted" for="qzt">Quiz adı</label>
+      <h2>${Z.id ? 'Zuqio\'yu düzenle' : 'Yeni Zuqio'}</h2>
+      ${locked ? '<div class="card"><p class="small">Bu Zuqio onay bekliyor. Düzenlemek için önce gönderimi geri çek.</p><button class="btn outline" data-act="qzwithdraw" style="margin-top:8px">Gönderimi geri çek</button></div>' : ''}
+      <label class="small muted" for="qzt">Zuqio adı</label>
       <input class="field" id="qzt" maxlength="40" value="${esc(Z.title)}" placeholder="Örn. 90'lar dizileri" ${locked ? 'disabled' : ''}>
       <label class="small muted" for="qzc">Kategori</label>
       <select class="field" id="qzc" ${locked ? 'disabled' : ''}>${NON_EN.map(c => `<option ${Z.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
@@ -1528,7 +1528,7 @@ V.qzedit = () => {
     ${locked ? '' : `<div class="stack">
       <button class="btn primary big" data-act="qzsave" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">KAYDET</span></button>
       ${Z.status !== 'approved' ? `<button class="btn outline" data-act="qzsubmit" ${S.busy ? 'disabled' : ''}>Kaydet ve havuza gönder</button>` : ''}
-      ${Z.id ? '<button class="btn ghost" data-act="qzremove">Quizi sil</button>' : ''}
+      ${Z.id ? '<button class="btn ghost" data-act="qzremove">Zuqio'yu sil</button>' : ''}
     </div>`}
   </div>`;
 };
@@ -1545,7 +1545,7 @@ function readQz() {
   });
 }
 function checkQz(Z) {
-  if (!Z.title.trim()) return 'Quize bir ad ver';
+  if (!Z.title.trim()) return 'Zuqio\'na bir ad ver';
   if (Z.qs.length < QZ_MIN) return `En az ${QZ_MIN} soru ekle`;
   for (let i = 0; i < Z.qs.length; i++) {
     const q = Z.qs[i], n = i + 1;
@@ -1702,9 +1702,9 @@ app.addEventListener('click', e => {
   else if (a === 'qzadd') { readQz(); S.qz.qs.push(blankQ(el.dataset.t)); render(); setTimeout(() => { const all = document.querySelectorAll('.qzq'); all[all.length - 1].scrollIntoView({behavior: 'smooth', block: 'center'}); }, 30); }
   else if (a === 'qzdel') { readQz(); S.qz.qs.splice(+el.dataset.i, 1); render(); }
   else if (a === 'qzsave') saveQz('draft');
-  else if (a === 'qzsubmit') { if (confirm('Quiz onaya gönderilsin mi? Onaylanan sorular herkesin oyunlarında çıkabilir.')) saveQz('pending'); }
+  else if (a === 'qzsubmit') { if (confirm('Zuqio onaya gönderilsin mi? Onaylanan sorular herkesin oyunlarında çıkabilir.')) saveQz('pending'); }
   else if (a === 'qzwithdraw') { (async () => { try { await update(ref(db, 'quizzes/' + S.qz.id), {status: 'draft', t: serverTimestamp()}); S.qz.status = 'draft'; S.myQuizzes[S.qz.id].status = 'draft'; render(); } catch (e) { toast('Geri çekilemedi'); } })(); }
-  else if (a === 'qzremove') { if (confirm('Bu quiz silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
+  else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
   else if (a === 'qzplay') { const q = S.myQuizzes[el.dataset.id]; createRoom({quiz: el.dataset.id, quizTitle: q.title, quizN: Object.keys(q.qs || {}).length}); }
   else if (a === 'quizoff') update(roomRef(), {quiz: null, quizTitle: null, quizN: null}).catch(() => toast('Değiştirilemedi'));
   else if (a === 'annclose') { if (S.ann) ls.set('zuqio-ann', String(S.ann.t)); render(); }

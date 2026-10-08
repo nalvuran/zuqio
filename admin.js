@@ -162,7 +162,7 @@ function vReports() {
 const DL = {k: 'Kolay', o: 'Orta', z: 'Zor'};
 function vApprove() {
   const list = Object.entries(S.quizzes).map(([id, q]) => Object.assign({id}, q)).filter(q => q.status === 'pending').sort((a, b) => (a.t || 0) - (b.t || 0));
-  if (!list.length) return '<div class="card"><b>Onay bekleyen quiz yok</b><p class="muted small">Oyuncular "Havuza gönder" dediğinde burada görünür.</p></div>';
+  if (!list.length) return '<div class="card"><b>Onay bekleyen Zuqio yok</b><p class="muted small">Oyuncular "Havuza gönder" dediğinde burada görünür.</p></div>';
   return `<p class="muted small">Soruları düzenleyebilir, istemediklerinin işaretini kaldırabilirsin. Onaylananlar herkesin oyunlarında çıkar.</p>
   <div class="list">${list.map(z => `<div class="card stack" data-qz="${z.id}">
     <div class="row between"><b style="font-size:1.1rem">${esc(z.title)}</b><span class="small muted">${dt(z.t)}</span></div>
