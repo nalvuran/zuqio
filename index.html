@@ -30,15 +30,15 @@
 }
 :root[data-theme="dark"]{ --bg:#22105A; --surface:#311C82; --ink:#FFFFFF; --muted:#B8ACEB; --line:#4733A6; --soft:#2A1670; }
 *,*::before,*::after{box-sizing:border-box}
-html{background:var(--bg); -webkit-text-size-adjust:100%}
+html{background:#170941; -webkit-text-size-adjust:100%}
 body{margin:0; color:var(--ink);
   font-family:"Baloo 2", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-tap-highlight-color:transparent; overscroll-behavior:none}
 /* Arka plan tüm ekranı (çentik ve alt çubuk dahil) kaplar */
-body::before{content:''; position:fixed; left:0; top:0; right:0; bottom:0; z-index:-1;
+body::before{content:''; position:fixed; left:0; top:0; right:0; bottom:calc(-1 * var(--vgap, 0px)); z-index:-1;
   background:radial-gradient(130% 75% at 50% 22%, #3B1C9C 0%, var(--bg) 62%, #170941 100%)}
 /* Uygulama alanı ekranın tamamını kaplar; güvenli alan boşlukları içeride bırakılır */
-#app{position:fixed; left:0; right:0; top:0; bottom:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+#app{position:fixed; left:0; right:0; top:0; bottom:calc(-1 * var(--vgap, 0px)); overflow-y:auto; -webkit-overflow-scrolling:touch;
   display:flex; flex-direction:column;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px)}
 .screen{flex:1; display:flex; flex-direction:column; width:100%; max-width:460px; margin:0 auto; padding:16px 18px 20px}
@@ -217,12 +217,26 @@ input.field{width:100%; min-height:56px; padding:0 16px; border-radius:16px; bor
 
 .tabs button.on{background:var(--yellow); color:#3A2200}
 /* durum çubuğu altına kayan içeriği örten şerit (ana ekrana eklenmiş uygulamada) */
-body::before{content:""; position:fixed; left:0; right:0; top:0; height:env(safe-area-inset-top,0px); background:rgba(30,14,80,.94); z-index:20; pointer-events:none}
+html::after{content:""; position:fixed; left:0; right:0; top:0; height:env(safe-area-inset-top,0px); background:rgba(30,14,80,.94); z-index:20; pointer-events:none}
 </style>
 </head>
 <body>
 <div id="app"><div class="screen"><p class="status" style="margin:auto">Yükleniyor…</p></div></div>
 <noscript><p style="padding:20px;color:#fff">Zuqio'yu oynamak için JavaScript'i açman gerekiyor.</p></noscript>
+<script>
+/* iOS'ta ana ekrandan açılan uygulamada görünür alan ekrandan kısa kalabiliyor (altta boş şerit).
+   Farkı ölçüp uygulama alanını ekranın en altına kadar uzatıyoruz. */
+(function(){
+  function fix(){
+    var sa = window.navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches);
+    var portrait = window.innerHeight > window.innerWidth;
+    var gap = 0;
+    if (sa && portrait) { gap = Math.max(0, screen.height - window.innerHeight); if (gap > 120) gap = 0; }
+    document.documentElement.style.setProperty('--vgap', gap + 'px');
+  }
+  fix(); window.addEventListener('resize', fix); window.addEventListener('orientationchange', function(){ setTimeout(fix, 300); });
+})();
+</script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
