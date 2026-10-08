@@ -172,7 +172,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 109';
+const APP_VERSION = '0.5 (test) · yapı 110';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -773,7 +773,6 @@ V.friends = () => `
         <button class="btn" data-go="join">${ICON.key}Kodla katıl</button>
         <button class="btn" data-act="openrooms">${ICON.list}Açık odalar</button>
       </div>
-      <button class="btn outline" data-act="myquizzes">${ic('doc')}Zuqio’larım<span class="small muted" style="margin-left:6px">· kendi sorularını yaz</span></button>
     </div>
   </div>`;
 
