@@ -2,7 +2,7 @@ import { firebaseConfig, APP_NAME } from './firebase-config.js';
 import { QUESTIONS } from './questions.js';
 const BASE_QS = QUESTIONS.slice(); // günün sorusu herkeste aynı olsun diye sadece hazır sorulardan seçilir
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, reauthenticateWithPopup, deleteUser } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getDatabase, ref as fbRef, get as fbGet, set as fbSet, update as fbUpdate, remove as fbRemove, onValue as fbOnValue, onDisconnect as fbOnDisconnect, serverTimestamp, query, orderByChild, equalTo, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 const fb = initializeApp(firebaseConfig);
@@ -674,6 +674,8 @@ V.settings = () => `
         <span class="small muted">Şu an test aşamasındayız. Gördüğün hataları ve önerilerini bize ilet, birlikte geliştirelim.</span>
       </div>
       <button class="btn ghost" data-act="logout">Çıkış yap</button>
+      <button class="btn ghost" data-act="delacct" style="color:var(--red)" ${S.busy ? 'disabled' : ''}>Hesabımı sil</button>
+      <span class="small muted" style="text-align:center">Hesabını silersen profilin, jetonların, puanların ve hazırladığın quizler kalıcı olarak silinir.</span>
     </div>
   </div>`;
 
@@ -1238,6 +1240,45 @@ async function login() {
     }
   }
   S.busy = false; render();
+}
+
+async function deleteAccount() {
+  const u = auth.currentUser; if (!u || S.busy) return;
+  if (!confirm('Hesabın ve tüm verilerin (profil, jetonlar, puanlar, hazırladığın quizler) kalıcı olarak silinecek. Bu işlem geri alınamaz.\n\nDevam etmek istiyor musun?')) return;
+  S.busy = true; render();
+  try {
+    const provider = new GoogleAuthProvider(); provider.setCustomParameters({prompt: 'select_account', login_hint: u.email || ''});
+    await reauthenticateWithPopup(u, provider);
+  } catch (e) {
+    S.busy = false; render();
+    if (!['auth/popup-closed-by-user', 'auth/cancelled-popup-request'].includes(e.code)) toast('Kimlik doğrulanamadı (' + (e.code || 'hata') + ')');
+    return;
+  }
+  try {
+    const id = u.uid;
+    if (unsubMe) { unsubMe(); unsubMe = null; }
+    leaveLocal();
+    const d0 = dayIdx(), w0 = Math.floor((d0 + 3) / 7), x = new Date(now() + 10800000), jobs = [];
+    for (let i = 0; i < 40; i++) jobs.push(remove(ref(db, `lb/d${d0 - i}/${id}`)));
+    for (let i = 0; i < 8; i++) jobs.push(remove(ref(db, `lb/w${w0 - i}/${id}`)));
+    for (let i = 0; i < 6; i++) {
+      const t = new Date(Date.UTC(x.getUTCFullYear(), x.getUTCMonth() - i, 1)), k = t.getUTCFullYear() + '-' + String(t.getUTCMonth() + 1).padStart(2, '0');
+      jobs.push(remove(ref(db, `lb/m${k}/${id}`))); jobs.push(remove(ref(db, `lbp/m${k}/${id}`)));
+    }
+    await Promise.allSettled(jobs);
+    try {
+      const qs = await get(query(ref(db, 'quizzes'), orderByChild('owner'), equalTo(id)));
+      const rm = []; qs.forEach(c => { rm.push(remove(ref(db, 'quizzes/' + c.key))); });
+      await Promise.allSettled(rm);
+    } catch (e) { console.error(e); }
+    await remove(ref(db, 'users/' + id));
+    await deleteUser(u);
+    try { Object.keys(localStorage).filter(k => k.startsWith('zuqio')).forEach(k => ls.del(k)); } catch (e) {}
+    S.busy = false; S.me = null; toast('Hesabın silindi');
+  } catch (e) {
+    console.error(e); S.busy = false; render();
+    toast('Hesap silinemedi (' + (e.code || 'hata') + '). Tekrar dene.');
+  }
 }
 
 // Profil değişince bu dönemin tablolarındaki kendi satırının ad ve avatarını da güncelle
@@ -1821,6 +1862,7 @@ app.addEventListener('click', e => {
   else if (a === 'openprofile') { S.pick = S.me.av; S.draft = S.me.name; S.firstProfile = false; go('profile'); }
   else if (a === 'av') { const nm = document.getElementById('pnm'); if (nm) S.draft = nm.value; S.pick = +el.dataset.i; buzz(15); render(); }
   else if (a === 'saveprof') saveProfile();
+  else if (a === 'delacct') deleteAccount();
   else if (a === 'logout') { if (confirm('Çıkış yapmak istiyor musun?')) { leaveLocal(); signOut(auth); } }
   else if (a === 'soon') toast(el.dataset.n + ' çok yakında');
   else if (a === 'claim') claimDaily();
