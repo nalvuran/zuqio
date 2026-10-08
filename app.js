@@ -413,6 +413,7 @@ async function equipItem(id) {
 /* ================= tepkiler ================= */
 const myPacks = () => REACT_PACKS.filter(p => !p.price || owned(p.id));
 function reactBar() {
+  return ''; // tepkiler kaldırıldı
   if (!S.code || isBotRoom()) return '';
   return `<div class="reactbar" role="group" aria-label="Tepki gönder">${myPacks().map(p => p.e.map((e, k) =>
     `<button data-act="react" data-p="${p.id}" data-e="${REACT_PACKS.indexOf(p) * 3 + k}" aria-label="Tepki ${e}">${e}</button>`).join('')).join('')}</div>`;
@@ -426,6 +427,7 @@ async function sendReact(p, e) {
 }
 const reactSeen = {};
 function showReacts(R) {
+  return; // tepkiler kaldırıldı
   const rx = R.react || {};
   for (const [id, r] of Object.entries(rx)) {
     if (!r || typeof r.t !== 'number') continue;
@@ -582,7 +584,7 @@ V.daily = () => {
 
 V.shop = () => {
   const tab = S.shopTab || 'av';
-  const tabs = {av: 'Avatar', fr: 'Çerçeve', re: 'Tepki', sh: 'Koruyucu'};
+  const tabs = {av: 'Avatar', fr: 'Çerçeve', sh: 'Koruyucu'};
   let body = '';
   if (tab === 'av') body = `<div class="shopgrid">${SHOP.map(it => {
       const own = owned(it.id), cur = S.me.av === it.av;
@@ -597,12 +599,6 @@ V.shop = () => {
         <span class="price">${own ? (cur ? 'Takılı' : 'Tak') : COIN + it.price}</span></button>`;
     }).join('')}</div>
     <p class="small muted">Çerçeven lobide, oyun sıralamasında ve liderlik tablosunda görünür.</p>`;
-  else if (tab === 're') body = `<div class="stack" style="gap:10px">${REACT_PACKS.map(p => {
-      const own = !p.price || owned(p.id);
-      return `<div class="card row between"><div class="stack" style="gap:4px"><b>${esc(p.name)}</b><span class="remos">${p.e.join(' ')}</span></div>
-        ${own ? `<span class="tag">${p.price ? 'Senin' : 'Ücretsiz'}</span>` : `<button class="btn primary buyb" data-act="buy" data-id="${p.id}">${COIN}${p.price}</button>`}</div>`;
-    }).join('')}</div>
-    <p class="small muted">Tepkileri lobide, cevap sonrasında ve oyun sonunda arkadaşlarına gönderebilirsin.</p>`;
   else body = `<div class="card stack" style="gap:10px;align-items:center;text-align:center">
       <div class="shieldic"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.6-3 8.4-7 10-4-1.6-7-5.4-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
       <b>Seri koruyucu</b>
@@ -615,7 +611,7 @@ V.shop = () => {
     <div class="top">${backBtn('data-go="home"')}<span class="coinbar">${COIN}<b>${coins()}</b></span></div>
     <div class="stack" style="gap:14px">
       <h2>Mağaza</h2>
-      <div class="tabs four" role="tablist">${Object.keys(tabs).map(k => `<button role="tab" class="${tab === k ? 'on' : ''}" aria-selected="${tab === k}" data-act="shoptab" data-t="${k}">${tabs[k]}</button>`).join('')}</div>
+      <div class="tabs four" role="tablist" style="grid-template-columns:repeat(3,1fr)">${Object.keys(tabs).map(k => `<button role="tab" class="${tab === k ? 'on' : ''}" aria-selected="${tab === k}" data-act="shoptab" data-t="${k}">${tabs[k]}</button>`).join('')}</div>
       ${body}
       <p class="small muted">Mağazadaki her şey sadece görünüş ve eğlence içindir; puana ve sıralamaya etkisi yoktur. Jetonları günlük ödül ve günün sorusuyla kazanırsın.</p>
     </div>
