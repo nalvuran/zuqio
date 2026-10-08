@@ -352,9 +352,15 @@ async function claimDaily() {
   S.busy = false; render();
 }
 
+const DQ_TIME = 15000; // günün sorusu için süre
+function dqStartT() { try { const v = JSON.parse(ls.get('zuqio-dq') || 'null'); return v && v.day === dayIdx() ? v.t : null; } catch (e) { return null; } }
+function dqLeft() { const t = dqStartT(); return t == null ? null : Math.max(0, DQ_TIME - (Date.now() - t)); }
+function dqStart() { if (dqStartT() == null) ls.set('zuqio-dq', JSON.stringify({day: dayIdx(), t: Date.now()})); S.dqPick = null; render(); }
 async function answerDaily(i) {
   if (S.busy) return;
   const st = dailyState(); if (st.qDone) return;
+  if (i >= 0 && dqLeft() == null) return; // önce BAŞLA'ya basılmalı
+  const late = i >= 0 && dqLeft() === 0; if (late) i = -1; // süre bittikten sonra gelen cevap geçersiz
   const dq = dailyQuestion(), right = i === dq.a, amt = right ? QUESTION_REWARD.right : QUESTION_REWARD.wrong;
   S.busy = true; S.dqPick = {day: dayIdx(), i}; render();
   try {
@@ -362,8 +368,8 @@ async function answerDaily(i) {
     if (w.qDay === t) { S.busy = false; render(); return; }
     await update(ref(db, 'users/' + uid()), {'wallet/coins': (w.coins || 0) + amt, 'wallet/qDay': t, 'wallet/qRes': right ? 1 : 0});
     SFX.play(right ? 'correct' : 'wrong'); buzz(right ? [30, 40, 30] : 120);
-    toast(right ? `Doğru! +${amt} jeton` : `Yanlış, ama +${amt} jeton kazandın`);
-  } catch (e) { console.error(e); S.dqPick = null; toast('Cevap kaydedilemedi, tekrar dene'); }
+    toast(right ? `Doğru! +${amt} jeton` : i < 0 ? `Süre doldu, +${amt} jeton kazandın` : `Yanlış, ama +${amt} jeton kazandın`);
+  } catch (e) { console.error(e); S.dqPick = null; S.dqRetry = Date.now() + 4000; toast('Cevap kaydedilemedi, tekrar dene'); }
   S.busy = false; render();
 }
 
@@ -555,14 +561,21 @@ V.daily = () => {
         return `<div class="card stack dqdone" style="gap:10px">
           <div class="row between"><span class="tag">Günün sorusu</span><span class="small muted" id="dqcd">${untilTomorrow()}</span></div>
           <p class="small muted">${esc(dq.q.q)}</p>
-          <div class="dqres ${ok ? 'ok' : 'no'}"><b>${ok ? '✓ Doğru bildin' : '✗ Bu sefer olmadı'}</b><span>${ok ? `+${QUESTION_REWARD.right} jeton` : `Doğrusu: ${esc(dq.o[dq.a])} · +${QUESTION_REWARD.wrong} jeton`}</span></div>
+          <div class="dqres ${ok ? 'ok' : 'no'}"><b>${ok ? '✓ Doğru bildin' : S.dqPick && S.dqPick.day === dayIdx() && S.dqPick.i < 0 ? '⏱ Süre doldu' : '✗ Bu sefer olmadı'}</b><span>${ok ? `+${QUESTION_REWARD.right} jeton` : `Doğrusu: ${esc(dq.o[dq.a])} · +${QUESTION_REWARD.wrong} jeton`}</span></div>
           <button class="btn outline" data-act="dqshare">Sonucu paylaş</button>
         </div>`;
-      })() : `<div class="card stack" style="gap:10px">
+      })() : (dqLeft() == null
+      ? `<div class="card stack" style="gap:10px;text-align:center">
         <div class="row between"><span class="tag">Günün sorusu</span><span class="small muted">Doğru +${QUESTION_REWARD.right} · Yanlış +${QUESTION_REWARD.wrong}</span></div>
+        <p style="font-size:1.1rem;font-weight:600">Hazır mısın? Cevaplamak için <b>${DQ_TIME / 1000} saniyen</b> var.</p>
+        <button class="btn primary big" data-act="dqstart"><span class="ic">${ICON.play}</span><span class="lb">BAŞLA</span></button>
+      </div>`
+      : `<div class="card stack" style="gap:10px">
+        <div class="row between"><span class="tag">Günün sorusu</span><div class="hex" id="dqhex">${Math.ceil(dqLeft() / 1000)}</div></div>
+        <div class="bar" style="margin:4px 0"><i id="dqbar" style="width:${dqLeft() / DQ_TIME * 100}%"></i></div>
         <p class="qtext" style="font-size:1.2rem">${esc(dq.q.q)}</p>
         <div class="answers dqa">${dq.o.map((o, i) => `<button class="ans c${i}" data-act="dqpick" data-i="${i}" ${S.busy ? 'disabled' : ''}>${icon(i)}<span>${esc(o)}</span></button>`).join('')}</div>
-      </div>`}
+      </div>`)}
     </div>
   </div>`;
 };
@@ -1117,7 +1130,18 @@ function tick() {
   }
   if (S.screen === 'count' && S.R) { const el = document.getElementById('cnt'); if (el && el.textContent !== String(countNum())) { el.textContent = countNum(); buzz(20); SFX.play('tick'); } }
 }
-setInterval(() => { if (S.screen === 'daily') { const c = document.getElementById('dqcd'); if (c) c.textContent = untilTomorrow(); } tick(); hostStep(); }, 150);
+setInterval(() => {
+  if (S.screen === 'daily') {
+    const c = document.getElementById('dqcd'); if (c) c.textContent = untilTomorrow();
+    const l = dqLeft(), hx = document.getElementById('dqhex'), br = document.getElementById('dqbar');
+    if (l != null && !dailyState().qDone && !S.busy) {
+      if (hx) { hx.textContent = Math.ceil(l / 1000); hx.className = 'hex' + (l < 5000 ? ' low' : ''); }
+      if (br) br.style.width = (l / DQ_TIME * 100) + '%';
+      if (l <= 0 && !(S.dqRetry > Date.now())) answerDaily(-1);
+    }
+  }
+  tick(); hostStep();
+}, 150);
 
 /* ================= giriş ve profil ================= */
 getRedirectResult(auth).catch(() => {});
@@ -1723,6 +1747,7 @@ app.addEventListener('click', e => {
   else if (a === 'logout') { if (confirm('Çıkış yapmak istiyor musun?')) { leaveLocal(); signOut(auth); } }
   else if (a === 'soon') toast(el.dataset.n + ' çok yakında');
   else if (a === 'claim') claimDaily();
+  else if (a === 'dqstart') dqStart();
   else if (a === 'dqpick') answerDaily(+el.dataset.i);
   else if (a === 'dqshare') shareDaily();
   else if (a === 'buy') buyItem(el.dataset.id);
