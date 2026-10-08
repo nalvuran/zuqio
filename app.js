@@ -57,7 +57,7 @@ const ICON = {
   again:'<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>',
   hint:'<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg>',
   play:'<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>',
-  bot:'<svg viewBox="0 0 24 24"><rect x="4.5" y="8" width="15" height="11" rx="3.5"/><path d="M12 8V4.5"/><circle cx="12" cy="3.6" r="1"/><path d="M9 13v1M15 13v1"/><path d="M2.5 12.5v3M21.5 12.5v3"/></svg>',
+  bot:'<svg viewBox="0 0 24 24"><rect x="7" y="5.5" width="10" height="7" rx="2.5"/><path d="M12 5.5V3.2"/><circle cx="12" cy="2.4" r=".9"/><path d="M10 8.2v1.2M14 8.2v1.2"/><rect x="6.5" y="14" width="11" height="5.2" rx="2"/><path d="M3.8 14.5v3.5M20.2 14.5v3.5M10 19.2v2.3M14 19.2v2.3"/></svg>',
   doc:'<svg viewBox="0 0 24 24"><path d="M14 3H7.5A2.5 2.5 0 0 0 5 5.5v13A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
   download:'<svg viewBox="0 0 24 24"><path d="M12 4v10M8 10l4 4 4-4M5 19h14"/></svg>',
   phone:'<svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/></svg>',
@@ -150,7 +150,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 83';
+const APP_VERSION = '0.5 (test) · yapı 84';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -948,7 +948,7 @@ V.lobby = () => {
   <div class="screen lobby">
     <div class="top">${backBtn('data-act="leave"', 'Odadan çık')}<span class="tag">${R.bot ? 'Antrenman' : host ? 'Oda sahibi sensin' : 'Oyun bekleniyor'}</span></div>
     ${R.bot ? `<div class="card stack codecard" style="align-items:center;gap:6px;text-align:center">
-      <b style="font-size:1.15rem;display:inline-flex;align-items:center;gap:8px"><span class="botic" style="width:22px;height:22px">${ICON.bot}</span>Bilgisayara karşı</b>
+      <b style="font-size:1.15rem;display:inline-flex;align-items:center;gap:8px"><span class="botic" style="width:30px;height:30px">${ICON.bot}</span>Bilgisayara karşı</b>
       <span class="small muted">Antrenman oyunu · liderlik tablosuna sayılmaz</span>
     </div>` : `<div class="card stack codecard" style="align-items:center;gap:6px">
       <span class="small muted">Oda kodu</span>
