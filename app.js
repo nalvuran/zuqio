@@ -59,6 +59,10 @@ const ICON = {
   play:'<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>',
   bot:'<svg viewBox="0 0 24 24"><rect x="4.5" y="8" width="15" height="11" rx="3.5"/><path d="M12 8V4.5"/><circle cx="12" cy="3.6" r="1"/><path d="M9 13v1M15 13v1"/><path d="M2.5 12.5v3M21.5 12.5v3"/></svg>',
   doc:'<svg viewBox="0 0 24 24"><path d="M14 3H7.5A2.5 2.5 0 0 0 5 5.5v13A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
+  download:'<svg viewBox="0 0 24 24"><path d="M12 4v10M8 10l4 4 4-4M5 19h14"/></svg>',
+  phone:'<svg viewBox="0 0 24 24"><rect x="7" y="3" width="10" height="18" rx="2.5"/><path d="M11 18h2"/></svg>',
+  target:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/></svg>',
+  car:'<svg viewBox="0 0 24 24"><path d="M4 12l1.8-4.6A2 2 0 0 1 7.7 6h8.6a2 2 0 0 1 1.9 1.4L20 12M3.5 12h17v4a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1z"/><circle cx="7.5" cy="14.5" r=".6"/><circle cx="16.5" cy="14.5" r=".6"/><path d="M6.5 17v2M17.5 17v2"/></svg>',
   user1:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>',
   users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6.5 6.5 0 0 1 3.5 6"/></svg>',
   home:'<svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7M6 10v10h12V10M10 20v-6h4v6"/></svg>',
@@ -138,6 +142,7 @@ const JOKER_INFO = {
   second: {label:'İkinci şans', icon:'again'}
 };
 const app = document.getElementById('app');
+const ic = n => `<span class="ico">${ICON[n]}</span>`;
 const BOT_MARK = '\uE000'; // bilgisayar rakip adının sonundaki özel işaret; ekranda robot simgesine dönüşür
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])).replace(/\uE000/g, () => `<span class="botic">${ICON.bot}</span>`);
 const fmt = n => Math.round(n).toLocaleString('tr-TR');
@@ -145,7 +150,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 82';
+const APP_VERSION = '0.5 (test) · yapı 83';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -490,7 +495,7 @@ window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.defe
 window.addEventListener('appinstalled', () => { S.deferredInstall = null; S.installed = true; if (S.screen === 'home') render(); });
 function a2Link() {
   if (isStandalone() || S.installed) return '';
-  return `<div style="text-align:center;margin-top:10px"><button class="a2link" data-act="a2hs">📲 Ana ekrana ekle</button></div>`;
+  return `<div style="text-align:center;margin-top:10px"><button class="a2link" data-act="a2hs">${ic('phone')}Ana ekrana ekle</button></div>`;
 }
 const SHARE_IC = '<svg class="a2ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8.5 7.5 12 4l3.5 3.5M6 11H5v9h14v-9h-1"/></svg>';
 function a2Sheet() {
@@ -528,7 +533,7 @@ function winPop() {
   const w = S.win; if (!w || ls.get('zuqio-win-' + w.key) === '1') return '';
   return `<div class="annmodal" data-act="winclose"><div class="anncard" role="dialog" aria-label="Tebrikler" data-stop="1" style="flex-direction:column;gap:18px">
     <button class="annx" data-act="winclose" aria-label="Kapat">✕</button>
-    <p style="font-size:1.2rem">🎉 Tebrikler!<br>${esc(monthLabel(w.key))} ayının kitap ödülünü kazandın</p>
+    <p style="font-size:1.2rem">${ic('trophy')}Tebrikler!<br>${esc(monthLabel(w.key))} ayının kitap ödülünü kazandın</p>
     <button class="btn primary" data-act="bookdl" ${S.busyBook ? 'disabled' : ''}>Kitabını indir</button></div></div>`;
 }
 async function checkWin() {
@@ -554,7 +559,7 @@ async function downloadBook() {
     const a = document.createElement('a'); a.href = url; a.download = v.n || 'Zuqio-kitap.pdf';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 120000);
-    ls.set('zuqio-win-' + w.key, '1'); toast('Kitap indirildi 🎉');
+    ls.set('zuqio-win-' + w.key, '1'); toast('Kitap indirildi');
   } catch (e) { console.error(e); toast('İndirilemedi, tekrar dene'); }
   S.busyBook = false; render();
 }
@@ -649,7 +654,7 @@ V.daily = () => {
         return `<div class="card stack dqdone" style="gap:10px">
           <div class="row between"><span class="tag">Günün sorusu</span><span class="small muted" id="dqcd">${untilTomorrow()}</span></div>
           <p class="small muted">${esc(dq.q.q)}</p>
-          <div class="dqres ${ok ? 'ok' : 'no'}"><b>${ok ? '✓ Doğru bildin' : S.dqPick && S.dqPick.day === dayIdx() && S.dqPick.i < 0 ? '⏱ Süre doldu' : '✗ Bu sefer olmadı'}</b><span>${ok ? `+${QUESTION_REWARD.right} jeton` : `Doğrusu: ${esc(dq.o[dq.a])} · +${QUESTION_REWARD.wrong} jeton`}</span></div>
+          <div class="dqres ${ok ? 'ok' : 'no'}"><b>${ok ? '✓ Doğru bildin' : S.dqPick && S.dqPick.day === dayIdx() && S.dqPick.i < 0 ? 'Süre doldu' : '✗ Bu sefer olmadı'}</b><span>${ok ? `+${QUESTION_REWARD.right} jeton` : `Doğrusu: ${esc(dq.o[dq.a])} · +${QUESTION_REWARD.wrong} jeton`}</span></div>
           <button class="btn outline" data-act="dqshare">Sonucu paylaş</button>
         </div>`;
       })() : (dqLeft() == null
@@ -746,7 +751,7 @@ V.friends = () => `
         <button class="btn" data-go="join">${ICON.key}Kodla katıl</button>
         <button class="btn" data-act="openrooms">${ICON.list}Açık odalar</button>
       </div>
-      <button class="btn outline" data-act="myquizzes">📝 Zuqio’larım<span class="small muted" style="margin-left:6px">· kendi sorularını yaz</span></button>
+      <button class="btn outline" data-act="myquizzes">${ic('doc')}Zuqio’larım<span class="small muted" style="margin-left:6px">· kendi sorularını yaz</span></button>
     </div>
   </div>`;
 
@@ -780,7 +785,7 @@ V.rooms = () => {
       : L.map(o => `<button class="card roomcard" data-act="joinopen" data-code="${o.code}" ${S.busy ? 'disabled' : ''}>
           <div class="row" style="gap:12px">${avatar(o.host.av, '', o.host.fr)}<div class="stack" style="gap:2px;flex:1;text-align:left">
             <b>${esc(o.host.name)} odası</b>
-            <span class="small muted">${o.R.quiz ? `📝 ${esc(o.R.quizTitle || 'Topluluk Zuqio’su')}` : `${o.R.count || 10} soru · ${DIFF_LABEL[o.R.diff || 'mix']} · ${esc(catSummary(o.R))}`}</span>
+            <span class="small muted">${o.R.quiz ? `${ic('doc')}${esc(o.R.quizTitle || 'Topluluk Zuqio’su')}` : `${o.R.count || 10} soru · ${DIFF_LABEL[o.R.diff || 'mix']} · ${esc(catSummary(o.R))}`}</span>
             ${o.R.quiz ? '<span><span class="tag">Topluluk Zuqio’su</span></span>' : ''}
           </div><div class="stack" style="gap:2px;align-items:flex-end"><b>${o.n}</b><span class="small muted">oyuncu</span></div></div>
         </button>`).join('')}
@@ -826,7 +831,7 @@ const NON_EN = CATS.filter(c => c !== 'İngilizce');
 const roomPack = R => { const c = R && R.cats; return c && c.startsWith('pk:') ? PACKS.find(p => p.id === c.slice(3)) || null : null; };
 const roomCats = R => R && R.cats ? R.cats.split('|').filter(c => CATS.includes(c)) : null;
 function catSummary(R) {
-  const pk = roomPack(R); if (pk) return pk.icon + ' ' + pk.name;
+  const pk = roomPack(R); if (pk) return pk.name;
   const c = roomCats(R);
   if (!c || !c.length) return 'Bilgi yarışması · Tümü';
   if (c.includes('İngilizce')) return 'İngilizce öğrenme';
@@ -918,7 +923,7 @@ V.cats = () => {
       </div>
       ${pkm ? `
       <p class="muted">Tek bir konuda yarışın. Paketlerde zorluk seviyesi yok, sorular karışık gelir.</p>
-      ${PACKS.map(p => `<button class="card setrow catrow" style="padding:12px 16px;${S.pkSel === p.id ? 'border-color:var(--yellow)' : ''}" data-act="pkpick" data-id="${p.id}" aria-pressed="${S.pkSel === p.id}"><div><b>${p.icon} ${esc(p.name)}</b><span class="small muted">${esc(p.desc)} · ${p.qs.length} soru</span></div><span class="${S.pkSel === p.id ? '' : 'muted'}">${S.pkSel === p.id ? '✓' : '›'}</span></button>`).join('')}` : en ? `
+      ${PACKS.map(p => `<button class="card setrow catrow" style="padding:12px 16px;${S.pkSel === p.id ? 'border-color:var(--yellow)' : ''}" data-act="pkpick" data-id="${p.id}" aria-pressed="${S.pkSel === p.id}"><div><b>${ICON[p.icon] ? ic(p.icon) : esc(p.icon)}${esc(p.name)}</b><span class="small muted">${esc(p.desc)} · ${p.qs.length} soru</span></div><span class="${S.pkSel === p.id ? '' : 'muted'}">${S.pkSel === p.id ? '✓' : '›'}</span></button>`).join('')}` : en ? `
       <div class="card stack" style="gap:8px">
         <b>İngilizce öğrenme modu</b>
         <p class="small muted">Sorular İngilizce kelime ve kalıplar üzerine. Kolay = A1–A2 (Türkçe sorular), Orta = B1–B2, Zor = C1. Her cevaptan sonra kısa bir “Öğren” notu gösterilir.</p>
@@ -961,10 +966,10 @@ V.lobby = () => {
     ${host && !R.bot ? `<div class="card setrow pubrow"><div><b>Herkese açık oda</b><span class="small muted">${R.public ? 'Açık odalar listesinde görünüyor' : 'Sadece kodu bilenler katılabilir'}</span></div>
       <button class="switch ${R.public ? 'on' : ''}" role="switch" aria-checked="${!!R.public}" aria-label="Herkese açık oda" data-act="tpublic"></button></div>` : ''}
     ${host && R.quiz ? `
-      <div class="card setrow" style="margin-bottom:14px;padding:10px 16px"><div><b>📝 ${esc(R.quizTitle || 'Kendi Zuqio’n')}</b><span class="small muted">${R.quizN || ''} soru · topluluk Zuqio’su</span></div>
+      <div class="card setrow" style="margin-bottom:14px;padding:10px 16px"><div><b>${ic('doc')}${esc(R.quizTitle || 'Kendi Zuqio’n')}</b><span class="small muted">${R.quizN || ''} soru · topluluk Zuqio’su</span></div>
         <button class="btn ghost" data-act="quizoff">Hazır sorular</button></div>
       <button class="btn primary big" data-act="start" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">OYUNU BAŞLAT</span></button>`
-    : !host && R.quiz ? `<p class="status">📝 ${esc(R.quizTitle || 'Topluluk Zuqio’su')} · ${R.quizN || ''} soru<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`
+    : !host && R.quiz ? `<p class="status">${ic('doc')}${esc(R.quizTitle || 'Topluluk Zuqio’su')} · ${R.quizN || ''} soru<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`
     : host ? `
       <span class="small muted lbl" style="margin-bottom:8px">Soru sayısı</span>
       <div class="chips" style="margin-bottom:10px">${[5, 10, 15].map(n => `<button class="${(R.count || 10) === n ? 'on' : ''}" data-act="count" data-n="${n}">${n}</button>`).join('')}</div>
@@ -1145,7 +1150,7 @@ async function loadBoard() {
   if (S.screen === 'board') render();
 }
 V.board = () => {
-  const labels = {d: 'Günlük', w: 'Haftalık', m: 'Aylık', p: '🏆 Ödül'}, key = boardKey();
+  const labels = {d: 'Günlük', w: 'Haftalık', m: 'Aylık', p: 'Ödül'}, key = boardKey();
   const data = S.lbCache && S.lbCache[key];
   let body;
   if (!data || data === 'loading') body = '<p class="status">Yükleniyor…</p>';
@@ -1158,11 +1163,11 @@ V.board = () => {
     </div>`;
   const sub = {d: 'Bugün gece yarısı sıfırlanır.', w: 'Her pazartesi sıfırlanır.', m: 'Her ayın başında sıfırlanır.', p: ''}[S.lbTab];
   const prize = S.lbTab !== 'p' ? '' : `<div class="card stack" style="gap:6px;margin-bottom:12px;border-color:rgba(255,194,26,.6)">
-      <div class="row" style="gap:12px;align-items:center"><img src="kitap-kapak.png" alt="Kitap kapağı" width="64" style="width:64px;height:auto;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.4)"><b>🏆 Bu ayın ödülü: “100 İlginç Bilgi” kitabı</b></div>
+      <div class="row" style="gap:12px;align-items:center"><img src="kitap-kapak.png" alt="Kitap kapağı" width="64" style="width:64px;height:auto;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.4)"><b>${ic('trophy')}Bu ayın ödülü: “100 İlginç Bilgi” kitabı</b></div>
       <p class="small" style="margin:0">Ay sonunda ödül puanında 1. olan, kitabın PDF’ini e-postayla alır. Bitmesine <b>${monthLeft()} gün</b> var.</p>
       <p class="small muted" style="margin:0">Sayılan oyunlar: en az 3 gerçek oyuncunun olduğu odalar. Günde en fazla ${fmt(PRIZE_DAILY_CAP)} puan sayılır. Antrenman ve Zuqio’larım oyunları sayılmaz. Kazanan, yönetici kontrolünden sonra kesinleşir.</p>
-      ${S.tabP ? `<p class="small" style="margin:0">Geçen ayın kazananı: <b>${esc(S.tabP.name)}</b> 🎉</p>` : ''}
-      ${S.win ? `<button class="btn primary" data-act="bookdl" ${S.busyBook ? 'disabled' : ''}>📥 Kitabını indir (${esc(monthLabel(S.win.key))})</button>` : ''}</div>`;
+      ${S.tabP ? `<p class="small" style="margin:0">Geçen ayın kazananı: <b>${esc(S.tabP.name)}</b></p>` : ''}
+      ${S.win ? `<button class="btn primary" data-act="bookdl" ${S.busyBook ? 'disabled' : ''}>${ic('download')}Kitabını indir (${esc(monthLabel(S.win.key))})</button>` : ''}</div>`;
   return `
   <div class="screen">
     <div class="top">${backBtn('data-go="home"')}</div>
@@ -1819,7 +1824,7 @@ V.pdfgen = () => {
     <div class="stack" style="gap:14px">
       <h2>Notlarınla çalış</h2>
       <p class="muted">Ders notunu ya da çalışma kâğıdını yükle; önce kısa bir özet, sonra bu nottan sorular hazırlansın. Hazır olunca düzenleyip arkadaşlarınla oynayabilirsin.</p>
-      <label class="btn outline" for="pdffile" style="justify-content:center;gap:8px;${P.busy ? 'opacity:.5;pointer-events:none' : ''}">📄 ${P.file ? esc(P.file.name) : 'PDF seç'}</label>
+      <label class="btn outline" for="pdffile" style="justify-content:center;gap:8px;${P.busy ? 'opacity:.5;pointer-events:none' : ''}">${ic('doc')}${P.file ? esc(P.file.name) : 'PDF seç'}</label>
       <input type="file" id="pdffile" accept="application/pdf,.pdf" hidden ${P.busy ? 'disabled' : ''}>
       <span class="small muted">En fazla 5 MB ve ${PDF_PAGES} sayfa. ${P.file ? Math.round(P.file.size / 1024) + ' KB seçildi.' : ''}</span>
       <span class="small muted lbl">Soru sayısı</span>
@@ -1880,7 +1885,7 @@ V.qzedit = () => {
       <textarea class="field" id="qzs" rows="9" maxlength="3000" ${locked ? 'disabled' : ''}>${esc(Z.summary)}</textarea>` : ''}
       <span class="small muted lbl">Cevaplama süresi</span>
       <div class="chips">${[15, 30, 45].map(n => `<button class="${Z.dur === n ? 'on' : ''}" data-act="qzdur" data-n="${n}" ${locked ? 'disabled' : ''}>${n} sn</button>`).join('')}</div>
-      ${Z.src === 'pdf' && !Z.showQs ? `<div class="card stack" style="gap:8px"><b>🎯 ${Z.qs.length} soru hazır</b>
+      ${Z.src === 'pdf' && !Z.showQs ? `<div class="card stack" style="gap:8px"><b>${ic('target')}${Z.qs.length} soru hazır</b>
         <p class="small muted">Sorular özetteki bilgilerden hazırlandı ve oyunda sürpriz olarak gelecek. Özeti oku; doğruysa onayla. Yapay zekâ hata yapabilir, oyunda yanlış bir soru görürsen “Soruyu bildir” düğmesini kullanabilirsin.</p></div>` : `${Z.qs.map((q, i) => `
         <div class="card stack qzq" style="gap:8px" data-i="${i}">
           <div class="row between"><b>${i + 1}. soru · ${q.t === 'num' ? 'Tahmin' : 'Çoktan seçmeli'}</b>${locked || Z.qs.length < 2 ? '' : `<button class="btn ghost" data-act="qzdel" data-i="${i}" aria-label="Soruyu sil">Sil</button>`}</div>

@@ -1,7 +1,7 @@
 // Konu paketleri: dar kapsamlı, zorluk seviyesi olmayan soru setleri (ilk şık doğru cevap)
 const m = (q, ...o) => ({t: 'mc', cat: 'Plakalar', d: 'o', q, o});
 export const PACKS = [
-  {id: 'plaka', name: 'Türkiye plakaları', icon: '🚗', desc: 'İl plaka kodlarını ne kadar biliyorsun?', qs: [
+  {id: 'plaka', name: 'Türkiye plakaları', icon: 'car', desc: 'İl plaka kodlarını ne kadar biliyorsun?', qs: [
     m('34 hangi ilin plakasıdır?', 'İstanbul', 'Ankara', 'İzmir', 'Bursa'),
     m('Konya’nın plaka kodu kaçtır?', '42', '40', '44', '46'),
     m('06 hangi ilin plakasıdır?', 'Ankara', 'Adana', 'Antalya', 'Aydın'),
