@@ -31,7 +31,7 @@ function periods() {
   return {d: 'd' + d, w: 'w' + w, m: 'm' + m};
 }
 
-const S = {user: null, role: null, tab: 'sum', users: {}, bans: {}, reports: {}, quizzes: {}, pool: {}, fix: {}, edit: null, poolTab: 'b', pq: '', pcat: '', rooms: {}, admins: {}, ann: null, lb: {}, lbTab: 'd', q: '', open: null, subs: []};
+const S = {user: null, role: null, tab: 'sum', users: {}, bans: {}, reports: {}, quizzes: {}, pool: {}, fix: {}, edit: null, poolTab: 'b', prizeM: 'cur', prizeRows: null, prizes: {}, pq: '', pcat: '', rooms: {}, admins: {}, ann: null, lb: {}, lbTab: 'd', q: '', open: null, subs: []};
 
 /* ---------------- veri ---------------- */
 function watch(path, key) {
@@ -39,7 +39,7 @@ function watch(path, key) {
 }
 function startData() {
   watch('users', 'users'); watch('bans', 'bans'); watch('reports', 'reports');
-  watch('rooms', 'rooms'); watch('admins', 'admins'); watch('quizzes', 'quizzes'); watch('approvedQs', 'pool'); watch('qfix', 'fix');
+  watch('rooms', 'rooms'); watch('admins', 'admins'); watch('quizzes', 'quizzes'); watch('approvedQs', 'pool'); watch('qfix', 'fix'); watch('prizes', 'prizes');
   S.subs.push(onValue(ref(db, 'announce'), sn => { S.ann = sn.val(); render(); }));
   loadLb();
 }
@@ -51,7 +51,7 @@ async function loadLb() {
 }
 
 /* ---------------- ekranlar ---------------- */
-const TABS = {sum: 'Özet', apr: 'Onay', users: 'Üyeler', rep: 'Bildirimler', pool: 'Havuz', lb: 'Liderlik', rooms: 'Odalar', ann: 'Duyuru', adm: 'Yöneticiler'};
+const TABS = {sum: 'Özet', apr: 'Onay', users: 'Üyeler', rep: 'Bildirimler', pool: 'Havuz', lb: 'Liderlik', rooms: 'Odalar', prize: 'Ödül', ann: 'Duyuru', adm: 'Yöneticiler'};
 
 function vLogin() {
   return `<div class="wrap narrow">
@@ -199,6 +199,28 @@ function vApprove() {
     <div class="row gap"><button class="btn primary" data-act="approve" data-id="${z.id}">Onayla</button><button class="btn danger" data-act="reject" data-id="${z.id}">Reddet</button></div>
   </div>`).join('')}</div>`;
 }
+const monthKey = off => { const x = new Date(Date.now() + 10800000); x.setUTCMonth(x.getUTCMonth() + off, 1); return 'm' + x.getUTCFullYear() + '-' + String(x.getUTCMonth() + 1).padStart(2, '0'); };
+const curPrizeKey = () => monthKey(S.prizeM === 'prev' ? -1 : 0);
+async function loadPrize() {
+  S.prizeRows = null; render();
+  try { const v = (await get(ref(db, 'lbp/' + curPrizeKey()))).val() || {}; S.prizeRows = Object.entries(v).map(([id, r]) => Object.assign({id}, r)).sort((x, y) => y.s - x.s).slice(0, 15); }
+  catch (e) { console.error(e); S.prizeRows = []; }
+  render();
+}
+function vPrize() {
+  const k = curPrizeKey(), pz = S.prizes[k], rows = S.prizeRows;
+  const mail = (p) => { const u = S.users[p.uid] || {}; return u.email || ''; };
+  const win = pz ? `<div class="card stack"><b>Kazanan: ${esc(pz.name)} ${pz.sent ? '<span class="tag">Gönderildi</span>' : '<span class="tag bad">Gönderilmedi</span>'}</b>
+      <div class="small muted">${esc(mail(pz) || 'e-posta bulunamadı')} · ${fmt(pz.s)} puan · ${fmt(pz.g)} oyun</div>
+      <div class="row gap">${mail(pz) ? `<a class="btn" href="mailto:${encodeURIComponent(mail(pz))}?subject=${encodeURIComponent('Zuqio aylık ödülün: kitap hediyesi 🎉')}&body=${encodeURIComponent('Merhaba ' + pz.name + ',\n\nZuqio’da geçen ayın ödül yarışında 1. oldun, tebrikler! Kitabın PDF’i ekte.\n\nKeyifli okumalar,\nZuqio')}" style="display:inline-flex;align-items:center;text-decoration:none;color:inherit">E-posta yaz</a>` : ''}
+      <button class="btn primary" data-act="prsent" data-id="${k}">${pz.sent ? 'Gönderilmedi yap' : 'Gönderildi'}</button><button class="btn danger" data-act="prclear" data-id="${k}">Kazananı kaldır</button></div></div>` : '';
+  return `<div class="seg" style="grid-template-columns:repeat(2,1fr)">${[['cur', 'Bu ay'], ['prev', 'Geçen ay']].map(([m, l]) => `<button class="${S.prizeM === m ? 'on' : ''}" data-act="przm" data-t="${m}">${l}</button>`).join('')}</div>
+    <p class="muted small">Ödül yarışı: en az 3 gerçek oyunculu odalar, günlük 5.000 puan sınırı. Kazananı kesinleştirmeden önce oyun sayısına ve puanın makul olup olmadığına bak; şüpheli satırı silebilirsin.</p>
+    ${win}
+    ${rows == null ? '<p class="muted small">Yükleniyor…</p>' : !rows.length ? '<div class="card"><b>Bu ay henüz puan yok</b></div>' : `<div class="list">${rows.map((r, i) => `<div class="row item"><span class="n">${i + 1}</span>
+      <div class="grow"><b>${esc(r.n)}</b><div class="small muted">${esc((S.users[r.id] || {}).email || '')} · ${r.g} oyun</div></div><b>${fmt(r.s)}</b>
+      <button class="btn ghost" data-act="prwin" data-id="${r.id}">Kazanan yap</button><button class="btn ghost danger-t" data-act="prdel" data-id="${r.id}">Sil</button></div>`).join('')}</div>`}`;
+}
 function vFixes() {
   const l = Object.entries(S.fix).map(([id, f]) => Object.assign({id}, f)).sort((x, y) => (y.at || 0) - (x.at || 0));
   if (!l.length) return '';
@@ -297,7 +319,7 @@ function render() {
   if (!S.user) { app.innerHTML = vLogin(); return; }
   if (!S.role) { app.innerHTML = vNotAdmin(); return; }
   const keep = document.activeElement && document.activeElement.id;
-  const body = {sum: vSum, apr: vApprove, pool: vPool, users: vUsers, rep: vReports, lb: vLb, rooms: vRooms, ann: vAnn, adm: vAdmins}[S.tab]();
+  const body = {sum: vSum, apr: vApprove, pool: vPool, users: vUsers, rep: vReports, lb: vLb, rooms: vRooms, prize: vPrize, ann: vAnn, adm: vAdmins}[S.tab]();
   const nrep = Object.keys(S.reports).length, npend = Object.values(S.quizzes).filter(q => q.status === 'pending').length;
   app.innerHTML = `<div class="wrap">
     <header class="row between"><h1>${esc(APP_NAME)} <span>Yönetim</span></h1><button class="btn ghost" data-act="logout">Çıkış</button></header>
@@ -326,7 +348,7 @@ app.addEventListener('change', e => { if (e.target.id === 'pcat') { S.pcat = e.t
 app.addEventListener('click', async e => {
   if (e.target.classList && e.target.classList.contains('sheet')) { S.open = null; render(); return; }
   const el = e.target.closest('[data-act],[data-tab]'); if (!el) return;
-  if (el.dataset.tab) { S.tab = el.dataset.tab; S.open = null; render(); window.scrollTo(0, 0); if (S.tab === 'lb' || S.tab === 'sum') loadLb(); return; }
+  if (el.dataset.tab) { S.tab = el.dataset.tab; S.open = null; render(); window.scrollTo(0, 0); if (S.tab === 'lb' || S.tab === 'sum') loadLb(); if (S.tab === 'prize') loadPrize(); return; }
   const a = el.dataset.act, id = el.dataset.id;
   try {
     if (a === 'logout') { stopData(); await signOut(auth); }
@@ -343,6 +365,15 @@ app.addEventListener('click', async e => {
       const txt = `Hatalı soru bildirimi\nKategori: ${r.cat}\nSoru: ${r.q}\n${r.opts ? 'Şıklar: ' + r.opts + '\n' : ''}Kayıtlı doğru cevap: ${r.ans}\nNot: ${r.note || '-'}`;
       await navigator.clipboard.writeText(txt); toast('Kopyalandı');
     }
+    else if (a === 'przm') { S.prizeM = el.dataset.t; loadPrize(); return; }
+    else if (a === 'prwin') {
+      const r = (S.prizeRows || []).find(x => x.id === id), k = curPrizeKey(); if (!r) return;
+      if (!confirm(`${r.n} bu ayın kazananı olarak kaydedilsin mi?`)) return;
+      await set(ref(db, 'prizes/' + k), {uid: id, name: r.n, av: r.av, fr: r.fr || '', s: r.s, g: r.g, sent: false, at: Date.now()}); toast('Kazanan kaydedildi'); return;
+    }
+    else if (a === 'prsent') { await update(ref(db, 'prizes/' + id), {sent: !S.prizes[id].sent}); return; }
+    else if (a === 'prclear') { if (!confirm('Kazanan kaydı silinsin mi?')) return; await remove(ref(db, 'prizes/' + id)); return; }
+    else if (a === 'prdel') { if (!confirm('Bu oyuncunun ödül puanı silinsin mi?')) return; await remove(ref(db, `lbp/${curPrizeKey()}/${id}`)); toast('Silindi'); loadPrize(); return; }
     else if (a === 'pooltab') { S.poolTab = el.dataset.t; render(); return; }
     else if (a === 'qedit' || a === 'qdel') {
       const q = QUESTIONS.find(x => qidOf(x) === id); if (!q) return;

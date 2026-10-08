@@ -974,6 +974,7 @@ function periods() {
   const dt = new Date(now() + 10800000), m = dt.getUTCFullYear() + '-' + String(dt.getUTCMonth() + 1).padStart(2, '0');
   return {d: 'd' + d, w: 'w' + w, m: 'm' + m};
 }
+const PRIZE_MIN = 3, PRIZE_DAILY_CAP = 5000; // ödül yarışı kuralları
 async function claimBoard(R) {
   if (R.bot || R.quiz) return; // antrenman ve kendi quiz oyunları tabloya sayılmaz
   const me = uid(), gid = R.gid, mine = (R.scores || {})[me] || 0;
@@ -982,34 +983,54 @@ async function claimBoard(R) {
   try {
     const P = periods(), code = S.code;
     const cur = await Promise.all(Object.values(P).map(p => get(ref(db, `lb/${p}/${me}`)).then(x => x.val()).catch(() => null)));
+    const pz = (R.hp || 0) >= PRIZE_MIN ? await get(ref(db, `lbp/${P.m}/${me}`)).then(x => x.val()).catch(() => null) : undefined;
     const up = {[`lbClaim/${code}/${gid}/${me}`]: true};
     Object.values(P).forEach((p, i) => {
       const o = cur[i] || {s: 0, g: 0};
       up[`lb/${p}/${me}`] = {s: (o.s || 0) + mine, g: (o.g || 0) + 1, n: S.me.name, av: S.me.av, fr: S.me.fr || '', c: code, gid};
     });
+    if (pz !== undefined) { // ödül yarışı: en az 3 gerçek oyuncu, günlük puan sınırı
+      const dd = dayIdx(), o = pz || {s: 0, g: 0}, used = o.dd === dd ? (o.dp || 0) : 0, gain = Math.min(mine, PRIZE_DAILY_CAP - used);
+      if (gain > 0) up[`lbp/${P.m}/${me}`] = {s: (o.s || 0) + gain, g: (o.g || 0) + 1, n: S.me.name, av: S.me.av, fr: S.me.fr || '', c: code, gid, dd, dp: used + gain};
+    }
     await update(ref(db), up);
     S.lbDone = gid; S.lbCache = {};
     if (S.screen === 'final') render();
   } catch (e) { console.error(e); }
   S.lbBusy = null;
 }
+const boardKey = () => S.lbTab === 'p' ? 'p' + periods().m : periods()[S.lbTab];
+function monthLeft() { // Türkiye saatine göre ay bitimine kalan gün
+  const x = new Date(Date.now() + 10800000), end = Date.UTC(x.getUTCFullYear(), x.getUTCMonth() + 1, 1);
+  return Math.max(1, Math.ceil((end - x.getTime()) / 86400000));
+}
+async function loadPrizeInfo() {
+  S.tabP = null;
+  try { const x = new Date(Date.now() + 10800000); x.setUTCMonth(x.getUTCMonth() - 1, 1);
+    const pm = x.getUTCFullYear() + '-' + String(x.getUTCMonth() + 1).padStart(2, '0');
+    const v = (await get(ref(db, 'prizes/m' + pm))).val(); S.tabP = v ? {name: v.name, av: v.av, fr: v.fr} : false;
+  } catch (e) { S.tabP = false; }
+  if (S.screen === 'board') render();
+}
 async function loadBoard() {
-  const key = periods()[S.lbTab];
+  const key = boardKey();
   S.lbCache = S.lbCache || {};
+  if (S.tabP === undefined) loadPrizeInfo();
   if (S.lbCache[key]) return;
   S.lbCache[key] = 'loading'; render();
   try {
-    const snap = await get(query(ref(db, 'lb/' + key), orderByChild('s'), limitToLast(50)));
+    const path = S.lbTab === 'p' ? 'lbp/' + periods().m : 'lb/' + key;
+    const snap = await get(query(ref(db, path), orderByChild('s'), limitToLast(50)));
     const rows = []; snap.forEach(c => { rows.push(Object.assign({id: c.key}, c.val())); });
     rows.sort((a, b) => b.s - a.s);
     let mine = rows.find(r => r.id === uid());
-    if (!mine) { const m = await get(ref(db, `lb/${key}/${uid()}`)); if (m.exists()) mine = Object.assign({id: uid(), out: true}, m.val()); }
+    if (!mine) { const m = await get(ref(db, `${path}/${uid()}`)); if (m.exists()) mine = Object.assign({id: uid(), out: true}, m.val()); }
     S.lbCache[key] = {rows, mine};
   } catch (e) { console.error(e); S.lbCache[key] = {err: true}; }
   if (S.screen === 'board') render();
 }
 V.board = () => {
-  const labels = {d: 'Günlük', w: 'Haftalık', m: 'Aylık'}, key = periods()[S.lbTab];
+  const labels = {d: 'Günlük', w: 'Haftalık', m: 'Aylık', p: '🏆 Ödül'}, key = boardKey();
   const data = S.lbCache && S.lbCache[key];
   let body;
   if (!data || data === 'loading') body = '<p class="status">Yükleniyor…</p>';
@@ -1020,13 +1041,18 @@ V.board = () => {
         <span class="pts">${fmt(r.s)}</span></div>`).join('')}
       ${data.mine && data.mine.out ? `<div class="rank me"><span class="n">–</span>${avatar(S.me.av, '', S.me.fr)}<b>${esc(S.me.name)}</b><span class="pts">${fmt(data.mine.s)}</span></div>` : ''}
     </div>`;
-  const sub = {d: 'Bugün gece yarısı sıfırlanır.', w: 'Her pazartesi sıfırlanır.', m: 'Her ayın başında sıfırlanır.'}[S.lbTab];
+  const sub = {d: 'Bugün gece yarısı sıfırlanır.', w: 'Her pazartesi sıfırlanır.', m: 'Her ayın başında sıfırlanır.', p: ''}[S.lbTab];
+  const prize = S.lbTab !== 'p' ? '' : `<div class="card stack" style="gap:6px;margin-bottom:12px;border-color:rgba(255,194,26,.6)">
+      <b>🏆 Bu ayın ödülü: kitap hediyesi</b>
+      <p class="small" style="margin:0">Ay sonunda ödül puanında 1. olan, kitabın PDF’ini e-postayla alır. Bitmesine <b>${monthLeft()} gün</b> var.</p>
+      <p class="small muted" style="margin:0">Sayılan oyunlar: en az 3 gerçek oyuncunun olduğu odalar. Günde en fazla ${fmt(PRIZE_DAILY_CAP)} puan sayılır. Antrenman ve Zuqio’larım oyunları sayılmaz. Kazanan, yönetici kontrolünden sonra kesinleşir.</p>
+      ${S.tabP ? `<p class="small" style="margin:0">Geçen ayın kazananı: <b>${esc(S.tabP.name)}</b> 🎉</p>` : ''}</div>`;
   return `
   <div class="screen">
     <div class="top">${backBtn('data-go="home"')}</div>
     <h2 style="margin-bottom:12px">Liderlik tablosu</h2>
-    <div class="tabs" role="tablist">${Object.keys(labels).map(k => `<button role="tab" class="${S.lbTab === k ? 'on' : ''}" aria-selected="${S.lbTab === k}" data-act="lbtab" data-t="${k}">${labels[k]}</button>`).join('')}</div>
-    <p class="small muted" style="margin-bottom:12px">${sub} Bilgisayara karşı antrenman oyunları sayılmaz.</p>
+    <div class="tabs" role="tablist" style="grid-template-columns:repeat(4,1fr)">${Object.keys(labels).map(k => `<button role="tab" class="${S.lbTab === k ? 'on' : ''}" aria-selected="${S.lbTab === k}" data-act="lbtab" data-t="${k}">${labels[k]}</button>`).join('')}</div>
+    ${prize}${S.lbTab === 'p' ? '' : `<p class="small muted" style="margin-bottom:12px">${sub} Bilgisayara karşı antrenman oyunları sayılmaz.</p>`}
     ${body}
   </div>`;
 };
@@ -1146,6 +1172,8 @@ async function syncBoardProfile() {
     const me = uid(), up = {};
     const keys = Object.values(periods());
     const rows = await Promise.all(keys.map(p => get(ref(db, `lb/${p}/${me}`)).then(x => x.exists()).catch(() => false)));
+    const pk = `lbp/${periods().m}/${me}`, pe = await get(ref(db, pk)).then(x => x.exists()).catch(() => false);
+    if (pe) { up[pk + '/n'] = S.me.name; up[pk + '/av'] = S.me.av; up[pk + '/fr'] = S.me.fr || ''; }
     keys.forEach((p, i) => { if (rows[i]) { up[`lb/${p}/${me}/n`] = S.me.name; up[`lb/${p}/${me}/av`] = S.me.av; up[`lb/${p}/${me}/fr`] = S.me.fr || ''; } });
     if (Object.keys(up).length) await update(ref(db), up);
     S.lbCache = {};
@@ -1426,6 +1454,7 @@ async function startGame() {
     const scores = {}; Object.keys(R.players || {}).forEach(id => { scores[id] = 0; });
     await update(roomRef(), {status: 'countdown', countAt: serverTimestamp(), questions: pub, qi: -1, qk: '-1',
       qStartAt: null, qDur: null, answers: null, reveal: null, jokers: null, scores, qm: null, pub: null, autoAt: null,
+      hp: Object.entries(R.players || {}).filter(([id, p]) => !id.startsWith('bot') && p.online !== false).length,
       gid: Date.now().toString(36) + Math.random().toString(36).slice(2, 7)});
   } catch (e) { console.error(e); toast('Oyun başlatılamadı'); }
   S.busy = false;
