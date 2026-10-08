@@ -13,7 +13,7 @@ async function getModel() {
   if (firebaseConfig.appCheckKey) {
     try {
       const m = await import('https://www.gstatic.com/firebasejs/12.8.0/firebase-app-check.js');
-      m.initializeAppCheck(app, {provider: new m.ReCaptchaV3Provider(firebaseConfig.appCheckKey), isTokenAutoRefreshEnabled: true});
+      m.initializeAppCheck(app, {provider: new m.ReCaptchaEnterpriseProvider(firebaseConfig.appCheckKey), isTokenAutoRefreshEnabled: true});
     } catch (e) { console.error(e); }
   }
   const S = Schema;
