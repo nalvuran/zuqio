@@ -140,7 +140,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 49';
+const APP_VERSION = '0.5 (test) · yapı 50';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -838,8 +838,7 @@ async function startBotGame() {
   const ps = {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: now()}};
   names.forEach((n, i) => { ps['bot' + i] = {name: n + ' 🤖', av: avs[i], fr: '', online: true, joinedAt: now() + i + 1, skill: 0.45 + Math.random() * 0.3}; });
   lset('rooms/' + code, {host: uid(), status: 'lobby', count: 10, diff: 'mix', bot: true, createdAt: now(), players: ps});
-  enterRoom(code);
-  setTimeout(() => { if (S.code === code) startGame(); }, 60);
+  enterRoom(code); // oyun, oda sahibi (sen) “Oyunu başlat”a basınca başlar; önce soru sayısı, zorluk ve kategori seçilir
 }
 // Her yeni soruda botların cevabını zamanla
 const botPlan = {};
@@ -928,21 +927,24 @@ V.lobby = () => {
   if (S.catsOpen && host) return V.cats();
   return `
   <div class="screen lobby">
-    <div class="top">${backBtn('data-act="leave"', 'Odadan çık')}<span class="tag">${host ? 'Oda sahibi sensin' : 'Oyun bekleniyor'}</span></div>
-    <div class="card stack codecard" style="align-items:center;gap:6px">
+    <div class="top">${backBtn('data-act="leave"', 'Odadan çık')}<span class="tag">${R.bot ? 'Antrenman' : host ? 'Oda sahibi sensin' : 'Oyun bekleniyor'}</span></div>
+    ${R.bot ? `<div class="card stack codecard" style="align-items:center;gap:6px;text-align:center">
+      <b style="font-size:1.15rem">🤖 Bilgisayara karşı</b>
+      <span class="small muted">Antrenman oyunu · liderlik tablosuna sayılmaz</span>
+    </div>` : `<div class="card stack codecard" style="align-items:center;gap:6px">
       <span class="small muted">Oda kodu</span>
       <div class="code">${S.code}</div>
       <button class="btn ghost" data-act="share">Kodu paylaş</button>
       <button class="copybtn" data-act="copycode" aria-label="Kodu kopyala"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="3"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg></button>
-    </div>
-    <div class="row between" style="margin:18px 0 10px"><b>Oyuncular</b><span class="muted small">${ps.length} kişi</span></div>
+    </div>`}
+    <div class="row between" style="margin:18px 0 10px"><b>${R.bot ? 'Rakiplerin' : 'Oyuncular'}</b><span class="muted small">${ps.length} kişi</span></div>
     <div class="plist">
       ${ps.map(p => `<div class="pitem ${p.online === false ? 'off' : ''}">${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>
-        <span style="margin-left:auto" class="row">${p.id === R.host ? '<span class="tag">Oda sahibi</span>' : ''}${p.id === uid() ? '<span class="tag">Sen</span>' : ''}</span></div>`).join('')}
+        <span style="margin-left:auto" class="row">${p.id === R.host && !R.bot ? '<span class="tag">Oda sahibi</span>' : ''}${p.id === uid() ? '<span class="tag">Sen</span>' : ''}</span></div>`).join('')}
     </div>
     ${reactBar()}
     <div class="lsp"></div>
-    ${host ? `<div class="card setrow pubrow"><div><b>Herkese açık oda</b><span class="small muted">${R.public ? 'Açık odalar listesinde görünüyor' : 'Sadece kodu bilenler katılabilir'}</span></div>
+    ${host && !R.bot ? `<div class="card setrow pubrow"><div><b>Herkese açık oda</b><span class="small muted">${R.public ? 'Açık odalar listesinde görünüyor' : 'Sadece kodu bilenler katılabilir'}</span></div>
       <button class="switch ${R.public ? 'on' : ''}" role="switch" aria-checked="${!!R.public}" aria-label="Herkese açık oda" data-act="tpublic"></button></div>` : ''}
     ${host && R.quiz ? `
       <div class="card setrow" style="margin-bottom:14px;padding:10px 16px"><div><b>📝 ${esc(R.quizTitle || 'Kendi Zuqio’n')}</b><span class="small muted">${R.quizN || ''} soru · topluluk Zuqio’su</span></div>
