@@ -1141,7 +1141,7 @@ function gnav() {
   if (!NAV_SCREENS.includes(S.screen) || S.R || (S.screen === 'profile' && S.firstProfile)) return '';
   const on = k => S.screen === k ? ' on' : '';
   const dot = (() => { const d = dailyState(); return !d.claimed || !d.qDone ? ' hasdot' : ''; })();
-  return `<div class="gnav"><nav class="bottomnav" aria-label="Ana menü">
+  return `<div class="gnav-sp"></div><div class="gnav"><nav class="bottomnav" aria-label="Ana menü">
       <button data-go="home" class="${on('home').trim()}">${ICON.home}ANA SAYFA</button>
       <button data-go="shop" class="${on('shop').trim()}">${ICON.shop}MAĞAZA</button>
       <button data-act="openboard" class="${on('board').trim()}">${ICON.trophy}LİDERLİK</button>

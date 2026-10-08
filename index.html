@@ -94,7 +94,8 @@ input.field,textarea.field,select.field{width:100%; min-height:56px; padding:0 1
 .slogan{font-weight:600; font-size:1.15rem; margin-top:14px}
 .slogan .y{color:var(--yellow)} .slogan .g{color:#5BD07A}
 .bottomnav{display:grid; grid-template-columns:repeat(5,1fr); gap:2px; width:100%; max-width:460px; margin:0 auto; padding:4px 6px 0; zoom:var(--z,1)}
-.gnav{position:sticky; bottom:calc(var(--vgap,0px) + env(safe-area-inset-bottom,0px)); z-index:5; margin-top:auto; flex:none; background:rgba(26,12,71,.96); border-top:1px solid var(--line); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); padding-bottom:4px}
+.gnav{position:fixed; left:0; right:0; bottom:calc(-1 * var(--vgap,0px)); z-index:5; background:#1a0c47; border-top:1px solid var(--line); padding-bottom:env(safe-area-inset-bottom,0px)}
+.gnav-sp{flex:none; height:calc(66px * var(--z,1))}
 body.kb .gnav{display:none}
 .bottomnav button.on{color:var(--yellow)}
 .bottomnav button{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-height:56px; color:var(--muted); font-size:.62rem; letter-spacing:-.01em; line-height:1.15; text-align:center; font-weight:600}
