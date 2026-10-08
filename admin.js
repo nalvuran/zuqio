@@ -238,8 +238,9 @@ function vFixes() {
     <button class="btn ghost" data-act="fixundo" data-id="${f.id}">Geri al</button></div>`).join('')}</div>`;
 }
 function vPool() {
-  return `<div class="seg" style="grid-template-columns:repeat(2,1fr)">${[['b', 'Hazır sorular'], ['c', 'Topluluk']].map(([k, l]) => `<button class="${S.poolTab === k ? 'on' : ''}" data-act="pooltab" data-t="${k}">${l}</button>`).join('')}</div>`
-    + (S.poolTab === 'b' ? vBuiltin() : vPoolC());
+  // Hazır sorular listesi kaldırıldı; yalnızca topluluk soruları gösterilir.
+  // (Hatalı hazır soru, Bildirimler sekmesindeki bildirimden düzeltilir.)
+  return vPoolC();
 }
 function vBuiltin() {
   const cats = [...new Set(QUESTIONS.map(q => q.cat))].sort(), term = S.pq.trim().toLocaleLowerCase('tr');
