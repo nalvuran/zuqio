@@ -143,7 +143,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 69';
+const APP_VERSION = '0.5 (test) · yapı 71';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1776,7 +1776,32 @@ V.quizzes = () => {
   </div>`;
 };
 
-const PDF_MAX = 5 * 1024 * 1024;
+const PDF_MAX = 5 * 1024 * 1024, PDF_PAGES = 40;
+// PDF'in sayfa sayısını dosyanın içinden tahmin eder (kütüphane yok). Bulamazsa null döner.
+async function pdfPages(file) {
+  try {
+    const u8 = new Uint8Array(await file.arrayBuffer()), dec = new TextDecoder('latin1');
+    const scan = t => {
+      const po = (t.match(/\/Type\s*\/Page(?![A-Za-z])/g) || []).length; let c = 0;
+      for (const m of t.matchAll(/\/Type\s*\/Pages[^>]*?\/Count\s+(\d+)|\/Count\s+(\d+)[^>]*?\/Type\s*\/Pages/g)) c = Math.max(c, +(m[1] || m[2]));
+      return Math.max(po, c);
+    };
+    const t = dec.decode(u8);
+    let n = scan(t);
+    // Sayfa nesneleri sıkıştırılmış nesne akışlarında olabilir; onları açıp tekrar bak
+    for (const m of t.matchAll(/\/Type\s*\/ObjStm/g)) {
+      const st = t.indexOf('stream', m.index); if (st < 0) continue;
+      let from = st + 6; if (t[from] === '\r') from++; if (t[from] === '\n') from++;
+      const to = t.indexOf('endstream', from); if (to < 0) continue;
+      try {
+        const ds = new DecompressionStream('deflate'), w = ds.writable.getWriter();
+        w.write(u8.subarray(from, to)).catch(() => {}); w.close().catch(() => {});
+        n = Math.max(n, scan(dec.decode(new Uint8Array(await new Response(ds.readable).arrayBuffer()))));
+      } catch (e) {}
+    }
+    return n > 0 ? n : null;
+  } catch (e) { return null; }
+}
 V.pdfgen = () => {
   const P = S.pdf;
   return `
@@ -1787,7 +1812,7 @@ V.pdfgen = () => {
       <p class="muted">Ders notunu ya da çalışma kâğıdını yükle; önce kısa bir özet, sonra bu nottan sorular hazırlansın. Hazır olunca düzenleyip arkadaşlarınla oynayabilirsin.</p>
       <label class="btn outline" for="pdffile" style="justify-content:center;gap:8px;${P.busy ? 'opacity:.5;pointer-events:none' : ''}">📄 ${P.file ? esc(P.file.name) : 'PDF seç'}</label>
       <input type="file" id="pdffile" accept="application/pdf,.pdf" hidden ${P.busy ? 'disabled' : ''}>
-      <span class="small muted">En fazla 5 MB. ${P.file ? Math.round(P.file.size / 1024) + ' KB seçildi.' : ''}</span>
+      <span class="small muted">En fazla 5 MB ve ${PDF_PAGES} sayfa. ${P.file ? Math.round(P.file.size / 1024) + ' KB seçildi.' : ''}</span>
       <span class="small muted lbl">Soru sayısı</span>
       <div class="chips">${[5, 10].map(n => `<button class="${P.count === n ? 'on' : ''}" data-act="pdfcount" data-n="${n}" ${P.busy ? 'disabled' : ''}>${n}</button>`).join('')}</div>
       <span class="small muted lbl">Cevaplama süresi</span>
@@ -1805,6 +1830,8 @@ async function pdfGenerate() {
   if (P.file.size > PDF_MAX) { P.err = 'Dosya 5 MB’tan büyük. Daha küçük bir PDF seç.'; render(); return; }
   P.busy = true; P.err = ''; render();
   try {
+    const pg = await pdfPages(P.file);
+    if (pg && pg > PDF_PAGES) { P.busy = false; P.file = null; P.err = `Bu PDF yaklaşık ${pg} sayfa. En fazla ${PDF_PAGES} sayfalık bir not yükleyebilirsin.`; render(); return; }
     let admin = false;
     try { admin = (await get(ref(db, 'admins/' + uid()))).exists(); } catch (e) {}
     if (!admin) {
@@ -1978,6 +2005,13 @@ document.addEventListener('change', e => {
     else if (f.size > PDF_MAX) { S.pdf.file = null; S.pdf.err = 'Dosya 5 MB’tan büyük. Daha küçük bir PDF seç.'; }
     else { S.pdf.file = f; S.pdf.err = ''; }
     render();
+    if (S.pdf && S.pdf.file === f) pdfPages(f).then(n => {
+      if (S.pdf && S.pdf.file === f) {
+        S.pdf.pages = n;
+        if (n && n > PDF_PAGES) { S.pdf.file = null; S.pdf.err = `Bu PDF yaklaşık ${n} sayfa. En fazla ${PDF_PAGES} sayfalık bir not yükleyebilirsin.`; }
+        if (S.screen === 'pdfgen') render();
+      }
+    });
   }
 });
 document.addEventListener('visibilitychange', () => {
