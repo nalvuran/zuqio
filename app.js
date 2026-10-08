@@ -143,7 +143,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 74';
+const APP_VERSION = '0.5 (test) · yapı 75';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -609,7 +609,7 @@ V.home = () => `
     <div class="stack home-btns" style="gap:14px">
       <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.user1}</span><span class="lb">RAKİP BUL</span></button>
       <button class="btn purple big" data-go="friends"><span class="ic">${ICON.users}</span><span class="lb">ARKADAŞLARINLA OYNA</span></button>
-      <button class="btn green big" data-act="myquizzes"><span class="ic">📄</span><span class="lb">PDF’TEN ZUQIO ÜRET</span></button>
+      <button class="btn green big" data-act="myquizzes"><span class="ic">📄</span><span class="lb">NOTLARINLA ÇALIŞ</span></button>
       <button class="btn outline big" data-act="bot" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.bot}</span><span class="lb">BİLGİSAYARA KARŞI OYNA</span></button>
     </div>
   </div>`;
@@ -1809,7 +1809,7 @@ V.pdfgen = () => {
   <div class="screen">
     <div class="top">${backBtn('data-go="quizzes"')}</div>
     <div class="stack" style="gap:14px">
-      <h2>PDF’ten Zuqio üret</h2>
+      <h2>Notlarınla çalış</h2>
       <p class="muted">Ders notunu ya da çalışma kâğıdını yükle; önce kısa bir özet, sonra bu nottan sorular hazırlansın. Hazır olunca düzenleyip arkadaşlarınla oynayabilirsin.</p>
       <label class="btn outline" for="pdffile" style="justify-content:center;gap:8px;${P.busy ? 'opacity:.5;pointer-events:none' : ''}">📄 ${P.file ? esc(P.file.name) : 'PDF seç'}</label>
       <input type="file" id="pdffile" accept="application/pdf,.pdf" hidden ${P.busy ? 'disabled' : ''}>
