@@ -1043,7 +1043,7 @@ V.board = () => {
     </div>`;
   const sub = {d: 'Bugün gece yarısı sıfırlanır.', w: 'Her pazartesi sıfırlanır.', m: 'Her ayın başında sıfırlanır.', p: ''}[S.lbTab];
   const prize = S.lbTab !== 'p' ? '' : `<div class="card stack" style="gap:6px;margin-bottom:12px;border-color:rgba(255,194,26,.6)">
-      <b>🏆 Bu ayın ödülü: kitap hediyesi</b>
+      <div class="row" style="gap:12px;align-items:center"><img src="kitap-kapak.png" alt="Kitap kapağı" width="64" style="width:64px;height:auto;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.4)"><b>🏆 Bu ayın ödülü: “100 İlginç Bilgi” kitabı</b></div>
       <p class="small" style="margin:0">Ay sonunda ödül puanında 1. olan, kitabın PDF’ini e-postayla alır. Bitmesine <b>${monthLeft()} gün</b> var.</p>
       <p class="small muted" style="margin:0">Sayılan oyunlar: en az 3 gerçek oyuncunun olduğu odalar. Günde en fazla ${fmt(PRIZE_DAILY_CAP)} puan sayılır. Antrenman ve Zuqio’larım oyunları sayılmaz. Kazanan, yönetici kontrolünden sonra kesinleşir.</p>
       ${S.tabP ? `<p class="small" style="margin:0">Geçen ayın kazananı: <b>${esc(S.tabP.name)}</b> 🎉</p>` : ''}</div>`;
