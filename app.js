@@ -140,7 +140,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 50';
+const APP_VERSION = '0.5 (test) · yapı 51';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1707,7 +1707,7 @@ async function playAgain() {
 }
 
 /* ================= kendi quizini yaz ================= */
-const QZ_MIN = 3, QZ_MAX = 30;
+const QZ_MIN = 1, QZ_MAX = 30;
 const QZ_ST = {draft: ['Taslak', ''], pending: ['Onay bekliyor', 'wait'], approved: ['Havuzda ✓', 'ok'], rejected: ['Reddedildi', 'bad']};
 async function loadMyQuizzes() {
   try {
@@ -1760,7 +1760,7 @@ V.quizzes = () => {
     </div>
   </div>`;
 };
-function blankQ(t) { return t === 'num' ? {t: 'num', q: '', a: '', unit: ''} : {t: 'mc', q: '', o: ['', '', '', '']}; }
+function blankQ(t, cat) { cat = cat || NON_EN[0]; return t === 'num' ? {t: 'num', q: '', a: '', unit: '', cat} : {t: 'mc', q: '', o: ['', '', '', ''], cat}; }
 V.qzedit = () => {
   const Z = S.qz, locked = Z.status === 'pending';
   return `
@@ -1771,11 +1771,10 @@ V.qzedit = () => {
       ${locked ? '<div class="card"><p class="small">Bu Zuqio onay bekliyor. Düzenlemek için önce gönderimi geri çek.</p><button class="btn outline" data-act="qzwithdraw" style="margin-top:8px">Gönderimi geri çek</button></div>' : ''}
       <label class="small muted" for="qzt">Zuqio adı</label>
       <input class="field" id="qzt" maxlength="40" value="${esc(Z.title)}" placeholder="Örn. 90'lar dizileri" ${locked ? 'disabled' : ''}>
-      <label class="small muted" for="qzc">Kategori</label>
-      <select class="field" id="qzc" ${locked ? 'disabled' : ''}>${NON_EN.map(c => `<option ${Z.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
       ${Z.qs.map((q, i) => `
         <div class="card stack qzq" style="gap:8px" data-i="${i}">
-          <div class="row between"><b>${i + 1}. soru · ${q.t === 'num' ? 'Tahmin' : 'Çoktan seçmeli'}</b>${locked ? '' : `<button class="btn ghost" data-act="qzdel" data-i="${i}" aria-label="Soruyu sil">Sil</button>`}</div>
+          <div class="row between"><b>${i + 1}. soru · ${q.t === 'num' ? 'Tahmin' : 'Çoktan seçmeli'}</b>${locked || Z.qs.length < 2 ? '' : `<button class="btn ghost" data-act="qzdel" data-i="${i}" aria-label="Soruyu sil">Sil</button>`}</div>
+          <select class="field" data-f="cat" aria-label="Kategori" ${locked ? 'disabled' : ''}>${NON_EN.map(c => `<option ${q.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
           <textarea class="field" data-f="q" maxlength="200" rows="2" placeholder="Soru" ${locked ? 'disabled' : ''}>${esc(q.q)}</textarea>
           ${q.t === 'num' ? `
             <div class="row" style="gap:8px"><input class="field" data-f="a" inputmode="decimal" placeholder="Doğru sayı" value="${esc(q.a)}" ${locked ? 'disabled' : ''}>
@@ -1783,9 +1782,9 @@ V.qzedit = () => {
           : q.o.map((o, k) => `<input class="field qzo ${k === 0 ? 'right' : ''}" data-f="o${k}" maxlength="60" placeholder="${k === 0 ? 'Doğru cevap' : 'Yanlış şık ' + k}" value="${esc(o)}" ${locked ? 'disabled' : ''}>`).join('')}
         </div>`).join('')}
       ${locked || Z.qs.length >= QZ_MAX ? '' : `<div class="row" style="gap:8px">
-        <button class="btn outline" style="flex:1" data-act="qzadd" data-t="mc">+ Çoktan seçmeli</button>
-        <button class="btn outline" style="flex:1" data-act="qzadd" data-t="num">+ Tahmin</button></div>`}
-      <p class="small muted">İlk şık her zaman doğru cevaptır; oyunda şıklar karıştırılır. En az ${QZ_MIN}, en fazla ${QZ_MAX} soru.</p>
+        <button class="btn outline" style="flex:1" data-act="qzadd" data-t="mc">+ Soru ekle</button>
+        <button class="btn outline" style="flex:1" data-act="qzadd" data-t="num">+ Tahmin sorusu</button></div>`}
+      <p class="small muted">İlk şık her zaman doğru cevaptır; oyunda şıklar karıştırılır. Tek soruyla başlayabilir, “+” ile istediğin kadar (en fazla ${QZ_MAX}) ekleyebilirsin. Her sorunun kategorisini ayrı seçebilirsin.</p>
     </div>
     <div class="grow" style="min-height:16px"></div>
     ${locked ? '' : `<div class="stack">
@@ -1797,8 +1796,8 @@ V.qzedit = () => {
 };
 function readQz() {
   const Z = S.qz; if (!Z || Z.status === 'pending') return;
-  const t = document.getElementById('qzt'), c = document.getElementById('qzc');
-  if (t) Z.title = t.value; if (c) Z.cat = c.value;
+  const t = document.getElementById('qzt');
+  if (t) Z.title = t.value;
   document.querySelectorAll('.qzq').forEach(el => {
     const q = Z.qs[+el.dataset.i]; if (!q) return;
     el.querySelectorAll('[data-f]').forEach(f => {
@@ -1809,7 +1808,7 @@ function readQz() {
 }
 function checkQz(Z) {
   if (!Z.title.trim()) return 'Zuqio’na bir ad ver';
-  if (Z.qs.length < QZ_MIN) return `En az ${QZ_MIN} soru ekle`;
+  if (Z.qs.length < QZ_MIN) return 'En az bir soru ekle';
   for (let i = 0; i < Z.qs.length; i++) {
     const q = Z.qs[i], n = i + 1;
     if (!q.q.trim()) return `${n}. sorunun metni boş`;
@@ -1826,10 +1825,10 @@ function checkQz(Z) {
 }
 async function saveQz(status) {
   readQz(); const Z = S.qz, err = checkQz(Z); if (err) { toast(err); return; }
-  const qs = Z.qs.map(q => q.t === 'mc' ? {t: 'mc', q: q.q.trim(), o: q.o.map(x => x.trim())}
-    : {t: 'num', q: q.q.trim(), a: parseFloat(String(q.a).replace(',', '.')), unit: String(q.unit).trim()});
+  const qs = Z.qs.map(q => q.t === 'mc' ? {t: 'mc', q: q.q.trim(), o: q.o.map(x => x.trim()), cat: q.cat}
+    : {t: 'num', q: q.q.trim(), a: parseFloat(String(q.a).replace(',', '.')), unit: String(q.unit).trim(), cat: q.cat});
   const id = Z.id || ('z' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
-  const data = {owner: uid(), name: S.me.name, title: Z.title.trim().slice(0, 40), cat: Z.cat, qs, status, t: serverTimestamp()};
+  const data = {owner: uid(), name: S.me.name, title: Z.title.trim().slice(0, 40), cat: qs[0].cat, qs, status, t: serverTimestamp()};
   S.busy = true; render();
   try {
     await set(ref(db, 'quizzes/' + id), data);
@@ -1981,11 +1980,11 @@ app.addEventListener('click', e => {
   else if (a === 'joinopen') { stopOpenRooms(); joinRoom(el.dataset.code); }
   else if (a === 'tpublic') { const on = !S.R.public; update(roomRef(), {public: on || null, pub: on ? 'open' : null}).then(() => toast(on ? 'Oda artık açık odalar listesinde' : 'Oda gizlendi')).catch(() => toast('Değiştirilemedi')); }
   else if (a === 'myquizzes') { S.myQuizzes = S.myQuizzes || null; go('quizzes'); loadMyQuizzes(); }
-  else if (a === 'qznew') { S.qz = {title: '', cat: NON_EN[0], qs: [blankQ('mc'), blankQ('mc'), blankQ('mc')], status: 'draft'}; go('qzedit'); }
+  else if (a === 'qznew') { S.qz = {title: '', cat: NON_EN[0], qs: [blankQ('mc')], status: 'draft'}; go('qzedit'); }
   else if (a === 'qzedit') { const q = S.myQuizzes[el.dataset.id]; S.qz = {id: el.dataset.id, title: q.title, cat: q.cat, status: q.status, why: q.why,
-      qs: Object.values(q.qs || {}).map(x => x.t === 'num' ? {t: 'num', q: x.q, a: String(x.a), unit: x.unit} : {t: 'mc', q: x.q, o: x.o.slice()})}; go('qzedit'); }
+      qs: Object.values(q.qs || {}).map(x => x.t === 'num' ? {t: 'num', q: x.q, a: String(x.a), unit: x.unit, cat: x.cat || q.cat} : {t: 'mc', q: x.q, o: x.o.slice(), cat: x.cat || q.cat})}; go('qzedit'); }
   else if (a === 'qzback') { go('quizzes'); }
-  else if (a === 'qzadd') { readQz(); S.qz.qs.push(blankQ(el.dataset.t)); render(); setTimeout(() => { const all = document.querySelectorAll('.qzq'); all[all.length - 1].scrollIntoView({behavior: 'smooth', block: 'center'}); }, 30); }
+  else if (a === 'qzadd') { readQz(); S.qz.qs.push(blankQ(el.dataset.t, S.qz.qs.length ? S.qz.qs[S.qz.qs.length - 1].cat : null)); render(); setTimeout(() => { const all = document.querySelectorAll('.qzq'); all[all.length - 1].scrollIntoView({behavior: 'smooth', block: 'center'}); }, 30); }
   else if (a === 'qzdel') { readQz(); S.qz.qs.splice(+el.dataset.i, 1); render(); }
   else if (a === 'qzsave') saveQz('draft');
   else if (a === 'qzsubmit') { if (confirm('Zuqio onaya gönderilsin mi? Onaylanan sorular herkesin oyunlarında çıkabilir.')) saveQz('pending'); }

@@ -436,7 +436,7 @@ app.addEventListener('click', async e => {
         const o = src[+el.dataset.i], g = k => { const f = el.querySelector(`[data-z="${k}"]`); return f ? f.value.trim() : ''; };
         const q = o.t === 'num' ? {t: 'num', q: g('q'), a: parseFloat(g('a').replace(',', '.')), unit: g('unit')} : {t: 'mc', q: g('q'), o: [g('o0'), g('o1'), g('o2'), g('o3')]};
         if (!q.q || (q.t === 'num' && !isFinite(q.a)) || (q.t === 'mc' && q.o.some(x => !x))) return;
-        Object.assign(q, {cat: z.cat, d, src: id, by: z.owner, byName: z.name || '', at: Date.now()});
+        Object.assign(q, {cat: o.cat || z.cat, d, src: id, by: z.owner, byName: z.name || '', at: Date.now()});
         up['approvedQs/' + id + '_' + el.dataset.i] = q; n++;
       });
       if (!n) { toast('En az bir soru seçili olmalı'); return; }
