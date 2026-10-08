@@ -84,7 +84,7 @@ const AV = [
   {c:'#FF5FA2', b:'blob',    f:'blush'},
   {c:'#17C3B2', b:'pill',    f:'cool'}
 ];
-const PREMIUM_NAMES = {8:'Yıldız', 9:'Kalp', 10:'Damla', 11:'Bulut', 12:'Robot', 13:'Kedi', 14:'Hayalet', 15:'Kral'};
+const PREMIUM_NAMES = {8:'Yıldız', 9:'Kalp', 10:'Damla', 11:'Bulut', 12:'Robot', 13:'Kedi', 14:'Hayalet', 15:'Kral', 16:'Köpek', 17:'Tavşan', 18:'Panda', 19:'Tilki'};
 function avPremium(i) {
   const k = '#1C1240';
   const dots = y => `<circle cx="18.5" cy="${y}" r="2.3" fill="${k}"/><circle cx="29.5" cy="${y}" r="2.3" fill="${k}"/>`;
@@ -100,6 +100,10 @@ function avPremium(i) {
     case 13: g = `<polygon points="10,21 11.5,6.5 21.5,13" fill="#FF8A1F" stroke="#FF8A1F" stroke-width="2.4" stroke-linejoin="round"/><polygon points="38,21 36.5,6.5 26.5,13" fill="#FF8A1F" stroke="#FF8A1F" stroke-width="2.4" stroke-linejoin="round"/><circle cx="24" cy="26" r="15" fill="#FF8A1F"/>${eyes(24.5)}<polygon points="22.3,29.2 25.7,29.2 24,31.4" fill="#FF6B8A"/><path d="M24 31.4Q21.5 35 18.5 33.4M24 31.4Q26.5 35 29.5 33.4" fill="none" stroke="${k}" stroke-width="1.8" stroke-linecap="round"/><path d="M8.5 28.5L14.5 29.5M8.5 33L14.5 32M39.5 28.5L33.5 29.5M39.5 33L33.5 32" stroke="${k}" stroke-width="1.2" stroke-linecap="round"/>`; break;
     case 14: g = `<path d="M9 40V22A15 15 0 0 1 39 22V40L34 36L29 40L24 36L19 40L14 36Z" fill="#B9A7FF"/><ellipse cx="18.5" cy="23" rx="2.6" ry="3.4" fill="${k}"/><ellipse cx="29.5" cy="23" rx="2.6" ry="3.4" fill="${k}"/><ellipse cx="24" cy="30.5" rx="2.7" ry="3.2" fill="${k}"/><circle cx="13.5" cy="28" r="2.2" fill="#E3D9FF"/><circle cx="34.5" cy="28" r="2.2" fill="#E3D9FF"/>`; break;
     case 15: g = `<circle cx="24" cy="28" r="14" fill="#7B5CFF"/><polygon points="14,19 16.5,8 21,13.5 24,6.5 27,13.5 31.5,8 34,19" fill="#FFC21A" stroke="#E39A00" stroke-width="1.4" stroke-linejoin="round"/>${eyes(28)}${smile(33.5)}`; break;
+    case 16: g = `<ellipse cx="11" cy="23" rx="5.5" ry="10" fill="#8A5A3C" transform="rotate(12 11 23)"/><ellipse cx="37" cy="23" rx="5.5" ry="10" fill="#8A5A3C" transform="rotate(-12 37 23)"/><circle cx="24" cy="26" r="15" fill="#D9A066"/><ellipse cx="24" cy="32" rx="8" ry="6" fill="#F3D3A8"/>${eyes(23.5)}<ellipse cx="24" cy="29.5" rx="2.8" ry="2" fill="${k}"/>${smile(32.5)}`; break;
+    case 17: g = `<ellipse cx="16.5" cy="11.5" rx="4.2" ry="8.5" fill="#EEEAF8"/><ellipse cx="31.5" cy="11.5" rx="4.2" ry="8.5" fill="#EEEAF8"/><ellipse cx="16.5" cy="12.5" rx="2" ry="5.8" fill="#FFB3D1"/><ellipse cx="31.5" cy="12.5" rx="2" ry="5.8" fill="#FFB3D1"/><circle cx="24" cy="28" r="14" fill="#EEEAF8"/>${eyes(26.5)}<ellipse cx="24" cy="31" rx="2" ry="1.5" fill="#FF7FB0"/>${smile(33)}<circle cx="13.5" cy="31" r="2.3" fill="#FFB3D1"/><circle cx="34.5" cy="31" r="2.3" fill="#FFB3D1"/>`; break;
+    case 18: g = `<circle cx="12" cy="13" r="5.8" fill="${k}"/><circle cx="36" cy="13" r="5.8" fill="${k}"/><circle cx="24" cy="26" r="15" fill="#fff"/><ellipse cx="17.5" cy="25" rx="4.8" ry="6" fill="${k}" transform="rotate(-18 17.5 25)"/><ellipse cx="30.5" cy="25" rx="4.8" ry="6" fill="${k}" transform="rotate(18 30.5 25)"/><circle cx="18.2" cy="24.4" r="2.3" fill="#fff"/><circle cx="29.8" cy="24.4" r="2.3" fill="#fff"/><ellipse cx="24" cy="31" rx="2.8" ry="2" fill="${k}"/>${smile(33.5)}`; break;
+    case 19: g = `<path d="M24 40L9 24L10 6L19 13Q24 11.5 29 13L38 6L39 24Z" fill="#FF7A2F" stroke="#FF7A2F" stroke-width="2.4" stroke-linejoin="round"/><path d="M12.5 26Q24 31 35.5 26L24 39Z" fill="#fff"/><polygon points="12,10 16.5,14 12,18.5" fill="${k}"/><polygon points="36,10 31.5,14 36,18.5" fill="${k}"/>${dots(23.5)}<circle cx="24" cy="37" r="2.2" fill="${k}"/>`; break;
     default: g = '';
   }
   return `<svg viewBox="3 3 42 42" aria-hidden="true">${g}</svg>`;
