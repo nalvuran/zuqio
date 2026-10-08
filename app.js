@@ -138,13 +138,14 @@ const JOKER_INFO = {
   second: {label:'İkinci şans', icon:'again'}
 };
 const app = document.getElementById('app');
-const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const BOT_MARK = '\uE000'; // bilgisayar rakip adının sonundaki özel işaret; ekranda robot simgesine dönüşür
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])).replace(/\uE000/g, () => `<span class="botic">${ICON.bot}</span>`);
 const fmt = n => Math.round(n).toLocaleString('tr-TR');
 const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 81';
+const APP_VERSION = '0.5 (test) · yapı 82';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -844,7 +845,7 @@ async function startBotGame() {
   const code = 'L' + Date.now().toString(36);
   const names = shuffle(BOT_NAMES).slice(0, 3), avs = shuffle([0, 1, 2, 3, 4, 5, 6, 7].filter(a => a !== S.me.av));
   const ps = {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: now()}};
-  names.forEach((n, i) => { ps['bot' + i] = {name: n + ' 🤖', av: avs[i], fr: '', online: true, joinedAt: now() + i + 1, skill: 0.45 + Math.random() * 0.3}; });
+  names.forEach((n, i) => { ps['bot' + i] = {name: n + ' ' + BOT_MARK, av: avs[i], fr: '', online: true, joinedAt: now() + i + 1, skill: 0.45 + Math.random() * 0.3}; });
   lset('rooms/' + code, {host: uid(), status: 'lobby', count: 10, diff: 'mix', bot: true, createdAt: now(), players: ps});
   enterRoom(code); // oyun, oda sahibi (sen) “Oyunu başlat”a basınca başlar; önce soru sayısı, zorluk ve kategori seçilir
 }
@@ -942,7 +943,7 @@ V.lobby = () => {
   <div class="screen lobby">
     <div class="top">${backBtn('data-act="leave"', 'Odadan çık')}<span class="tag">${R.bot ? 'Antrenman' : host ? 'Oda sahibi sensin' : 'Oyun bekleniyor'}</span></div>
     ${R.bot ? `<div class="card stack codecard" style="align-items:center;gap:6px;text-align:center">
-      <b style="font-size:1.15rem">🤖 Bilgisayara karşı</b>
+      <b style="font-size:1.15rem;display:inline-flex;align-items:center;gap:8px"><span class="botic" style="width:22px;height:22px">${ICON.bot}</span>Bilgisayara karşı</b>
       <span class="small muted">Antrenman oyunu · liderlik tablosuna sayılmaz</span>
     </div>` : `<div class="card stack codecard" style="align-items:center;gap:6px">
       <span class="small muted">Oda kodu</span>
