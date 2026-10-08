@@ -143,7 +143,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 61';
+const APP_VERSION = '0.5 (test) · yapı 62';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1722,7 +1722,7 @@ async function playAgain() {
 
 /* ================= kendi quizini yaz ================= */
 const QZ_MIN = 1, QZ_MAX = 30;
-const QZ_ST = {draft: ['Taslak', ''], pending: ['Onay bekliyor', 'wait'], approved: ['Havuzda ✓', 'ok'], rejected: ['Reddedildi', 'bad']};
+const QZ_ST = {draft: ['Taslak', ''], pending: ['Onay bekliyor', 'wait'], approved: ['Onaylandı ✓', 'ok'], rejected: ['Reddedildi', 'bad']};
 async function loadMyQuizzes() {
   try {
     const sn = await get(query(ref(db, 'quizzes'), orderByChild('owner'), equalTo(uid())));
