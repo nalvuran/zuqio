@@ -150,7 +150,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 92';
+const APP_VERSION = '0.5 (test) · yapı 93';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -594,7 +594,7 @@ V.profile = () => `
       ${S.firstProfile ? '<p class="muted">Oyunda görünecek adını ve avatarını seç. Sonra istediğin zaman değiştirebilirsin.</p>' : ''}
       <div class="avatar avbig">${avSVG(S.pick)}</div>
       <label class="small muted" for="pnm">Oyunda görünecek adın</label>
-      <input class="field" id="pnm" maxlength="16" autocomplete="nickname" value="${esc(S.draft)}">
+      <input class="field" id="pnm" maxlength="25" autocomplete="nickname" value="${esc(S.draft)}">
       <span class="small muted">Avatarını seç</span>
       <div class="avpick" role="radiogroup" aria-label="Avatar">
         ${[0, 1, 2, 3, 4, 5, 6, 7].concat(SHOP.filter(s => owned(s.id)).map(s => s.av)).map(i => `<button role="radio" aria-checked="${S.pick === i}" aria-label="Avatar ${i + 1}" class="${S.pick === i ? 'on' : ''}" data-act="av" data-i="${i}">${avSVG(i)}</button>`).join('')}
@@ -1287,7 +1287,7 @@ onAuthStateChanged(auth, async u => {
     }
     else {
       S.firstProfile = true; S.pick = Math.floor(Math.random() * 8);
-      S.draft = (u.displayName || '').split(' ')[0].slice(0, 16);
+      S.draft = (u.displayName || '').split(' ')[0].slice(0, 25);
       go('profile');
     }
   } catch (e) { console.error(e); toast('Profil yüklenemedi. Sayfayı yenile.'); }
@@ -1370,7 +1370,7 @@ async function syncBoardProfile() {
 }
 
 async function saveProfile() {
-  const v = (document.getElementById('pnm').value || '').trim().slice(0, 16);
+  const v = (document.getElementById('pnm').value || '').trim().slice(0, 25);
   if (!v) { toast('Bir ad yaz'); return; }
   S.busy = true; render();
   try {
