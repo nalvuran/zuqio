@@ -1,4 +1,5 @@
 import { firebaseConfig, APP_NAME } from './firebase-config.js';
+import { QUESTIONS } from './questions.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getDatabase, ref, get, set, update, remove, onValue, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
@@ -30,7 +31,7 @@ function periods() {
   return {d: 'd' + d, w: 'w' + w, m: 'm' + m};
 }
 
-const S = {user: null, role: null, tab: 'sum', users: {}, bans: {}, reports: {}, quizzes: {}, pool: {}, rooms: {}, admins: {}, ann: null, lb: {}, lbTab: 'd', q: '', open: null, subs: []};
+const S = {user: null, role: null, tab: 'sum', users: {}, bans: {}, reports: {}, quizzes: {}, pool: {}, fix: {}, edit: null, rooms: {}, admins: {}, ann: null, lb: {}, lbTab: 'd', q: '', open: null, subs: []};
 
 /* ---------------- veri ---------------- */
 function watch(path, key) {
@@ -38,7 +39,7 @@ function watch(path, key) {
 }
 function startData() {
   watch('users', 'users'); watch('bans', 'bans'); watch('reports', 'reports');
-  watch('rooms', 'rooms'); watch('admins', 'admins'); watch('quizzes', 'quizzes'); watch('approvedQs', 'pool');
+  watch('rooms', 'rooms'); watch('admins', 'admins'); watch('quizzes', 'quizzes'); watch('approvedQs', 'pool'); watch('qfix', 'fix');
   S.subs.push(onValue(ref(db, 'announce'), sn => { S.ann = sn.val(); render(); }));
   loadLb();
 }
@@ -144,6 +145,25 @@ function vUser(id) {
   </div></div>`;
 }
 
+function qidOf(q) { let h = 0; const t = q.q + '|' + (q.t === 'mc' ? q.o[0] : q.a); for (let i = 0; i < t.length; i++) h = (h * 31 + t.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+function findQ(r) {
+  const all = [...QUESTIONS, ...Object.values(S.pool)];
+  const q = (r.qk && all.find(x => qidOf(x) === r.qk)) || all.find(x => x.q === r.q || (r.q.length >= 400 && x.q.startsWith(r.q)));
+  return q ? {q, key: qidOf(q)} : null;
+}
+function vEdit() {
+  const E = S.edit, q = E.q, f = E.f;
+  return `<div class="sheet"><div class="card stack">
+    <div class="row between"><b>Soruyu düzenle</b><button class="btn ghost" data-act="editclose">Vazgeç</button></div>
+    <div class="small muted">${esc(q.cat || '')} · ${q.t === 'num' ? 'Tahmin sorusu' : 'İlk şık doğru cevaptır'}</div>
+    <textarea class="field" rows="3" data-e="q">${esc(f.q)}</textarea>
+    ${q.t === 'num'
+      ? `<div class="row"><input class="field" data-e="a" value="${esc(f.a)}" inputmode="decimal"><input class="field" data-e="unit" value="${esc(f.unit)}"></div>`
+      : f.o.map((o, k) => `<input class="field ${k === 0 ? 'ok' : ''}" data-e="o${k}" value="${esc(o)}" placeholder="${k === 0 ? 'Doğru cevap' : 'Yanlış şık'}">`).join('')}
+    <div class="row gap"><button class="btn primary" data-act="editsave">Kaydet</button></div>
+    <p class="muted small">Kaydedince oyuncularda bir sonraki açılışta düzelmiş hâliyle çıkar.</p>
+  </div></div>`;
+}
 function vReports() {
   const list = Object.entries(S.reports).map(([id, r]) => Object.assign({id}, r)).sort((a, b) => (b.t || 0) - (a.t || 0));
   if (!list.length) return '<div class="card"><b>Bekleyen bildirim yok</b><p class="muted small">Oyuncular "Bu soruda hata var" dediğinde burada görünür.</p></div>';
@@ -156,6 +176,7 @@ function vReports() {
       ${r.note ? `<div class="note">“${esc(r.note)}”</div>` : ''}
       <div class="small muted">Bildiren: ${esc(r.name || '')}</div>
       <div class="row gap"><button class="btn" data-act="copyrep" data-id="${r.id}">Kopyala</button><button class="btn primary" data-act="resolve" data-id="${r.id}">Çözüldü</button></div>
+      <div class="row gap"><button class="btn" data-act="repedit" data-id="${r.id}">Düzenle</button><button class="btn danger" data-act="repdel" data-id="${r.id}">Havuzdan kaldır</button></div>
     </div>`).join('')}</div>`;
 }
 
@@ -178,13 +199,20 @@ function vApprove() {
     <div class="row gap"><button class="btn primary" data-act="approve" data-id="${z.id}">Onayla</button><button class="btn danger" data-act="reject" data-id="${z.id}">Reddet</button></div>
   </div>`).join('')}</div>`;
 }
+function vFixes() {
+  const l = Object.entries(S.fix).map(([id, f]) => Object.assign({id}, f)).sort((x, y) => (y.at || 0) - (x.at || 0));
+  if (!l.length) return '';
+  return `<h3 style="margin:14px 0 6px">Düzeltilen sorular</h3><div class="list">${l.map(f => `<div class="row item"><div class="grow"><b>${esc(f.orig || f.q || f.id)}</b>
+    <div class="small muted">${f.del ? 'Havuzdan kaldırıldı' : 'Düzenlendi → ' + esc(f.q || '')}</div></div>
+    <button class="btn ghost" data-act="fixundo" data-id="${f.id}">Geri al</button></div>`).join('')}</div>`;
+}
 function vPool() {
   const list = Object.entries(S.pool).map(([id, q]) => Object.assign({id}, q)).sort((a, b) => (b.at || 0) - (a.at || 0));
-  if (!list.length) return '<div class="card"><b>Havuzda henüz topluluk sorusu yok</b></div>';
+  if (!list.length) return '<div class="card"><b>Havuzda henüz topluluk sorusu yok</b></div>' + vFixes();
   return `<p class="muted small">${list.length} topluluk sorusu havuzda. Uygunsuz ya da hatalı olanı kaldırabilirsin.</p>
   <div class="list">${list.map(q => `<div class="row item"><div class="grow"><b>${esc(q.q)}</b>
     <div class="small muted">${esc(q.cat)} · ${DL[q.d] || ''} · ${q.t === 'num' ? `${q.a} ${esc(q.unit)}` : '✓ ' + esc(q.o[0])} · ${esc(q.byName || '')}</div></div>
-    <button class="btn ghost danger-t" data-act="pooldel" data-id="${q.id}">Kaldır</button></div>`).join('')}</div>`;
+    <button class="btn ghost danger-t" data-act="pooldel" data-id="${q.id}">Kaldır</button></div>`).join('')}</div>` + vFixes();
 }
 
 function lbRows(k, limit, actions) {
@@ -258,6 +286,7 @@ function render() {
       `<button class="${S.tab === k ? 'on' : ''}" data-tab="${k}">${TABS[k]}${k === 'rep' && nrep ? ` <i>${nrep}</i>` : ''}${k === 'apr' && npend ? ` <i>${npend}</i>` : ''}</button>`).join('')}</nav>
     <main>${body}</main>
     ${S.open ? vUser(S.open) : ''}
+    ${S.edit ? vEdit() : ''}
   </div>`;
   if (keep === 'search') { const i = document.getElementById('search'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
 }
@@ -270,7 +299,8 @@ app.addEventListener('submit', async e => {
   catch (err) { toast(['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found'].includes(err.code) ? 'E-posta veya şifre hatalı' : 'Giriş yapılamadı (' + err.code + ')'); }
 });
 app.addEventListener('focusout', () => setTimeout(() => { if (S.dirty) render(); }, 0));
-app.addEventListener('input', e => { if (e.target.id === 'search') { S.q = e.target.value; render(); } });
+app.addEventListener('input', e => {
+  if (e.target.dataset && e.target.dataset.e && S.edit) { const k = e.target.dataset.e; if (/^o\d$/.test(k)) S.edit.f.o[+k[1]] = e.target.value; else S.edit.f[k] = e.target.value; return; } if (e.target.id === 'search') { S.q = e.target.value; render(); } });
 app.addEventListener('click', async e => {
   if (e.target.classList && e.target.classList.contains('sheet')) { S.open = null; render(); return; }
   const el = e.target.closest('[data-act],[data-tab]'); if (!el) return;
@@ -291,6 +321,29 @@ app.addEventListener('click', async e => {
       const txt = `Hatalı soru bildirimi\nKategori: ${r.cat}\nSoru: ${r.q}\n${r.opts ? 'Şıklar: ' + r.opts + '\n' : ''}Kayıtlı doğru cevap: ${r.ans}\nNot: ${r.note || '-'}`;
       await navigator.clipboard.writeText(txt); toast('Kopyalandı');
     }
+    else if (a === 'repedit') {
+      const r = S.reports[id], hit = findQ(r); if (!hit) { toast('Soru havuzda bulunamadı (zaten kaldırılmış olabilir)'); return; }
+      const fx = S.fix[hit.key] && !S.fix[hit.key].del ? S.fix[hit.key] : null, q = hit.q;
+      S.edit = {rid: id, key: hit.key, q, f: q.t === 'num' ? {q: (fx || q).q, a: String((fx || q).a), unit: (fx || q).unit || ''} : {q: (fx || q).q, o: ((fx || q).o || q.o).slice()}};
+      render(); return;
+    }
+    else if (a === 'editclose') { S.edit = null; render(); return; }
+    else if (a === 'editsave') {
+      const E = S.edit, f = E.f, q = E.q; let out;
+      if (q.t === 'num') { const v = parseFloat(String(f.a).replace(',', '.')); if (!f.q.trim() || !isFinite(v)) { toast('Soru ve sayısal cevap gerekli'); return; } out = {q: f.q.trim(), a: v, unit: (f.unit || '').trim()}; }
+      else { const o = f.o.map(x => x.trim()); if (!f.q.trim() || o.some(x => !x)) { toast('Soru ve dört şık da dolu olmalı'); return; } out = {q: f.q.trim(), o}; }
+      await set(ref(db, 'qfix/' + E.key), Object.assign(out, {orig: q.q.slice(0, 200), at: Date.now()}));
+      if (E.rid) await remove(ref(db, 'reports/' + E.rid));
+      S.edit = null; toast('Soru düzeltildi'); render(); return;
+    }
+    else if (a === 'repdel') {
+      const r = S.reports[id], hit = findQ(r); if (!hit) { toast('Soru havuzda bulunamadı (zaten kaldırılmış olabilir)'); return; }
+      if (!confirm('Bu soru havuzdan kaldırılsın mı?\n\n' + hit.q.q)) return;
+      await set(ref(db, 'qfix/' + hit.key), {del: true, orig: hit.q.q.slice(0, 200), at: Date.now()});
+      const pk = Object.keys(S.pool).find(k => qidOf(S.pool[k]) === hit.key); if (pk) await remove(ref(db, 'approvedQs/' + pk));
+      await remove(ref(db, 'reports/' + id)); toast('Soru havuzdan kaldırıldı');
+    }
+    else if (a === 'fixundo') { if (!confirm('Bu düzeltme geri alınsın mı? Soru ilk hâliyle havuza döner.')) return; await remove(ref(db, 'qfix/' + id)); toast('Geri alındı'); }
     else if (a === 'resolve') { await remove(ref(db, 'reports/' + id)); toast('Bildirim kapatıldı'); }
     else if (a === 'approve') {
       const card = app.querySelector(`[data-qz="${id}"]`), z = S.quizzes[id], d = card.querySelector('[data-z="d"]').value;

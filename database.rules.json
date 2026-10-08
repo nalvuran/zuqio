@@ -188,7 +188,7 @@
       ".read": "auth != null && root.child('admins').child(auth.uid).exists()",
       "$id": {
         ".write": "auth != null && ((!data.exists() && !root.child('bans').child(auth.uid).exists()) || (!newData.exists() && root.child('admins').child(auth.uid).exists()))",
-        ".validate": "newData.hasChildren(['q','by','t']) && newData.child('by').val() === auth.uid && newData.child('t').val() === now && newData.child('q').isString() && newData.child('q').val().length <= 400 && (!newData.child('note').exists() || newData.child('note').val().length <= 300)"
+        ".validate": "newData.hasChildren(['q','by','t']) && newData.child('by').val() === auth.uid && newData.child('t').val() === now && newData.child('q').isString() && newData.child('q').val().length <= 400 && (!newData.child('note').exists() || newData.child('note').val().length <= 300) && (!newData.child('qk').exists() || (newData.child('qk').isString() && newData.child('qk').val().length <= 20))"
       }
     },
     "announce": {
@@ -217,6 +217,10 @@
       }
     },
     "approvedQs": {
+      ".read": "auth != null",
+      ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
+    },
+    "qfix": {
       ".read": "auth != null",
       ".write": "auth != null && root.child('admins').child(auth.uid).exists()"
     }

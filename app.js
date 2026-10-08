@@ -1096,7 +1096,7 @@ getRedirectResult(auth).catch(() => {});
 onAuthStateChanged(auth, async u => {
   S.user = u;
   if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } if (annSub) { annSub(); annSub = null; } S.me = null; go('login'); return; }
-  watchAnn(); loadApproved();
+  watchAnn(); loadApproved().then(loadFixes);
   try {
     const snap = await get(ref(db, 'users/' + u.uid));
     const ban = await get(ref(db, 'bans/' + u.uid)).catch(() => null);
@@ -1376,7 +1376,7 @@ function buildGame(count, diff, cats, fixed) {
       const order = shuffle([0, 1, 2, 3]);
       const o = order.map(i => q.o[i]), a = order.indexOf(0);
       const h = shuffle([0, 1, 2, 3].filter(i => i !== a)).slice(0, 2);
-      const item = {t: 'mc', cat: q.cat, d: q.d, q: q.q, o, h};
+      const item = {t: 'mc', cat: q.cat, d: q.d, q: q.q, o, h, id: q.fk || qid(q)};
       if (q.sub) item.sub = q.sub;
       pub.push(item); keys.push(a); infos.push(q.info || '');
     } else {
@@ -1385,7 +1385,7 @@ function buildGame(count, diff, cats, fixed) {
       const lo = q.tolAbs ? Math.floor(lo0) : Math.min(niceRound(lo0, false), q.a);
       const hi = q.tolAbs ? Math.ceil(lo0 + w) : Math.max(niceRound(lo0 + w, true), q.a);
       const f = v => q.tolAbs ? String(v) : fmt(v);
-      const item = {t: 'num', cat: q.cat, d: q.d, q: q.q, unit: q.unit, hint: `${f(lo)} ile ${f(hi)} ${q.unit} arasında`};
+      const item = {t: 'num', cat: q.cat, d: q.d, q: q.q, unit: q.unit, hint: `${f(lo)} ile ${f(hi)} ${q.unit} arasında`, id: q.fk || qid(q)};
       if (q.tolAbs) item.tolAbs = q.tolAbs;
       pub.push(item); keys.push(q.a); infos.push(q.info || '');
     }
@@ -1513,6 +1513,19 @@ async function loadApproved() {
     sn.forEach(c => { const q = c.val(); if (q && q.q && !have.has(qid(q))) { QUESTIONS.push(q); have.add(qid(q)); } });
   } catch (e) { console.error(e); }
 }
+// yönetici düzeltmeleri: kaldırılan / düzenlenen sorular (qfix/<soru kimliği>)
+async function loadFixes() {
+  try {
+    const sn = await get(ref(db, 'qfix')); const fx = sn.val(); if (!fx) return;
+    for (let i = QUESTIONS.length - 1; i >= 0; i--) {
+      const q = QUESTIONS[i], k = q.fk || qid(q), f = fx[k]; if (!f) continue;
+      if (f.del) { QUESTIONS.splice(i, 1); continue; }
+      q.fk = k;
+      if (q.t === 'mc' && Array.isArray(f.o) && f.o.length === 4 && f.q) { q.q = f.q; q.o = f.o.slice(); }
+      else if (q.t === 'num' && f.q && isFinite(f.a)) { q.q = f.q; q.a = +f.a; if (f.unit) q.unit = f.unit; }
+    }
+  } catch (e) { console.error(e); }
+}
 V.quizzes = () => {
   const list = Object.entries(S.myQuizzes || {}).map(([id, q]) => Object.assign({id}, q)).sort((a, b) => (b.t || 0) - (a.t || 0));
   return `
@@ -1629,7 +1642,7 @@ async function reportQuestion() {
   const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   try {
     await set(ref(db, 'reports/' + id), {q: q.q.slice(0, 400), cat: q.cat || '', ans: String(ans).slice(0, 120), opts: q.t === 'mc' ? q.o.join(' | ').slice(0, 300) : '',
-      note: note.trim().slice(0, 300), by: uid(), name: S.me.name, t: serverTimestamp()});
+      note: note.trim().slice(0, 300), qk: String(q.id || '').slice(0, 20), by: uid(), name: S.me.name, t: serverTimestamp()});
     S.reported[key] = true; toast('Teşekkürler! Bildirim yöneticiye iletildi.');
   } catch (e) { console.error(e); toast('Bildirim gönderilemedi'); }
 }
