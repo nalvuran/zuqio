@@ -874,7 +874,7 @@ V.lobby = () => {
       <div class="chips" style="margin-bottom:14px">${[5, 10, 15].map(n => `<button class="${(R.count || 10) === n ? 'on' : ''}" data-act="count" data-n="${n}">${n}</button>`).join('')}</div>
       <span class="small muted" style="margin-bottom:8px">Zorluk</span>
       <div class="chips" style="margin-bottom:14px">${['mix', 'k', 'o', 'z'].map(v => `<button class="${(R.diff || 'mix') === v ? 'on' : ''}" data-act="diff" data-v="${v}">${DIFF_LABEL[v]}</button>`).join('')}</div>
-      <button class="card setrow" style="margin-bottom:14px;padding:10px 16px" data-act="opencats"><div><b>Kategoriler</b><span class="small muted">${esc(catSummary(R))}</span></div><span class="muted">›</span></button>
+      <button class="card setrow catbtn" style="margin-bottom:14px;padding:10px 16px" data-act="opencats"><div><b>Kategoriler</b><span class="small">${esc(catSummary(R))}</span></div><span>›</span></button>
       <button class="btn primary big" data-act="start" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">OYUNU BAŞLAT</span></button>`
     : `<p class="status">${R.count || 10} soru · ${DIFF_LABEL[R.diff || 'mix']} · ${esc(catSummary(R))}<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`}
   </div>`;
