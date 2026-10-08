@@ -31,7 +31,7 @@ function periods() {
   return {d: 'd' + d, w: 'w' + w, m: 'm' + m};
 }
 
-const S = {user: null, role: null, tab: 'sum', users: {}, bans: {}, reports: {}, quizzes: {}, pool: {}, fix: {}, edit: null, rooms: {}, admins: {}, ann: null, lb: {}, lbTab: 'd', q: '', open: null, subs: []};
+const S = {user: null, role: null, tab: 'sum', users: {}, bans: {}, reports: {}, quizzes: {}, pool: {}, fix: {}, edit: null, poolTab: 'b', pq: '', pcat: '', rooms: {}, admins: {}, ann: null, lb: {}, lbTab: 'd', q: '', open: null, subs: []};
 
 /* ---------------- veri ---------------- */
 function watch(path, key) {
@@ -207,6 +207,24 @@ function vFixes() {
     <button class="btn ghost" data-act="fixundo" data-id="${f.id}">Geri al</button></div>`).join('')}</div>`;
 }
 function vPool() {
+  return `<div class="seg" style="grid-template-columns:repeat(2,1fr)">${[['b', 'Hazır sorular'], ['c', 'Topluluk']].map(([k, l]) => `<button class="${S.poolTab === k ? 'on' : ''}" data-act="pooltab" data-t="${k}">${l}</button>`).join('')}</div>`
+    + (S.poolTab === 'b' ? vBuiltin() : vPoolC());
+}
+function vBuiltin() {
+  const cats = [...new Set(QUESTIONS.map(q => q.cat))].sort(), term = S.pq.trim().toLocaleLowerCase('tr');
+  let l = QUESTIONS.map(q => ({q, key: qidOf(q)})).filter(x => (!S.pcat || x.q.cat === S.pcat) && (!term || x.q.q.toLocaleLowerCase('tr').includes(term)));
+  const total = l.length; l = l.slice(0, 60);
+  return `<p class="muted small">${QUESTIONS.length} hazır soru. Ara ya da kategori seç; hatalı olanı düzenle veya kaldır.</p>
+    <div class="row gap"><input class="field grow" id="psearch" placeholder="Soruda ara" value="${esc(S.pq)}">
+    <select class="field" id="pcat" style="width:auto"><option value="">Tüm kategoriler</option>${cats.map(c => `<option ${c === S.pcat ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
+    <p class="muted small">${total} sonuç${total > 60 ? ' · ilk 60 gösteriliyor, aramayı daralt' : ''}</p>
+    <div class="list">${l.map(({q, key}) => { const f = S.fix[key], gone = f && f.del;
+      return `<div class="item stack" style="gap:6px;${gone ? 'opacity:.55' : ''}"><b>${esc(f && !f.del && f.q ? f.q : q.q)}</b>
+      <div class="small muted">${esc(q.cat)} · ${DL[q.d] || ''} · ${q.t === 'num' ? `${esc(String(f && !f.del && f.a != null ? f.a : q.a))} ${esc(q.unit || '')}` : '✓ ' + esc(f && !f.del && f.o ? f.o[0] : q.o[0])}${f ? (f.del ? ' · KALDIRILDI' : ' · düzenlendi') : ''}</div>
+      <div class="row gap">${gone ? `<button class="btn" data-act="fixundo" data-id="${key}">Geri al</button>`
+        : `<button class="btn" data-act="qedit" data-id="${key}">Düzenle</button><button class="btn danger" data-act="qdel" data-id="${key}">Kaldır</button>`}</div></div>`; }).join('')}</div>`;
+}
+function vPoolC() {
   const list = Object.entries(S.pool).map(([id, q]) => Object.assign({id}, q)).sort((a, b) => (b.at || 0) - (a.at || 0));
   if (!list.length) return '<div class="card"><b>Havuzda henüz topluluk sorusu yok</b></div>' + vFixes();
   return `<p class="muted small">${list.length} topluluk sorusu havuzda. Uygunsuz ya da hatalı olanı kaldırabilirsin.</p>
@@ -273,6 +291,7 @@ function vAdmins() {
 
 function render() {
   const ae = document.activeElement;
+  if (S.edit && ae && ae.matches && ae.matches('input,textarea') && ae.closest('.sheet')) { S.dirty = true; return; }
   if (S.tab === 'apr' && S.user && S.role && ae && ae.matches && ae.matches('input,textarea,select') && ae.closest('[data-qz]')) { S.dirty = true; return; }
   S.dirty = false;
   if (!S.user) { app.innerHTML = vLogin(); return; }
@@ -288,6 +307,7 @@ function render() {
     ${S.open ? vUser(S.open) : ''}
     ${S.edit ? vEdit() : ''}
   </div>`;
+  if (keep === 'psearch') { const i = document.getElementById('psearch'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
   if (keep === 'search') { const i = document.getElementById('search'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
 }
 
@@ -300,7 +320,9 @@ app.addEventListener('submit', async e => {
 });
 app.addEventListener('focusout', () => setTimeout(() => { if (S.dirty) render(); }, 0));
 app.addEventListener('input', e => {
+  if (e.target.id === 'psearch') { S.pq = e.target.value; render(); return; }
   if (e.target.dataset && e.target.dataset.e && S.edit) { const k = e.target.dataset.e; if (/^o\d$/.test(k)) S.edit.f.o[+k[1]] = e.target.value; else S.edit.f[k] = e.target.value; return; } if (e.target.id === 'search') { S.q = e.target.value; render(); } });
+app.addEventListener('change', e => { if (e.target.id === 'pcat') { S.pcat = e.target.value; render(); } });
 app.addEventListener('click', async e => {
   if (e.target.classList && e.target.classList.contains('sheet')) { S.open = null; render(); return; }
   const el = e.target.closest('[data-act],[data-tab]'); if (!el) return;
@@ -320,6 +342,17 @@ app.addEventListener('click', async e => {
       const r = S.reports[id];
       const txt = `Hatalı soru bildirimi\nKategori: ${r.cat}\nSoru: ${r.q}\n${r.opts ? 'Şıklar: ' + r.opts + '\n' : ''}Kayıtlı doğru cevap: ${r.ans}\nNot: ${r.note || '-'}`;
       await navigator.clipboard.writeText(txt); toast('Kopyalandı');
+    }
+    else if (a === 'pooltab') { S.poolTab = el.dataset.t; render(); return; }
+    else if (a === 'qedit' || a === 'qdel') {
+      const q = QUESTIONS.find(x => qidOf(x) === id); if (!q) return;
+      if (a === 'qdel') {
+        if (!confirm('Bu soru havuzdan kaldırılsın mı?\n\n' + q.q)) return;
+        await set(ref(db, 'qfix/' + id), {del: true, orig: q.q.slice(0, 200), at: Date.now()}); toast('Soru kaldırıldı'); return;
+      }
+      const fx = S.fix[id] && !S.fix[id].del ? S.fix[id] : null, s = fx || q;
+      S.edit = {rid: null, key: id, q, f: q.t === 'num' ? {q: s.q, a: String(s.a), unit: s.unit || ''} : {q: s.q, o: (s.o || q.o).slice()}};
+      render(); return;
     }
     else if (a === 'repedit') {
       const r = S.reports[id], hit = findQ(r); if (!hit) { toast('Soru havuzda bulunamadı (zaten kaldırılmış olabilir)'); return; }
