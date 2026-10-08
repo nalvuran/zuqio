@@ -144,7 +144,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 78';
+const APP_VERSION = '0.5 (test) · yapı 79';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1221,6 +1221,11 @@ function render() {
   if (g && !g.disabled) keep = g.value;
   app.innerHTML = V[S.screen]() + gnav();
   if (keep != null) { const g2 = document.getElementById('guess'); if (g2 && !g2.disabled) g2.value = keep; }
+  // tahmin sorusunda kutuya otomatik odaklan (telefonlarda tarayıcı klavyeyi kendiliğinden açmayabilir)
+  if (S.screen === 'question' && S.R && S.q) {
+    const g3 = document.getElementById('guess'), fk = S.R.gid + ':' + S.R.qi;
+    if (g3 && !g3.disabled && S.q.focusKey !== fk) { S.q.focusKey = fk; try { g3.focus({preventScroll: true}); } catch (e) {} }
+  }
   tick();
 }
 
