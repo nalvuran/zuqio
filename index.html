@@ -93,9 +93,12 @@ input.field,textarea.field,select.field{width:100%; min-height:56px; padding:0 1
 .wordmark span{color:var(--yellow); text-shadow:0 4px 0 #E39A00, 0 9px 0 #3A2296, 0 14px 18px rgba(0,0,0,.35)}
 .slogan{font-weight:600; font-size:1.15rem; margin-top:14px}
 .slogan .y{color:var(--yellow)} .slogan .g{color:#5BD07A}
-.bottomnav{display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin-top:18px}
-.bottomnav button{display:flex; flex-direction:column; align-items:center; gap:4px; min-height:60px; color:var(--muted); font-size:.72rem; line-height:1.15; text-align:center; font-weight:600}
-.bottomnav svg{width:26px; height:26px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.bottomnav{display:grid; grid-template-columns:repeat(5,1fr); gap:2px; width:100%; max-width:460px; margin:0 auto; padding:4px 6px 0; zoom:var(--z,1)}
+.gnav{position:sticky; bottom:calc(var(--vgap,0px) + env(safe-area-inset-bottom,0px)); z-index:5; margin-top:auto; flex:none; background:rgba(26,12,71,.96); border-top:1px solid var(--line); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); padding-bottom:4px}
+body.kb .gnav{display:none}
+.bottomnav button.on{color:var(--yellow)}
+.bottomnav button{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; min-height:56px; color:var(--muted); font-size:.62rem; letter-spacing:-.01em; line-height:1.15; text-align:center; font-weight:600}
+.bottomnav svg{width:24px; height:24px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
 .me-chip{display:flex; align-items:center; gap:8px; font-weight:600; min-height:44px; color:#fff}
 
 /* home menu */
@@ -169,7 +172,7 @@ input.field,textarea.field,select.field{width:100%; min-height:56px; padding:0 1
 .tabs button{min-height:42px; border-radius:10px; font-weight:600; color:var(--muted)}
 .tabs button.on{background:var(--surface); color:var(--ink)}
 
-.toast{position:fixed; left:50%; bottom:calc(20px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); background:#fff; color:#22105A;
+.toast{position:fixed; left:50%; bottom:calc(84px + env(safe-area-inset-bottom,0px)); transform:translateX(-50%); background:#fff; color:#22105A;
   padding:12px 18px; border-radius:14px; font-weight:600; font-size:.95rem; max-width:90%; text-align:center; z-index:9}
 
 /* --- canlı sürüm ekleri --- */

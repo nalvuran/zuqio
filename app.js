@@ -57,6 +57,7 @@ const ICON = {
   hint:'<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg>',
   play:'<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>',
   users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6.5 6.5 0 0 1 3.5 6"/></svg>',
+  home:'<svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7M6 10v10h12V10M10 20v-6h4v6"/></svg>',
   gear:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   shop:'<svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0zM5 13v7h14v-7M10 20v-4h4v4"/></svg>',
   help:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.5-2.7 4M12 17.5h.01"/></svg>',
@@ -560,12 +561,6 @@ V.home = () => `
       <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">HIZLI OYNA</span></button>
       <button class="btn purple big" data-go="friends"><span class="ic">${ICON.users}</span><span class="lb">ARKADAŞLARINLA OYNA</span></button>
     </div>
-    <nav class="bottomnav" aria-label="Diğer">
-      <button data-go="settings">${ICON.gear}AYARLAR</button>
-      <button data-go="shop">${ICON.shop}MAĞAZA</button>
-      <button data-act="openboard">${ICON.trophy}LİDERLİK</button>
-      <button data-go="daily" class="${(() => { const s = dailyState(); return !s.claimed || !s.qDone ? 'hasdot' : ''; })()}">${ICON.gift}GÜNLÜK ÖDÜL</button>
-    </nav>
   </div>`;
 
 function untilTomorrow() {
@@ -1141,12 +1136,25 @@ V.final = () => {
   </div>`;
 };
 
+const NAV_SCREENS = ['home', 'friends', 'settings', 'shop', 'board', 'daily', 'quizzes', 'rooms', 'join', 'how', 'profile'];
+function gnav() {
+  if (!NAV_SCREENS.includes(S.screen) || S.R || (S.screen === 'profile' && S.firstProfile)) return '';
+  const on = k => S.screen === k ? ' on' : '';
+  const dot = (() => { const d = dailyState(); return !d.claimed || !d.qDone ? ' hasdot' : ''; })();
+  return `<div class="gnav"><nav class="bottomnav" aria-label="Ana menü">
+      <button data-go="home" class="${on('home').trim()}">${ICON.home}ANA SAYFA</button>
+      <button data-go="shop" class="${on('shop').trim()}">${ICON.shop}MAĞAZA</button>
+      <button data-act="openboard" class="${on('board').trim()}">${ICON.trophy}LİDERLİK</button>
+      <button data-go="daily" class="${(on('daily') + dot).trim()}">${ICON.gift}GÜNLÜK</button>
+      <button data-go="settings" class="${on('settings').trim()}">${ICON.gear}AYARLAR</button>
+    </nav></div>`;
+}
 function render() {
   MUSIC.duck();
   if (!V[S.screen]) S.screen = 'home';
   let keep = null; const g = document.getElementById('guess');
   if (g && !g.disabled) keep = g.value;
-  app.innerHTML = V[S.screen]();
+  app.innerHTML = V[S.screen]() + gnav();
   if (keep != null) { const g2 = document.getElementById('guess'); if (g2 && !g2.disabled) g2.value = keep; }
   tick();
 }
@@ -1802,6 +1810,8 @@ document.addEventListener('visibilitychange', () => {
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.code) { S.wake = null; wakeOn(); markOnline(); } });
 
 /* ================= olaylar ================= */
+document.addEventListener('focusin', e => { if (e.target && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) document.body.classList.add('kb'); });
+document.addEventListener('focusout', () => document.body.classList.remove('kb'));
 app.addEventListener('click', e => {
   SFX.init(); if (S.music && !MUSIC.on) MUSIC.start();
   const el = e.target.closest('[data-act],[data-go]'); if (!el || el.disabled) return;
