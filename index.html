@@ -31,7 +31,7 @@
 :root[data-theme="dark"]{ --bg:#22105A; --surface:#311C82; --ink:#FFFFFF; --muted:#B8ACEB; --line:#4733A6; --soft:#2A1670; }
 *,*::before,*::after{box-sizing:border-box}
 html{background:#170941; -webkit-text-size-adjust:100%}
-body{margin:0; color:var(--ink);
+body{-webkit-user-select:none; user-select:none; -webkit-touch-callout:none; margin:0; color:var(--ink);
   font-family:"Baloo 2", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-tap-highlight-color:transparent; overscroll-behavior:none}
 /* Arka plan tüm ekranı (çentik ve alt çubuk dahil) kaplar */
@@ -50,6 +50,9 @@ p{margin:0; line-height:1.45}
 .muted{color:var(--muted)}
 .small{font-size:.9rem}
 .grow{flex:1}
+input,textarea,select,.code,[contenteditable]{-webkit-user-select:text; user-select:text; -webkit-touch-callout:default}
+.btn.green{background:var(--green); color:#0B3D1F; border-color:var(--green); box-shadow:0 5px 0 #1F7A3C}
+@media (max-height:720px){.home-btns{gap:10px !important}.home-btns .btn.big{min-height:54px}.home-btns .btn.big .ic{width:40px;height:40px}}
 .stack{display:flex; flex-direction:column; gap:12px}
 .row{display:flex; align-items:center; gap:10px}
 .between{justify-content:space-between}
@@ -324,6 +327,8 @@ textarea.field{min-height:64px; padding-top:12px; resize:vertical; font:inherit}
 .pubrow{padding:6px 16px; margin-bottom:12px; border-bottom:1.5px solid var(--line)}
 .roomcard{width:100%; color:#fff}
 .roomcard:active:not(:disabled){transform:scale(.98)}
+@media (max-height:720px){.logo4{grid-template-columns:repeat(2,44px)}.logo4 img{width:46px;height:46px}.wordmark{font-size:3.1rem}.slogan{font-size:1rem;margin-top:8px}}
+@media (max-height:680px){.slogan{display:none}.wordmark{margin-top:2px}}
 </style>
 </head>
 <body>
