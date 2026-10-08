@@ -143,7 +143,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 67';
+const APP_VERSION = '0.5 (test) · yapı 69';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1836,7 +1836,7 @@ V.qzedit = () => {
   <div class="screen">
     <div class="top">${backBtn('data-act="qzback"')}${Z.id ? `<span class="qzst ${(QZ_ST[Z.status] || QZ_ST.draft)[1]}">${(QZ_ST[Z.status] || QZ_ST.draft)[0]}</span>` : ''}</div>
     <div class="stack" style="gap:12px">
-      <h2>${Z.id ? 'Zuqio’yu düzenle' : 'Yeni Zuqio'}</h2>
+      <h2>${Z.src === 'pdf' ? 'Özeti kontrol et' : Z.id ? 'Zuqio’yu düzenle' : 'Yeni Zuqio'}</h2>
       ${locked ? '<div class="card"><p class="small">Bu Zuqio onay bekliyor. Düzenlemek için önce gönderimi geri çek.</p><button class="btn outline" data-act="qzwithdraw" style="margin-top:8px">Gönderimi geri çek</button></div>' : ''}
       <label class="small muted" for="qzt">Zuqio adı</label>
       <input class="field" id="qzt" maxlength="40" value="${esc(Z.title)}" placeholder="Örn. 90'lar dizileri" ${locked ? 'disabled' : ''}>
@@ -1844,7 +1844,8 @@ V.qzedit = () => {
       <textarea class="field" id="qzs" rows="9" maxlength="3000" ${locked ? 'disabled' : ''}>${esc(Z.summary)}</textarea>` : ''}
       <span class="small muted lbl">Cevaplama süresi</span>
       <div class="chips">${[15, 30, 45].map(n => `<button class="${Z.dur === n ? 'on' : ''}" data-act="qzdur" data-n="${n}" ${locked ? 'disabled' : ''}>${n} sn</button>`).join('')}</div>
-      ${Z.qs.map((q, i) => `
+      ${Z.src === 'pdf' && !Z.showQs ? `<div class="card stack" style="gap:8px"><b>🎯 ${Z.qs.length} soru hazır</b>
+        <p class="small muted">Sorular özetteki bilgilerden hazırlandı ve oyunda sürpriz olarak gelecek. Özeti oku; doğruysa onayla. Yapay zekâ hata yapabilir, oyunda yanlış bir soru görürsen “Soruyu bildir” düğmesini kullanabilirsin.</p></div>` : `${Z.qs.map((q, i) => `
         <div class="card stack qzq" style="gap:8px" data-i="${i}">
           <div class="row between"><b>${i + 1}. soru · ${q.t === 'num' ? 'Tahmin' : 'Çoktan seçmeli'}</b>${locked || Z.qs.length < 2 ? '' : `<button class="btn ghost" data-act="qzdel" data-i="${i}" aria-label="Soruyu sil">Sil</button>`}</div>
           <select class="field" data-f="cat" aria-label="Kategori" ${locked ? 'disabled' : ''}>${(NON_EN.includes(q.cat) || !q.cat ? NON_EN : [...NON_EN, q.cat]).map(c => `<option ${q.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
@@ -1856,12 +1857,12 @@ V.qzedit = () => {
         </div>`).join('')}
       ${locked || Z.qs.length >= QZ_MAX ? '' : `<div class="row" style="gap:8px">
         <button class="btn outline" style="flex:1" data-act="qzadd" data-t="mc">+ Soru ekle</button>
-        <button class="btn outline" style="flex:1" data-act="qzadd" data-t="num">+ Tahmin sorusu</button></div>`}
-      <p class="small muted">İlk şık her zaman doğru cevaptır; oyunda şıklar karıştırılır. Tek soruyla başlayabilir, “+” ile istediğin kadar (en fazla ${QZ_MAX}) ekleyebilirsin. Her sorunun kategorisini ayrı seçebilirsin.</p>
+        <button class="btn outline" style="flex:1" data-act="qzadd" data-t="num">+ Tahmin sorusu</button></div>`}`}
+      ${Z.src === 'pdf' && !Z.showQs ? '' : `<p class="small muted">İlk şık her zaman doğru cevaptır; oyunda şıklar karıştırılır. Tek soruyla başlayabilir, “+” ile istediğin kadar (en fazla ${QZ_MAX}) ekleyebilirsin. Her sorunun kategorisini ayrı seçebilirsin.</p>`}
     </div>
     <div class="grow" style="min-height:16px"></div>
     ${locked ? '' : `<div class="stack">
-      <button class="btn primary big" data-act="qzsave" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">KAYDET</span></button>
+      <button class="btn primary big" data-act="qzsave" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">${Z.src === 'pdf' ? 'ÖZETİ ONAYLA VE KAYDET' : 'KAYDET'}</span></button>
       ${Z.status !== 'approved' && Z.src !== 'pdf' ? `<button class="btn outline" data-act="qzsubmit" ${S.busy ? 'disabled' : ''}>Kaydet ve havuza gönder</button>` : ''}
       ${Z.id ? '<button class="btn ghost" data-act="qzremove">Zuqio’yu sil</button>' : ''}
     </div>`}
