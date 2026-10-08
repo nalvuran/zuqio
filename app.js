@@ -2,7 +2,7 @@ import { firebaseConfig, APP_NAME } from './firebase-config.js';
 import { QUESTIONS } from './questions.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getDatabase, ref, get, set, update, remove, onValue, onDisconnect, serverTimestamp, query, orderByChild, equalTo } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { getDatabase, ref, get, set, update, remove, onValue, onDisconnect, serverTimestamp, query, orderByChild, equalTo, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 const fb = initializeApp(firebaseConfig);
 const auth = getAuth(fb);
@@ -318,7 +318,7 @@ V.home = () => `
     <div class="stack" style="gap:14px">
       <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">HIZLI OYNA</span></button>
       <button class="btn purple big" data-go="friends"><span class="ic">${ICON.users}</span><span class="lb">ARKADAŞLARINLA OYNA</span></button>
-      <button class="btn outline big" data-act="soon" data-n="Liderlik tablosu"><span class="ic">${ICON.trophy}</span><span class="lb">LİDERLİK TABLOSU</span></button>
+      <button class="btn outline big" data-act="openboard"><span class="ic">${ICON.trophy}</span><span class="lb">LİDERLİK TABLOSU</span></button>
     </div>
     <nav class="bottomnav" aria-label="Diğer">
       <button data-go="settings">${ICON.gear}AYARLAR</button>
@@ -633,6 +633,69 @@ V.reveal = () => {
   </div>`;
 };
 
+/* ================= lider tablosu ================= */
+// Dönemler Türkiye saatine göre: gün, hafta (pazartesi başlar), ay
+function periods() {
+  const d = dayIdx(), w = Math.floor((d + 3) / 7);
+  const dt = new Date(now() + 10800000), m = dt.getUTCFullYear() + '-' + String(dt.getUTCMonth() + 1).padStart(2, '0');
+  return {d: 'd' + d, w: 'w' + w, m: 'm' + m};
+}
+async function claimBoard(R) {
+  const me = uid(), gid = R.gid, mine = (R.scores || {})[me] || 0;
+  if (!gid || !mine || S.lbDone === gid || S.lbBusy === gid) return;
+  S.lbBusy = gid;
+  try {
+    const P = periods(), code = S.code;
+    const cur = await Promise.all(Object.values(P).map(p => get(ref(db, `lb/${p}/${me}`)).then(x => x.val()).catch(() => null)));
+    const up = {[`lbClaim/${code}/${gid}/${me}`]: true};
+    Object.values(P).forEach((p, i) => {
+      const o = cur[i] || {s: 0, g: 0};
+      up[`lb/${p}/${me}`] = {s: (o.s || 0) + mine, g: (o.g || 0) + 1, n: S.me.name, av: S.me.av, c: code, gid};
+    });
+    await update(ref(db), up);
+    S.lbDone = gid; S.lbCache = {};
+    if (S.screen === 'final') render();
+  } catch (e) { console.error(e); }
+  S.lbBusy = null;
+}
+async function loadBoard() {
+  const key = periods()[S.lbTab];
+  S.lbCache = S.lbCache || {};
+  if (S.lbCache[key]) return;
+  S.lbCache[key] = 'loading'; render();
+  try {
+    const snap = await get(query(ref(db, 'lb/' + key), orderByChild('s'), limitToLast(50)));
+    const rows = []; snap.forEach(c => { rows.push(Object.assign({id: c.key}, c.val())); });
+    rows.sort((a, b) => b.s - a.s);
+    let mine = rows.find(r => r.id === uid());
+    if (!mine) { const m = await get(ref(db, `lb/${key}/${uid()}`)); if (m.exists()) mine = Object.assign({id: uid(), out: true}, m.val()); }
+    S.lbCache[key] = {rows, mine};
+  } catch (e) { console.error(e); S.lbCache[key] = {err: true}; }
+  if (S.screen === 'board') render();
+}
+V.board = () => {
+  const labels = {d: 'Günlük', w: 'Haftalık', m: 'Aylık'}, key = periods()[S.lbTab];
+  const data = S.lbCache && S.lbCache[key];
+  let body;
+  if (!data || data === 'loading') body = '<p class="status">Yükleniyor…</p>';
+  else if (data.err) body = '<p class="status">Tablo yüklenemedi. Biraz sonra tekrar dene.</p>';
+  else if (!data.rows.length) body = '<div class="card" style="text-align:center"><b>Henüz kimse yok</b><p class="small muted" style="margin-top:6px">Bir oyun bitir, bu tablonun ilk adı sen ol!</p></div>';
+  else body = `<div class="stack" style="gap:8px">${data.rows.map((r, i) => `
+      <div class="rank ${r.id === uid() ? 'me' : ''}"><span class="n">${i + 1}</span>${avatar(r.av)}<b>${esc(r.n)}</b>
+        <span class="pts">${fmt(r.s)}</span></div>`).join('')}
+      ${data.mine && data.mine.out ? `<div class="rank me"><span class="n">–</span>${avatar(data.mine.av)}<b>${esc(data.mine.n)}</b><span class="pts">${fmt(data.mine.s)}</span></div>` : ''}
+    </div>`;
+  const sub = {d: 'Bugün gece yarısı sıfırlanır.', w: 'Her pazartesi sıfırlanır.', m: 'Her ayın başında sıfırlanır.'}[S.lbTab];
+  return `
+  <div class="screen">
+    <div class="top">${backBtn('data-go="home"')}</div>
+    <h2 style="margin-bottom:12px">Liderlik tablosu</h2>
+    <div class="tabs" role="tablist">${Object.keys(labels).map(k => `<button role="tab" class="${S.lbTab === k ? 'on' : ''}" aria-selected="${S.lbTab === k}" data-act="lbtab" data-t="${k}">${labels[k]}</button>`).join('')}</div>
+    <p class="small muted" style="margin-bottom:12px">${sub} Tüm oyunlar sayılır.</p>
+    ${body}
+  </div>`;
+};
+
 V.final = () => {
   const R = S.R, sc = R.scores || {};
   const s = players(R).sort((a, b) => (sc[b.id] || 0) - (sc[a.id] || 0));
@@ -641,6 +704,7 @@ V.final = () => {
   return `
   <div class="screen">
     <h2 style="text-align:center;margin-top:10px">${myRank === 1 ? 'Kazandın!' : `${myRank}. oldun`}</h2>
+    <p class="muted small" style="text-align:center;margin-top:4px">${S.lbDone === R.gid ? 'Puanın günlük, haftalık ve aylık tablolara eklendi.' : (R.scores && R.scores[uid()] ? 'Puanın lider tablolarına ekleniyor…' : '')}</p>
     <div class="podium">${pod(s[1], 2, 70)}${pod(s[0], 1, 104)}${pod(s[2], 3, 50)}</div>
     <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av)}<b>${esc(p.name)}</b><span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
     <div class="grow" style="min-height:20px"></div>
@@ -791,6 +855,7 @@ function onRoom(R) {
       SFX.play(g > 0 ? 'correct' : (ansOf(R, R.qi)[uid()] ? 'wrong' : 'timeup'));
     }
     if (R.status === 'final') {
+      claimBoard(R);
       const sc = R.scores || {}, mine = sc[uid()] || 0, top = Math.max(0, ...Object.values(sc));
       SFX.play(mine > 0 && mine >= top ? 'win' : 'end');
     }
@@ -988,7 +1053,8 @@ async function startGame() {
     S.keys = {a: keys, i: infos};
     const scores = {}; Object.keys(R.players || {}).forEach(id => { scores[id] = 0; });
     await update(roomRef(), {status: 'countdown', countAt: serverTimestamp(), questions: pub, qi: -1, qk: '-1',
-      qStartAt: null, qDur: null, answers: null, reveal: null, jokers: null, scores, qm: null, autoAt: null});
+      qStartAt: null, qDur: null, answers: null, reveal: null, jokers: null, scores, qm: null, autoAt: null,
+      gid: Date.now().toString(36) + Math.random().toString(36).slice(2, 7)});
   } catch (e) { console.error(e); toast('Oyun başlatılamadı'); }
   S.busy = false;
 }
@@ -1119,6 +1185,8 @@ app.addEventListener('click', e => {
     S.catAll = !qc.length; S.catSel = new Set(qc);
     S.catsOpen = true; render(); app.scrollTop = 0;
   }
+  else if (a === 'openboard') { S.lbTab = S.lbTab || 'd'; S.lbCache = {}; go('board'); loadBoard(); }
+  else if (a === 'lbtab') { S.lbTab = el.dataset.t; render(); loadBoard(); }
   else if (a === 'catmode') { S.catMode = el.dataset.m; render(); }
   else if (a === 'catall') { S.catAll = true; S.catSel = new Set(); render(); }
   else if (a === 'cattoggle') {
