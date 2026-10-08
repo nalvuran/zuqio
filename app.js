@@ -149,8 +149,26 @@ const fmt = n => Math.round(n).toLocaleString('tr-TR');
 const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 94';
+// Android: navigator.vibrate. iPhone (Safari) bunu desteklemez; onun yerine gizli "switch" onay kutusuna
+// dokunma hissi (Safari 17.4+) kullanılır. Yalnızca kullanıcı dokunuşu sırasında çalışır.
+const HAP_IOS = !('vibrate' in navigator) && /iP(hone|ad|od)/.test(navigator.userAgent || '');
+const HAP_OK = 'vibrate' in navigator || HAP_IOS;
+let hapLbl = null;
+const buzz = ms => { try {
+  if (S.haptic === false) return;
+  if (navigator.vibrate) navigator.vibrate(ms);
+  else if (HAP_IOS) {
+    if (!hapLbl) {
+      hapLbl = document.createElement('label');
+      hapLbl.setAttribute('aria-hidden', 'true');
+      hapLbl.style.cssText = 'position:fixed;left:-99px;top:-99px;width:1px;height:1px;opacity:0;pointer-events:none';
+      hapLbl.innerHTML = '<input type="checkbox" switch tabindex="-1">';
+      document.body.appendChild(hapLbl);
+    }
+    hapLbl.click();
+  }
+} catch (e) {} };
+const APP_VERSION = '0.5 (test) · yapı 95';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -719,8 +737,8 @@ V.settings = () => `
           <button class="switch ${S.music ? 'on' : ''}" role="switch" aria-checked="${S.music}" aria-label="Müzik" data-act="tmusic"></button></div>
         <div class="setrow"><div><b>Ses efektleri</b><span class="small muted">Doğru, yanlış ve geri sayım sesleri</span></div>
           <button class="switch ${S.sound ? 'on' : ''}" role="switch" aria-checked="${S.sound}" aria-label="Ses efektleri" data-act="tsound"></button></div>
-        <div class="setrow"><div><b>Titreşim</b><span class="small muted">${'vibrate' in navigator ? 'Cevap verince ve süre azalınca titrer' : 'Bu cihaz web uygulamalarında titreşimi desteklemiyor'}</span></div>
-          <button class="switch ${S.haptic && 'vibrate' in navigator ? 'on' : ''}" role="switch" aria-checked="${S.haptic && 'vibrate' in navigator}" aria-label="Titreşim" data-act="thaptic" ${'vibrate' in navigator ? '' : 'disabled'}></button></div>
+        <div class="setrow"><div><b>Titreşim</b><span class="small muted">${HAP_OK ? 'Cevap verince ve süre azalınca titrer' : 'Bu cihaz web uygulamalarında titreşimi desteklemiyor'}</span></div>
+          <button class="switch ${S.haptic && HAP_OK ? 'on' : ''}" role="switch" aria-checked="${!!(S.haptic && HAP_OK)}" aria-label="Titreşim" data-act="thaptic" ${HAP_OK ? '' : 'disabled'}></button></div>
       </div>
       <div class="card stack" style="gap:0;padding:0 16px">
         <button class="setrow" data-act="openprofile"><div><b>Profili düzenle</b><span class="small muted">${esc(S.me.name)}</span></div>${avatar(S.me.av, '', S.me.fr)}</button>
