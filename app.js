@@ -58,6 +58,7 @@ const ICON = {
   hint:'<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg>',
   play:'<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>',
   bot:'<svg viewBox="0 0 24 24"><rect x="4.5" y="8" width="15" height="11" rx="3.5"/><path d="M12 8V4.5"/><circle cx="12" cy="3.6" r="1"/><path d="M9 13v1M15 13v1"/><path d="M2.5 12.5v3M21.5 12.5v3"/></svg>',
+  doc:'<svg viewBox="0 0 24 24"><path d="M14 3H7.5A2.5 2.5 0 0 0 5 5.5v13A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/></svg>',
   user1:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>',
   users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6.5 6.5 0 0 1 3.5 6"/></svg>',
   home:'<svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7M6 10v10h12V10M10 20v-6h4v6"/></svg>',
@@ -143,7 +144,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 77';
+const APP_VERSION = '0.5 (test) · yapı 78';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -609,7 +610,7 @@ V.home = () => `
     <div class="stack home-btns" style="gap:14px">
       <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.user1}</span><span class="lb">RAKİP BUL</span></button>
       <button class="btn purple big" data-go="friends"><span class="ic">${ICON.users}</span><span class="lb">ARKADAŞLARINLA OYNA</span></button>
-      <button class="btn green big" data-act="myquizzes"><span class="ic">📄</span><span class="lb">NOTLARINLA ÇALIŞ</span></button>
+      <button class="btn green big" data-act="myquizzes"><span class="ic">${ICON.doc}</span><span class="lb">NOTLARINLA ÇALIŞ</span></button>
       <button class="btn outline big" data-act="bot" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.bot}</span><span class="lb">BİLGİSAYARA KARŞI OYNA</span></button>
     </div>
   </div>`;
@@ -1761,7 +1762,7 @@ V.quizzes = () => {
       <h2>Zuqio’larım</h2>
       <p class="muted">Kendi Zuqio’nu oluştur, arkadaşlarınla hemen oyna. İstersen havuza gönder; onaylanınca herkesin oyunlarında çıkar.</p>
       <button class="btn primary big" data-act="qznew"><span class="ic">${ICON.plus || '+'}</span><span class="lb">YENİ ZUQIO</span></button>
-      <button class="btn purple big" data-act="pdfnew"><span class="ic">📄</span><span class="lb">PDF’TEN ÜRET</span></button>
+      <button class="btn purple big" data-act="pdfnew"><span class="ic">${ICON.doc}</span><span class="lb">PDF’TEN ÜRET</span></button>
       ${S.myQuizzes == null ? '<p class="status">Yükleniyor…</p>' : !list.length ? '<div class="card"><p class="small muted">Henüz bir Zuqio’n yok.</p></div>' : list.map(q => {
         const st = stOf(q), n = Object.keys(q.qs || {}).length;
         return `<div class="card stack" style="gap:8px">
