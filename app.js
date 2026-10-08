@@ -170,7 +170,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 101';
+const APP_VERSION = '0.5 (test) · yapı 102';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -830,15 +830,15 @@ V.how = () => `
     <div class="stack">
       <h2>Nasıl oynanır?</h2>
       <div class="card stack" style="gap:14px">
-        <p><b>${ic('user1')}Rakip bul.</b> Başka oyuncuları 10 saniye boyunca arar. Kimse çıkmazsa bilgisayara karşı oynarsın.</p>
-        <p><b>${ic('users')}Arkadaşlarınla oyna.</b> Oda aç, 6 haneli kodu ya da bağlantıyı paylaş. Odaya en fazla 32 kişi katılabilir.</p>
-        <p><b>${ic('doc')}Notlarınla çalış.</b> Ders notunu, kitabını ya da kılavuzunu <b>PDF</b> olarak yükle. Zuqio önce <b>kısa bir özet</b> çıkarır. Özeti okuyup onaylayınca <b>5 ya da 10 soru</b> hazırlanır; soru başına <b>15, 30 ya da 45 saniye</b> seçebilirsin. Sorular oyun başlayana kadar görünmez, sınav gibi çalışırsın. Tek başına oynayabilir ya da arkadaşlarınla oda açıp birlikte çözebilirsin.</p>
-        <p><b>${ic('bot')}Bilgisayara karşı oyna.</b> Kategori, zorluk ve soru sayısını seç, bilgisayar oyuncularla yarış.</p>
-        <p><b>${ic('bolt')}Hızlı ve doğru cevap ver.</b> Ne kadar erken bilirsen o kadar çok puan alırsın.</p>
-        <p><b>${ic('target')}Tahmin sorularında</b> şık yok: sayını yaz, doğruya ne kadar yakınsan o kadar çok puan.</p>
-        <p><b>${ic('list')}Konu paketleri:</b> tek bir konuya odaklanan hazır sorular (örneğin Türkiye plakaları).</p>
-        <p><b>${ic('gift')}Jeton kazan:</b> her gün Günlük ödül’ü al ve günün sorusunu cevapla. Jetonlarla Mağaza’dan yeni avatarlar açarsın. Jetonlar oyunda avantaj sağlamaz.</p>
-        <p><b>${ic('half')}Jokerlerin</b> her oyunda birer kez kullanılır: yarı yarıya, çifte puan, buz ve tahmin sorularında ipucu.</p>
+        <p><b>${ic('user1')}Rakip Bul:</b> Başka oyuncuları 10 saniye boyunca arar. Kimse bulunamazsa bilgisayara karşı oynarsın.</p>
+        <p><b>${ic('users')}Arkadaşlarınla Oyna:</b> Oda aç, 6 haneli kodu ya da bağlantıyı arkadaşlarınla paylaş. Bir odaya en fazla 32 kişi katılabilir.</p>
+        <p><b>${ic('doc')}Notlarınla Çalış:</b> Ders notunu, kitabını ya da kılavuzunu PDF olarak yükle. Zuqio önce kısa bir özet çıkarır. Özeti onaylayınca 5 ya da 10 soru hazırlanır ve soru başına 15, 30 ya da 45 saniye seçebilirsin. Sorular oyun başlayana kadar görünmez. Tek başına çalışabilir ya da arkadaşlarınla oda açıp birlikte çözebilirsin.</p>
+        <p><b>${ic('bot')}Bilgisayara Karşı Oyna:</b> Kategori, zorluk ve soru sayısını seç, bilgisayar oyuncularla yarış.</p>
+        <p><b>${ic('bolt')}Hızlı Ve Doğru Cevap:</b> Ne kadar erken cevap verirsen o kadar çok puan alırsın.</p>
+        <p><b>${ic('target')}Tahmin Soruları:</b> Şık yoktur. Sayıyı yaz, doğruya ne kadar yakınsan o kadar çok puan alırsın.</p>
+        <p><b>${ic('list')}Konu Paketleri:</b> Tek bir konuya odaklanan hazır sorulardır. Örneğin Türkiye plakaları.</p>
+        <p><b>${ic('gift')}Jeton Kazan:</b> Her gün günlük ödülü al ve günün sorusunu cevapla. Jetonlarla mağazadan yeni avatarlar açabilirsin. Jetonlar oyunda avantaj sağlamaz.</p>
+        <p><b>${ic('half')}Jokerler:</b> Her oyunda birer kez kullanılır. Yarı yarıya, çifte puan, buz ve tahmin sorularında ipucu jokerleri vardır.</p>
       </div>
     </div>
   </div>`;
