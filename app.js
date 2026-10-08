@@ -456,7 +456,10 @@ const LOGO = () => `<div class="hero">
 
 function annBanner() {
   const A = S.ann; if (!A || !A.text || ls.get('zuqio-ann') === String(A.t)) return '';
-  return `<div class="annbar"><span>📣</span><p>${esc(A.text)}</p><button data-act="annclose" aria-label="Kapat">✕</button></div>`;
+  return `<div class="annmodal" data-act="annclose"><div class="anncard" role="dialog" aria-label="Duyuru" data-stop="1">
+    <button class="annx" data-act="annclose" aria-label="Kapat">✕</button>
+    <img class="annicon" src="ic3.png" alt="" width="72" height="72">
+    <p>${esc(A.text)}</p></div></div>`;
 }
 let annSub = null;
 function watchAnn() { if (annSub) return; annSub = onValue(ref(db, 'announce'), sn => { S.ann = sn.val(); if (S.screen === 'home') render(); }, () => { annSub = null; }); }
@@ -1766,7 +1769,7 @@ app.addEventListener('click', e => {
   else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
   else if (a === 'qzplay') { const q = S.myQuizzes[el.dataset.id]; createRoom({quiz: el.dataset.id, quizTitle: q.title, quizN: Object.keys(q.qs || {}).length}); }
   else if (a === 'quizoff') update(roomRef(), {quiz: null, quizTitle: null, quizN: null}).catch(() => toast('Değiştirilemedi'));
-  else if (a === 'annclose') { if (S.ann) ls.set('zuqio-ann', String(S.ann.t)); render(); }
+  else if (a === 'annclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; if (S.ann) ls.set('zuqio-ann', String(S.ann.t)); render(); }
 });
 app.addEventListener('keydown', e => {
   if (e.key !== 'Enter') return;
