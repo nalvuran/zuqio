@@ -143,7 +143,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 62';
+const APP_VERSION = '0.5 (test) · yapı 63';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -829,7 +829,7 @@ function catSummary(R) {
   if (c.includes('İngilizce')) return 'İngilizce öğrenme';
   return c.length <= 2 ? c.join(', ') : c.length + ' kategori';
 }
-const BOT_NAMES = ['Zeka', 'Bilgin', 'Kıvılcım', 'Pusula', 'Atlas', 'Sincap', 'Mercan', 'Fener'];
+const BOT_NAMES = ['Elif', 'Mert', 'Zeynep', 'Emre', 'Selin', 'Burak', 'Ayşe', 'Can', 'Deniz', 'Merve', 'Kaan', 'Ece', 'Ahmet', 'Defne', 'Berk', 'İrem', 'Onur', 'Buse', 'Yusuf', 'Ceren', 'Eren', 'Gizem', 'Furkan', 'Naz', 'Mehmet', 'Sena', 'Arda', 'Pelin', 'Kerem', 'Dilara', 'Oğuz', 'Aslı'];
 const isBotRoom = () => !!(S.R && S.R.bot);
 async function startBotGame() {
   if (S.busy) return;
