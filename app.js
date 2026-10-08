@@ -1648,6 +1648,8 @@ async function useJoker(key) {
   buzz(20); SFX.play('joker');
   try {
     await set(ref(db, `rooms/${S.code}/jokers/${uid()}/${key}`), R.qi);
+    // bot odasında yerel veri tabanı olay göndermeden önce çizim yapılmasın diye durumu hemen işle
+    if (S.R === R) { R.jokers = R.jokers || {}; R.jokers[uid()] = Object.assign({}, R.jokers[uid()], {[key]: R.qi}); }
     if (key === 'double') toast('Çifte puan açık: bu soruda puanın ikiye katlanacak');
     if (key === 'freeze') toast('Süre 8 saniyeliğine donduruldu');
   } catch (e) { console.error(e); if (key === 'freeze') S.q.frozenUntil = 0; toast('Joker kullanılamadı'); }
