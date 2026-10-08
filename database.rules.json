@@ -8,7 +8,7 @@
           ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 25"
         },
         "av": {
-          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 15"
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 21"
         },
         "plan": {
           ".validate": "newData.val() === 'free' || newData.val() === data.val()"
@@ -75,7 +75,7 @@
               ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 25"
             },
             "av": {
-              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 15"
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 21"
             },
             "online": {
               ".validate": "newData.isBoolean()"
@@ -142,7 +142,7 @@
             ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 25"
           },
           "av": {
-            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 15"
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 21"
           },
           "c": {
             ".validate": "newData.isString() && newData.val().matches(/^[0-9]{6}$/)"
@@ -255,7 +255,7 @@
             ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 25"
           },
           "av": {
-            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 15"
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 21"
           },
           "c": {
             ".validate": "newData.isString() && newData.val().matches(/^[0-9]{6}$/)"

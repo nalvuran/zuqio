@@ -181,7 +181,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 114';
+const APP_VERSION = '0.5 (test) · yapı 115';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -334,7 +334,8 @@ const DAILY = [10, 10, 15, 15, 20, 25, 50];
 const QUESTION_REWARD = {right: 20, wrong: 5};
 const SHOP = [
   {id: 'av8', av: 8, price: 60}, {id: 'av9', av: 9, price: 60}, {id: 'av10', av: 10, price: 80}, {id: 'av11', av: 11, price: 80},
-  {id: 'av12', av: 12, price: 100}, {id: 'av13', av: 13, price: 100}, {id: 'av14', av: 14, price: 120}, {id: 'av15', av: 15, price: 150}
+  {id: 'av12', av: 12, price: 100}, {id: 'av13', av: 13, price: 100}, {id: 'av14', av: 14, price: 120}, {id: 'av15', av: 15, price: 150},
+  {id: 'av16', av: 16, price: 100}, {id: 'av17', av: 17, price: 100}, {id: 'av18', av: 18, price: 120}, {id: 'av19', av: 19, price: 150}, {id: 'av20', av: 20, price: 150}, {id: 'av21', av: 21, price: 120}
 ];
 const FRAMES = [
   {id: 'fr1', name: 'Altın', price: 80}, {id: 'fr4', name: 'Buz', price: 80}, {id: 'fr6', name: 'Gece', price: 100},
