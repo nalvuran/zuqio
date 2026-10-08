@@ -202,11 +202,27 @@ input.field,textarea.field,select.field{width:100%; min-height:56px; padding:0 1
 .infocard{margin-top:12px; padding:12px 16px}
 .infocard p{margin-top:4px; color:var(--muted); font-size:.95rem; line-height:1.4}
 .setrow{display:flex; align-items:center; justify-content:space-between; gap:12px; min-height:68px; padding:10px 0; width:100%; text-align:left; border-bottom:1px solid var(--line)}
-.catbtn{background:linear-gradient(135deg,#17C3B2,#0FA39A) !important; border:1.5px solid #5FE6D8 !important; color:#0B2B3A; box-shadow:0 4px 0 #0A7E78}
-.catbtn b{color:#0B2B3A; font-size:1.1rem}
-.catbtn .small{color:#0B3B45; font-weight:600}
-.catbtn > span{color:#0B2B3A !important; font-weight:800}
-.catbtn:active{transform:translateY(2px); box-shadow:0 2px 0 #0A7E78}
+.catbtn{background:linear-gradient(135deg,#9A78FF,#6F4BF2) !important; border:1.5px solid #C2B0FF !important; color:#fff; box-shadow:0 4px 0 #4B2FC0}
+.catbtn b{color:#fff; font-size:1.1rem}
+.catbtn .small{color:#EDE6FF; font-weight:600}
+.catbtn > span{color:#fff !important; font-weight:800}
+.catbtn:active{transform:translateY(2px); box-shadow:0 2px 0 #4B2FC0}
+/* oda ekranı: her şey tek ekrana sığsın; oyuncu listesi kalan boşluğu alır ve gerekirse kayar */
+.screen.lobby{min-height:0; height:100%; flex:1 1 0; padding-top:8px; padding-bottom:12px}
+.lobby .top{margin-bottom:6px}
+.lobby .codecard{padding:8px 12px !important; gap:0 !important}
+.lobby .code{font-size:2.3rem; line-height:1.15}
+.lobby .codecard .btn{min-height:34px}
+.lobby .plhead{margin:10px 0 6px !important}
+.lobby .plist{flex:1 1 auto; min-height:52px; overflow-y:auto; gap:6px}
+.lobby .pitem{flex:0 0 auto; padding:7px 12px}
+.lobby .reactbar{padding:8px 0 2px; flex:0 0 auto}
+.lobby .chips button{min-height:40px}
+.lobby .lsp{flex:0 0 8px}
+.lobby .pubrow{margin-bottom:8px; min-height:56px}
+.lobby .catbtn{min-height:56px; margin-bottom:10px !important}
+.lobby .btn.big{min-height:56px; flex:0 0 auto}
+.lobby .lbl{margin-bottom:4px !important}
 .setrow:last-child{border-bottom:0}
 .setrow > div, .setrow > span{display:flex; flex-direction:column; gap:2px; min-width:0}
 .setrow .small{font-weight:400; line-height:1.3}

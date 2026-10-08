@@ -795,7 +795,7 @@ V.quickLobby = () => {
       <h2 id="qmtitle">${ps.length < QUICK_MIN ? 'Rakip aranıyor…' : 'Rakipler bulundu!'}</h2>
       <p class="muted" id="qmsub">${ps.length < QUICK_MIN ? 'Biri katılınca oyun kısa süre içinde başlayacak.' : `Oyun <b>${sec != null ? sec : '…'}</b> saniye içinde başlıyor`}</p>
     </div>
-    <div class="row between" style="margin:18px 0 10px"><b>Oyuncular</b><span class="muted small">${ps.length} / ${QUICK_MAX}</span></div>
+    <div class="row between plhead" style="margin:18px 0 10px"><b>Oyuncular</b><span class="muted small">${ps.length} / ${QUICK_MAX}</span></div>
     <div class="plist">
       ${ps.map(p => `<div class="pitem">${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>${p.id === uid() ? '<span class="tag" style="margin-left:auto">Sen</span>' : ''}</div>`).join('')}
     </div>
@@ -848,9 +848,9 @@ V.lobby = () => {
   if (R.quick) return V.quickLobby();
   if (S.catsOpen && host) return V.cats();
   return `
-  <div class="screen">
+  <div class="screen lobby">
     <div class="top">${backBtn('data-act="leave"', 'Odadan çık')}<span class="tag">${host ? 'Oda sahibi sensin' : 'Oyun bekleniyor'}</span></div>
-    <div class="card stack" style="align-items:center;gap:6px">
+    <div class="card stack codecard" style="align-items:center;gap:6px">
       <span class="small muted">Oda kodu</span>
       <div class="code">${S.code}</div>
       <button class="btn ghost" data-act="share">Kodu paylaş</button>
@@ -861,7 +861,7 @@ V.lobby = () => {
         <span style="margin-left:auto" class="row">${p.id === R.host ? '<span class="tag">Oda sahibi</span>' : ''}${p.id === uid() ? '<span class="tag">Sen</span>' : ''}</span></div>`).join('')}
     </div>
     ${reactBar()}
-    <div class="grow" style="min-height:20px"></div>
+    <div class="lsp"></div>
     ${host ? `<div class="card setrow pubrow"><div><b>Herkese açık oda</b><span class="small muted">${R.public ? 'Açık odalar listesinde görünüyor' : 'Sadece kodu bilenler katılabilir'}</span></div>
       <button class="switch ${R.public ? 'on' : ''}" role="switch" aria-checked="${!!R.public}" aria-label="Herkese açık oda" data-act="tpublic"></button></div>` : ''}
     ${host && R.quiz ? `
@@ -870,10 +870,10 @@ V.lobby = () => {
       <button class="btn primary big" data-act="start" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">OYUNU BAŞLAT</span></button>`
     : !host && R.quiz ? `<p class="status">📝 ${esc(R.quizTitle || 'Topluluk Zuqio’su')} · ${R.quizN || ''} soru<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`
     : host ? `
-      <span class="small muted" style="margin-bottom:8px">Soru sayısı</span>
-      <div class="chips" style="margin-bottom:14px">${[5, 10, 15].map(n => `<button class="${(R.count || 10) === n ? 'on' : ''}" data-act="count" data-n="${n}">${n}</button>`).join('')}</div>
-      <span class="small muted" style="margin-bottom:8px">Zorluk</span>
-      <div class="chips" style="margin-bottom:14px">${['mix', 'k', 'o', 'z'].map(v => `<button class="${(R.diff || 'mix') === v ? 'on' : ''}" data-act="diff" data-v="${v}">${DIFF_LABEL[v]}</button>`).join('')}</div>
+      <span class="small muted lbl" style="margin-bottom:8px">Soru sayısı</span>
+      <div class="chips" style="margin-bottom:10px">${[5, 10, 15].map(n => `<button class="${(R.count || 10) === n ? 'on' : ''}" data-act="count" data-n="${n}">${n}</button>`).join('')}</div>
+      <span class="small muted lbl" style="margin-bottom:8px">Zorluk</span>
+      <div class="chips" style="margin-bottom:10px">${['mix', 'k', 'o', 'z'].map(v => `<button class="${(R.diff || 'mix') === v ? 'on' : ''}" data-act="diff" data-v="${v}">${DIFF_LABEL[v]}</button>`).join('')}</div>
       <button class="card setrow catbtn" style="margin-bottom:14px;padding:10px 16px" data-act="opencats"><div><b>Kategoriler</b><span class="small">${esc(catSummary(R))}</span></div><span>›</span></button>
       <button class="btn primary big" data-act="start" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">OYUNU BAŞLAT</span></button>`
     : `<p class="status">${R.count || 10} soru · ${DIFF_LABEL[R.diff || 'mix']} · ${esc(catSummary(R))}<br>Oda sahibinin oyunu başlatması bekleniyor…</p>`}
