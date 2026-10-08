@@ -60,9 +60,10 @@
       ".read": "auth != null && root.child('admins').child(auth.uid).exists()"
     },
     "rooms": {
-      ".read": "auth != null && ((query.orderByChild === 'qm' && query.equalTo === 'open') || root.child('admins').child(auth.uid).exists())",
+      ".read": "auth != null && ((query.orderByChild === 'qm' && query.equalTo === 'open') || (query.orderByChild === 'pub' && query.equalTo === 'open') || root.child('admins').child(auth.uid).exists())",
       ".indexOn": [
-        "qm"
+        "qm",
+        "pub"
       ],
       "$code": {
         ".read": "auth != null",

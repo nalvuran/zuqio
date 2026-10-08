@@ -641,12 +641,50 @@ V.friends = () => `
       <button class="btn primary menu-main" data-act="create" ${S.busy ? 'disabled' : ''}>Oda aç<small>Kodu arkadaşlarına gönder, oyunu sen başlat</small></button>
       <div class="menu-grid">
         <button class="btn" data-go="join">${ICON.key}Kodla katıl</button>
-        <button class="btn" data-act="soon" data-n="Açık odalar">${ICON.list}Açık odalar</button>
+        <button class="btn" data-act="openrooms">${ICON.list}Açık odalar</button>
       </div>
       <button class="btn outline" data-act="myquizzes">📝 Zuqio’larım<span class="small muted" style="margin-left:6px">· kendi sorularını yaz</span></button>
       <button class="btn outline" data-act="bot" ${S.busy ? 'disabled' : ''}>🤖 Bilgisayara karşı oyna<span class="small muted" style="margin-left:6px">· antrenman</span></button>
     </div>
   </div>`;
+
+function watchOpenRooms() {
+  stopOpenRooms();
+  S.openRooms = null;
+  S.orUnsub = onValue(query(ref(db, 'rooms'), orderByChild('pub'), equalTo('open')), sn => {
+    const t = now(), list = [];
+    sn.forEach(ch => {
+      const R = ch.val(); if (!R || R.status !== 'lobby' || !R.public) return;
+      const ps = Object.values(R.players || {}), host = (R.players || {})[R.host];
+      if (!host || host.online === false || (R.createdAt || 0) < t - 3 * 3600 * 1000) return;
+      list.push({code: ch.key, R, n: ps.filter(p => p.online !== false).length, host});
+    });
+    list.sort((a, b) => b.n - a.n || (b.R.createdAt || 0) - (a.R.createdAt || 0));
+    S.openRooms = list; if (S.screen === 'rooms') render();
+  }, err => { console.error(err); S.openRooms = []; if (S.screen === 'rooms') render(); toast('Odalar yüklenemedi'); });
+}
+function stopOpenRooms() { if (S.orUnsub) { S.orUnsub(); S.orUnsub = null; } }
+V.rooms = () => {
+  const L = S.openRooms;
+  return `
+  <div class="screen">
+    <div class="top">${backBtn('data-act="roomsback"')}</div>
+    <div class="stack" style="gap:12px">
+      <h2>Açık odalar</h2>
+      <p class="muted">Oyuncu bekleyen herkese açık odalar. Dokun, katıl.</p>
+      ${L == null ? '<p class="status">Yükleniyor…</p>' : !L.length ? `<div class="card stack" style="gap:10px;text-align:center"><b>Şu an açık oda yok</b>
+        <p class="small muted">Kendin bir oda açıp "Herkese açık" yapabilir ya da hızlı oyunla rakip arayabilirsin.</p>
+        <button class="btn primary" data-act="quick">Hızlı oyna</button></div>`
+      : L.map(o => `<button class="card roomcard" data-act="joinopen" data-code="${o.code}" ${S.busy ? 'disabled' : ''}>
+          <div class="row" style="gap:12px">${avatar(o.host.av, '', o.host.fr)}<div class="stack" style="gap:2px;flex:1;text-align:left">
+            <b>${esc(o.host.name)} odası</b>
+            <span class="small muted">${o.R.quiz ? `📝 ${esc(o.R.quizTitle || 'Topluluk Zuqio’su')}` : `${o.R.count || 10} soru · ${DIFF_LABEL[o.R.diff || 'mix']} · ${esc(catSummary(o.R))}`}</span>
+            ${o.R.quiz ? '<span><span class="tag">Topluluk Zuqio’su</span></span>' : ''}
+          </div><div class="stack" style="gap:2px;align-items:flex-end"><b>${o.n}</b><span class="small muted">oyuncu</span></div></div>
+        </button>`).join('')}
+    </div>
+  </div>`;
+};
 
 V.join = () => `
   <div class="screen">
@@ -808,6 +846,8 @@ V.lobby = () => {
     </div>
     ${reactBar()}
     <div class="grow" style="min-height:20px"></div>
+    ${host ? `<div class="card setrow pubrow"><div><b>Herkese açık oda</b><span class="small muted">${R.public ? 'Açık odalar listesinde görünüyor' : 'Sadece kodu bilenler katılabilir'}</span></div>
+      <button class="switch ${R.public ? 'on' : ''}" role="switch" aria-checked="${!!R.public}" aria-label="Herkese açık oda" data-act="tpublic"></button></div>` : ''}
     ${host && R.quiz ? `
       <div class="card setrow" style="margin-bottom:14px;padding:10px 16px"><div><b>📝 ${esc(R.quizTitle || 'Kendi Zuqio’n')}</b><span class="small muted">${R.quizN || ''} soru · topluluk Zuqio’su</span></div>
         <button class="btn ghost" data-act="quizoff">Hazır sorular</button></div>
@@ -1382,7 +1422,7 @@ async function startGame() {
     S.keys = {a: keys, i: infos};
     const scores = {}; Object.keys(R.players || {}).forEach(id => { scores[id] = 0; });
     await update(roomRef(), {status: 'countdown', countAt: serverTimestamp(), questions: pub, qi: -1, qk: '-1',
-      qStartAt: null, qDur: null, answers: null, reveal: null, jokers: null, scores, qm: null, autoAt: null,
+      qStartAt: null, qDur: null, answers: null, reveal: null, jokers: null, scores, qm: null, pub: null, autoAt: null,
       gid: Date.now().toString(36) + Math.random().toString(36).slice(2, 7)});
   } catch (e) { console.error(e); toast('Oyun başlatılamadı'); }
   S.busy = false;
@@ -1451,7 +1491,7 @@ async function playAgain() {
   try {
     await remove(ref(db, 'keys/' + S.code));
     await update(roomRef(), {status: 'lobby', questions: null, qi: null, qk: null, qStartAt: null, qDur: null,
-      countAt: null, answers: null, reveal: null, jokers: null, scores: null});
+      countAt: null, answers: null, reveal: null, jokers: null, scores: null, pub: S.R && S.R.public ? 'open' : null});
   } catch (e) { console.error(e); toast('Yeni oyun başlatılamadı'); }
   S.busy = false;
 }
@@ -1646,7 +1686,7 @@ app.addEventListener('click', e => {
   else if (a === 'tsound') { S.sound = !S.sound; ls.set('zuqio-sound', S.sound ? '1' : '0'); if (S.sound) SFX.play('correct'); render(); }
   else if (a === 'thaptic') { S.haptic = !S.haptic; ls.set('zuqio-haptic', S.haptic ? '1' : '0'); if (S.haptic) buzz(40); render(); }
   else if (a === 'create') createRoom();
-  else if (a === 'quick') quickPlay();
+  else if (a === 'quick') { stopOpenRooms(); quickPlay(); }
   else if (a === 'bot') startBotGame();
   else if (a === 'keepwait') { S.qmSince = now(); S.qmOffered = false; render(); }
   else if (a === 'botagain') { (async () => { await playAgain(); startGame(); })(); }
@@ -1694,6 +1734,10 @@ app.addEventListener('click', e => {
   else if (a === 'next') hostAction(nextQ, () => S.R && S.R.status === 'reveal');
   else if (a === 'again') playAgain();
   else if (a === 'report') reportQuestion();
+  else if (a === 'openrooms') { go('rooms'); watchOpenRooms(); }
+  else if (a === 'roomsback') { stopOpenRooms(); go('friends'); }
+  else if (a === 'joinopen') { stopOpenRooms(); joinRoom(el.dataset.code); }
+  else if (a === 'tpublic') { const on = !S.R.public; update(roomRef(), {public: on || null, pub: on ? 'open' : null}).then(() => toast(on ? 'Oda artık açık odalar listesinde' : 'Oda gizlendi')).catch(() => toast('Değiştirilemedi')); }
   else if (a === 'myquizzes') { S.myQuizzes = S.myQuizzes || null; go('quizzes'); loadMyQuizzes(); }
   else if (a === 'qznew') { S.qz = {title: '', cat: NON_EN[0], qs: [blankQ('mc'), blankQ('mc'), blankQ('mc')], status: 'draft'}; go('qzedit'); }
   else if (a === 'qzedit') { const q = S.myQuizzes[el.dataset.id]; S.qz = {id: el.dataset.id, title: q.title, cat: q.cat, status: q.status, why: q.why,
