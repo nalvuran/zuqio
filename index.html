@@ -218,6 +218,39 @@ input.field{width:100%; min-height:56px; padding:0 16px; border-radius:16px; bor
 .tabs button.on{background:var(--yellow); color:#3A2200}
 /* durum çubuğu altına kayan içeriği örten şerit (ana ekrana eklenmiş uygulamada) */
 html::after{content:""; position:fixed; left:0; right:0; top:0; height:env(safe-area-inset-top,0px); background:rgba(30,14,80,.94); z-index:20; pointer-events:none}
+
+/* çerçeveler */
+@property --fa{syntax:'<angle>'; inherits:false; initial-value:0deg}
+.avatar.fr1{box-shadow:0 0 0 3px #FFC21A, 0 0 0 5px #B87F00}
+.avatar.fr4{box-shadow:0 0 0 3px #D8F6FF, 0 0 0 5px #5EBBF5, 0 0 12px 2px rgba(110,200,255,.55)}
+.avatar.fr6{box-shadow:0 0 0 3px #12083A, 0 0 0 5px #FFC21A, 0 0 14px 3px rgba(123,92,255,.7)}
+.avatar.fr2{box-shadow:0 0 0 3px #3DF5FF, 0 0 14px 4px rgba(61,245,255,.65)}
+.avatar.fr3,.avatar.fr5{border:3px solid transparent; --fa:0deg}
+.avatar.fr3{background:linear-gradient(#3A2496,#3A2496) padding-box, conic-gradient(from var(--fa), #E5333B, #FFC21A, #2FA84F, #1E78F5, #7B5CFF, #E5333B) border-box}
+.avatar.fr5{background:linear-gradient(#3A2496,#3A2496) padding-box, conic-gradient(from var(--fa), #FF3B1F, #FFB21A, #FF6A00, #FFE15A, #FF3B1F) border-box; box-shadow:0 0 14px 3px rgba(255,106,0,.55)}
+@media (prefers-reduced-motion: no-preference){
+  .avatar.fr3,.avatar.fr5{animation:frspin 3s linear infinite}
+  .avatar.fr2{animation:frpulse 1.6s ease-in-out infinite}
+}
+@keyframes frspin{to{--fa:360deg}}
+@keyframes frpulse{50%{box-shadow:0 0 0 3px #3DF5FF, 0 0 22px 7px rgba(61,245,255,.85)}}
+.shopitem .avatar{margin:6px 0}
+.tabs.four{grid-template-columns:repeat(4,1fr); margin-bottom:0}
+.tabs.four button{font-size:.88rem}
+.remos{font-size:1.5rem; letter-spacing:4px}
+.buyb{min-height:44px; padding:0 14px; gap:6px}
+.buyb .coin{width:20px; height:20px}
+.shieldic{width:64px; height:64px; border-radius:50%; display:grid; place-items:center; background:#3A2496; color:var(--yellow)}
+.shieldic svg{width:32px; height:32px; fill:none; stroke:currentColor; stroke-width:1.8}
+/* tepkiler */
+.reactbar{display:flex; gap:6px; overflow-x:auto; padding:10px 0 4px; scrollbar-width:none}
+.reactbar::-webkit-scrollbar{display:none}
+.reactbar button{flex:0 0 auto; width:44px; height:44px; border-radius:50%; background:var(--surface); border:1.5px solid var(--line); font-size:1.35rem; display:grid; place-items:center}
+.reactbar button:active{transform:scale(.88)}
+.rfly{position:fixed; bottom:calc(120px + env(safe-area-inset-bottom,0px)); z-index:30; pointer-events:none; display:flex; flex-direction:column; align-items:center; animation:rfly 2.6s ease-out forwards}
+.rfly .re{font-size:2.6rem; line-height:1; filter:drop-shadow(0 4px 6px rgba(0,0,0,.35))}
+.rfly .rn{font-size:.75rem; font-weight:800; background:rgba(0,0,0,.45); color:#fff; padding:1px 8px; border-radius:999px; margin-top:2px}
+@keyframes rfly{0%{transform:translateY(20px) scale(.6); opacity:0} 12%{transform:translateY(0) scale(1.1); opacity:1} 80%{opacity:1} 100%{transform:translateY(-260px) scale(1); opacity:0}}
 </style>
 </head>
 <body>

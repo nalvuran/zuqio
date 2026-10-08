@@ -104,7 +104,7 @@ const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { c
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
 const APP_VERSION = '0.5 (test)';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
-const avatar = (av, cls = '') => `<div class="avatar ${cls}">${avSVG(av || 0)}</div>`;
+const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
 const ls = {
   get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } },
@@ -180,16 +180,30 @@ const SHOP = [
   {id: 'av8', av: 8, price: 60}, {id: 'av9', av: 9, price: 60}, {id: 'av10', av: 10, price: 80}, {id: 'av11', av: 11, price: 80},
   {id: 'av12', av: 12, price: 100}, {id: 'av13', av: 13, price: 100}, {id: 'av14', av: 14, price: 120}, {id: 'av15', av: 15, price: 150}
 ];
+const FRAMES = [
+  {id: 'fr1', name: 'Altın', price: 80}, {id: 'fr4', name: 'Buz', price: 80}, {id: 'fr6', name: 'Gece', price: 100},
+  {id: 'fr2', name: 'Neon', price: 120}, {id: 'fr5', name: 'Alev', price: 150}, {id: 'fr3', name: 'Gökkuşağı', price: 200}
+];
+// Tepki paketleri: re0 herkese ücretsiz. Her paketin 3 tepkisi var, sırası kurallarla eşleşir.
+const REACT_PACKS = [
+  {id: 're0', name: 'Temel', price: 0, e: ['👍', '😂', '😮']},
+  {id: 're1', name: 'Kutlama', price: 50, e: ['🔥', '🎉', '👏']},
+  {id: 're2', name: 'Atışma', price: 70, e: ['😎', '😈', '🤯']},
+  {id: 're3', name: 'Duygusal', price: 50, e: ['😭', '❤️', '🙏']}
+];
+const SHIELD = {price: 40, max: 2};
+const shields = () => (S.me && S.me.wallet && S.me.wallet.shield) || 0;
 const coins = () => (S.me && S.me.wallet && S.me.wallet.coins) || 0;
 const owned = id => !!(S.me && S.me.owned && S.me.owned[id]);
 const dayIdx = () => Math.floor((now() + 10800000) / 86400000); // Türkiye saatine göre gün numarası
 
 function dailyState() {
   const w = (S.me && S.me.wallet) || {}, t = dayIdx();
-  const claimed = w.claimDay === t, cont = w.claimDay === t - 1;
+  const claimed = w.claimDay === t, saved = w.claimDay === t - 2 && (w.shield || 0) > 0;
+  const cont = w.claimDay === t - 1 || saved;
   const next = claimed ? w.streak : (cont ? (w.streak % 7) + 1 : 1);
   const done = claimed ? w.streak : (cont && w.streak < 7 ? w.streak : 0);
-  return {claimed, next, done, qDone: w.qDay === t, qRes: w.qRes};
+  return {claimed, next, done, saved, qDone: w.qDay === t, qRes: w.qRes};
 }
 
 // Günün sorusu: herkese aynı, tarihe göre belirlenir (İngilizce hariç, çoktan seçmeli)
@@ -216,9 +230,12 @@ async function claimDaily() {
   try {
     const w = await freshWallet(), t = dayIdx();
     if (w.claimDay === t) { toast('Bugünün ödülünü zaten aldın'); S.busy = false; render(); return; }
-    const streak = w.claimDay === t - 1 ? (w.streak % 7) + 1 : 1, amt = DAILY[streak - 1];
-    await update(ref(db, 'users/' + uid()), {'wallet/coins': (w.coins || 0) + amt, 'wallet/claimDay': t, 'wallet/streak': streak});
-    SFX.play('coin'); buzz(30); toast(`+${amt} jeton kazandın!`);
+    const saved = w.claimDay === t - 2 && (w.shield || 0) > 0;
+    const streak = (w.claimDay === t - 1 || saved) ? (w.streak % 7) + 1 : 1, amt = DAILY[streak - 1];
+    const up = {'wallet/coins': (w.coins || 0) + amt, 'wallet/claimDay': t, 'wallet/streak': streak};
+    if (saved) up['wallet/shield'] = w.shield - 1;
+    await update(ref(db, 'users/' + uid()), up);
+    SFX.play('coin'); buzz(30); toast(saved ? `Seri koruyucu serini kurtardı! +${amt} jeton` : `+${amt} jeton kazandın!`);
   } catch (e) { console.error(e); toast('Ödül alınamadı, tekrar dene'); }
   S.busy = false; render();
 }
@@ -238,26 +255,73 @@ async function answerDaily(i) {
   S.busy = false; render();
 }
 
+function shopItem(id) {
+  const av = SHOP.find(x => x.id === id); if (av) return {id, kind: 'av', av: av.av, price: av.price, name: PREMIUM_NAMES[av.av] + ' avatarı'};
+  const fr = FRAMES.find(x => x.id === id); if (fr) return {id, kind: 'fr', price: fr.price, name: fr.name + ' çerçevesi'};
+  const rp = REACT_PACKS.find(x => x.id === id); if (rp && rp.price) return {id, kind: 're', price: rp.price, name: rp.name + ' tepki paketi'};
+  if (id === 'shield') return {id, kind: 'shield', price: SHIELD.price, name: 'Seri koruyucu'};
+  return null;
+}
+
 async function buyItem(id) {
-  const it = SHOP.find(x => x.id === id); if (!it || S.busy) return;
+  const it = shopItem(id); if (!it || S.busy) return;
   const w = await freshWallet();
-  if (owned(id)) return;
+  if (it.kind === 'shield' ? (w.shield || 0) >= SHIELD.max : owned(id)) return;
   if ((w.coins || 0) < it.price) { toast(`Yeterli jetonun yok (${it.price} gerekli)`); render(); return; }
-  if (!confirm(`${PREMIUM_NAMES[it.av]} avatarını ${it.price} jetona almak istiyor musun?`)) return;
+  if (!confirm(`${it.name} için ${it.price} jeton harcamak istiyor musun?`)) return;
   S.busy = true;
   try {
-    await update(ref(db, 'users/' + uid()), {'wallet/coins': (w.coins || 0) - it.price, ['owned/' + id]: true});
-    S.me = Object.assign({}, S.me, {wallet: Object.assign({}, w, {coins: (w.coins || 0) - it.price}), owned: Object.assign({}, S.me.owned, {[id]: true})});
-    SFX.play('coin'); toast(`${PREMIUM_NAMES[it.av]} artık senin!`);
+    const up = {'wallet/coins': (w.coins || 0) - it.price};
+    if (it.kind === 'shield') up['wallet/shield'] = (w.shield || 0) + 1; else up['owned/' + id] = true;
+    await update(ref(db, 'users/' + uid()), up);
+    await freshWallet();
+    SFX.play('coin'); toast(it.kind === 'shield' ? 'Seri koruyucu hazır!' : `${it.name} artık senin!`);
   } catch (e) { console.error(e); toast('Satın alınamadı, tekrar dene'); }
   S.busy = false; render();
 }
 
 async function equipItem(id) {
-  const it = SHOP.find(x => x.id === id); if (!it || !owned(id)) return;
-  try { await update(ref(db, 'users/' + uid()), {av: it.av}); S.me = Object.assign({}, S.me, {av: it.av}); toast('Avatarın değişti'); }
-  catch (e) { console.error(e); toast('Değiştirilemedi'); }
+  const it = shopItem(id) || (id === 'fr0' ? {kind: 'fr'} : null);
+  if (!it || (id !== 'fr0' && !owned(id))) return;
+  const up = it.kind === 'av' ? {av: it.av} : {fr: id === 'fr0' ? '' : id};
+  try {
+    await update(ref(db, 'users/' + uid()), up);
+    S.me = Object.assign({}, S.me, up); syncBoardProfile();
+    toast(it.kind === 'av' ? 'Avatarın değişti' : (id === 'fr0' ? 'Çerçeve çıkarıldı' : 'Çerçeven takıldı'));
+  } catch (e) { console.error(e); toast('Değiştirilemedi'); }
   render();
+}
+
+/* ================= tepkiler ================= */
+const myPacks = () => REACT_PACKS.filter(p => !p.price || owned(p.id));
+function reactBar() {
+  if (!S.code) return '';
+  return `<div class="reactbar" role="group" aria-label="Tepki gönder">${myPacks().map(p => p.e.map((e, k) =>
+    `<button data-act="react" data-p="${p.id}" data-e="${REACT_PACKS.indexOf(p) * 3 + k}" aria-label="Tepki ${e}">${e}</button>`).join('')).join('')}</div>`;
+}
+let lastReact = 0;
+async function sendReact(p, e) {
+  if (Date.now() - lastReact < 1600) return;
+  lastReact = Date.now(); buzz(15);
+  try { await set(ref(db, `rooms/${S.code}/react/${uid()}`), {e, p, t: serverTimestamp()}); }
+  catch (err) { console.error(err); }
+}
+const reactSeen = {};
+function showReacts(R) {
+  const rx = R.react || {};
+  for (const [id, r] of Object.entries(rx)) {
+    if (!r || typeof r.t !== 'number') continue;
+    const first = reactSeen[id] === undefined;
+    if (reactSeen[id] === r.t) continue;
+    reactSeen[id] = r.t;
+    if (first && now() - r.t > 4000) continue;
+    const pk = REACT_PACKS[Math.floor(r.e / 3)], emo = pk && pk.e[r.e % 3]; if (!emo) continue;
+    const p = (R.players || {})[id] || {};
+    const el = document.createElement('div'); el.className = 'rfly';
+    el.style.left = (12 + Math.random() * 62) + '%';
+    el.innerHTML = `<span class="re">${emo}</span><span class="rn">${esc(p.name || '')}</span>`;
+    document.body.appendChild(el); setTimeout(() => el.remove(), 2600);
+  }
 }
 
 let unsubMe = null;
@@ -312,7 +376,7 @@ V.profile = () => `
 
 V.home = () => `
   <div class="screen">
-    <div class="top"><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton">${COIN}<b>${coins()}</b></button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle">${esc(S.me.name)}${avatar(S.me.av)}</button></div>
+    <div class="top"><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton">${COIN}<b>${coins()}</b></button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle">${esc(S.me.name)}${avatar(S.me.av, '', S.me.fr)}</button></div>
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px"></div>
     <div class="stack" style="gap:14px">
@@ -338,7 +402,7 @@ V.daily = () => {
       <h2>Günlük ödül</h2>
       <div class="days" aria-label="7 günlük seri">${DAILY.map((amt, i) => `<div class="day ${i + 1 <= st.done ? 'done' : ''} ${!st.claimed && i + 1 === st.next ? 'today' : ''}"><span class="n">${i + 1}. gün</span>${COIN}<b>${amt}</b></div>`).join('')}</div>
       <button class="btn primary big" data-act="claim" ${st.claimed || S.busy ? 'disabled' : ''}><span class="ic">${ICON.gift}</span><span class="lb">${st.claimed ? 'BUGÜNÜN ÖDÜLÜ ALINDI' : `ÖDÜLÜ AL · +${DAILY[st.next - 1]}`}</span></button>
-      <p class="small muted" style="text-align:center">${st.claimed ? `Yarın gel, +${nextAmt} jeton seni bekliyor. Seri bozulmasın!` : 'Her gün gelirsen ödül büyür, 7. gün en büyük ödül.'}</p>
+      <p class="small muted" style="text-align:center">${st.claimed ? `Yarın gel, +${nextAmt} jeton seni bekliyor. Seri bozulmasın!` : (st.saved ? 'Dün gelemedin ama seri koruyucun serini kurtaracak!' : 'Her gün gelirsen ödül büyür, 7. gün en büyük ödül.')}${shields() ? ` · Seri koruyucu: ${shields()}` : ''}</p>
       <div class="card stack" style="gap:10px">
         <div class="row between"><span class="tag">Günün sorusu</span><span class="small muted">Doğru +${QUESTION_REWARD.right} · Yanlış +${QUESTION_REWARD.wrong}</span></div>
         <p class="qtext" style="font-size:1.2rem">${esc(dq.q.q)}</p>
@@ -353,21 +417,47 @@ V.daily = () => {
   </div>`;
 };
 
-V.shop = () => `
+V.shop = () => {
+  const tab = S.shopTab || 'av';
+  const tabs = {av: 'Avatar', fr: 'Çerçeve', re: 'Tepki', sh: 'Koruyucu'};
+  let body = '';
+  if (tab === 'av') body = `<div class="shopgrid">${SHOP.map(it => {
+      const own = owned(it.id), cur = S.me.av === it.av;
+      return `<button class="shopitem ${own ? 'own' : ''} ${cur ? 'cur' : ''}" data-act="${own ? 'equip' : 'buy'}" data-id="${it.id}" ${cur ? 'disabled' : ''}>
+        <div class="avatar">${avSVG(it.av)}</div><b>${PREMIUM_NAMES[it.av]}</b>
+        <span class="price">${own ? (cur ? 'Kullanılıyor' : 'Kullan') : COIN + it.price}</span></button>`;
+    }).join('')}</div>`;
+  else if (tab === 'fr') body = `<div class="shopgrid">${[{id: 'fr0', name: 'Çerçevesiz', price: 0}].concat(FRAMES).map(it => {
+      const own = it.id === 'fr0' || owned(it.id), cur = (S.me.fr || 'fr0') === it.id;
+      return `<button class="shopitem ${own ? 'own' : ''} ${cur ? 'cur' : ''}" data-act="${own ? 'equip' : 'buy'}" data-id="${it.id}" ${cur ? 'disabled' : ''}>
+        ${avatar(S.me.av, '', it.id)}<b>${esc(it.name)}</b>
+        <span class="price">${own ? (cur ? 'Takılı' : 'Tak') : COIN + it.price}</span></button>`;
+    }).join('')}</div>
+    <p class="small muted">Çerçeven lobide, oyun sıralamasında ve liderlik tablosunda görünür.</p>`;
+  else if (tab === 're') body = `<div class="stack" style="gap:10px">${REACT_PACKS.map(p => {
+      const own = !p.price || owned(p.id);
+      return `<div class="card row between"><div class="stack" style="gap:4px"><b>${esc(p.name)}</b><span class="remos">${p.e.join(' ')}</span></div>
+        ${own ? `<span class="tag">${p.price ? 'Senin' : 'Ücretsiz'}</span>` : `<button class="btn primary buyb" data-act="buy" data-id="${p.id}">${COIN}${p.price}</button>`}</div>`;
+    }).join('')}</div>
+    <p class="small muted">Tepkileri lobide, cevap sonrasında ve oyun sonunda arkadaşlarına gönderebilirsin.</p>`;
+  else body = `<div class="card stack" style="gap:10px;align-items:center;text-align:center">
+      <div class="shieldic"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.6-3 8.4-7 10-4-1.6-7-5.4-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <b>Seri koruyucu</b>
+      <p class="small muted">Günlük ödülü bir gün kaçırırsan serin bozulmaz; koruyucu kendiliğinden kullanılır. En fazla ${SHIELD.max} tane taşıyabilirsin.</p>
+      <p><b>Sende: ${shields()} / ${SHIELD.max}</b></p>
+      <button class="btn primary big" data-act="buy" data-id="shield" ${shields() >= SHIELD.max ? 'disabled' : ''}><span class="ic">${COIN}</span><span class="lb">${shields() >= SHIELD.max ? 'DOLU' : `AL · ${SHIELD.price} JETON`}</span></button>
+    </div>`;
+  return `
   <div class="screen">
     <div class="top">${backBtn('data-go="home"')}<span class="coinbar">${COIN}<b>${coins()}</b></span></div>
     <div class="stack" style="gap:14px">
       <h2>Mağaza</h2>
-      <p class="muted">Jetonlarınla yeni avatarlar aç. Avatarlar sadece görünüştür, oyunda avantaj sağlamaz.</p>
-      <div class="shopgrid">${SHOP.map(it => {
-        const own = owned(it.id), cur = S.me.av === it.av;
-        return `<button class="shopitem ${own ? 'own' : ''} ${cur ? 'cur' : ''}" data-act="${own ? 'equip' : 'buy'}" data-id="${it.id}" ${cur ? 'disabled' : ''}>
-          <div class="avatar">${avSVG(it.av)}</div><b>${PREMIUM_NAMES[it.av]}</b>
-          <span class="price">${own ? (cur ? 'Kullanılıyor' : 'Kullan') : COIN + it.price}</span></button>`;
-      }).join('')}</div>
-      <p class="small muted">Jetonları her gün giriş yaparak ve günün sorusunu cevaplayarak kazanırsın. Daha fazla ürün yakında.</p>
+      <div class="tabs four" role="tablist">${Object.keys(tabs).map(k => `<button role="tab" class="${tab === k ? 'on' : ''}" aria-selected="${tab === k}" data-act="shoptab" data-t="${k}">${tabs[k]}</button>`).join('')}</div>
+      ${body}
+      <p class="small muted">Mağazadaki her şey sadece görünüş ve eğlence içindir; puana ve sıralamaya etkisi yoktur. Jetonları günlük ödül ve günün sorusuyla kazanırsın.</p>
     </div>
   </div>`;
+};
 
 V.settings = () => `
   <div class="screen">
@@ -381,7 +471,7 @@ V.settings = () => `
           <button class="switch ${S.haptic && 'vibrate' in navigator ? 'on' : ''}" role="switch" aria-checked="${S.haptic && 'vibrate' in navigator}" aria-label="Titreşim" data-act="thaptic" ${'vibrate' in navigator ? '' : 'disabled'}></button></div>
       </div>
       <div class="card stack" style="gap:0;padding:0 16px">
-        <button class="setrow" data-act="openprofile"><div><b>Profili düzenle</b><span class="small muted">${esc(S.me.name)}</span></div>${avatar(S.me.av)}</button>
+        <button class="setrow" data-act="openprofile"><div><b>Profili düzenle</b><span class="small muted">${esc(S.me.name)}</span></div>${avatar(S.me.av, '', S.me.fr)}</button>
         <button class="setrow" data-go="how"><div><b>Nasıl oynanır?</b></div><span class="muted">›</span></button>
       </div>
       <div class="card stack" style="gap:4px">
@@ -466,7 +556,7 @@ V.quickLobby = () => {
     </div>
     <div class="row between" style="margin:18px 0 10px"><b>Oyuncular</b><span class="muted small">${ps.length} / ${QUICK_MAX}</span></div>
     <div class="plist">
-      ${ps.map(p => `<div class="pitem">${avatar(p.av)}<b>${esc(p.name)}</b>${p.id === uid() ? '<span class="tag" style="margin-left:auto">Sen</span>' : ''}</div>`).join('')}
+      ${ps.map(p => `<div class="pitem">${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>${p.id === uid() ? '<span class="tag" style="margin-left:auto">Sen</span>' : ''}</div>`).join('')}
     </div>
     <div class="grow"></div>
     <p class="demo">10 soru · karışık kategoriler</p>
@@ -519,9 +609,10 @@ V.lobby = () => {
     </div>
     <div class="row between" style="margin:18px 0 10px"><b>Oyuncular</b><span class="muted small">${ps.length} kişi</span></div>
     <div class="plist">
-      ${ps.map(p => `<div class="pitem ${p.online === false ? 'off' : ''}">${avatar(p.av)}<b>${esc(p.name)}</b>
+      ${ps.map(p => `<div class="pitem ${p.online === false ? 'off' : ''}">${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>
         <span style="margin-left:auto" class="row">${p.id === R.host ? '<span class="tag">Oda sahibi</span>' : ''}${p.id === uid() ? '<span class="tag">Sen</span>' : ''}</span></div>`).join('')}
     </div>
+    ${reactBar()}
     <div class="grow" style="min-height:20px"></div>
     ${host ? `
       <span class="small muted" style="margin-bottom:8px">Soru sayısı</span>
@@ -600,7 +691,7 @@ function rankList(R, qi) {
   const gains = (R.reveal && R.reveal[qi] && R.reveal[qi].gains) || {};
   const sc = R.scores || {};
   return players(R).sort((a, b) => (sc[b.id] || 0) - (sc[a.id] || 0)).map((p, i) => `
-    <div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 1}</span>${avatar(p.av)}<b>${esc(p.name)}</b>
+    <div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 1}</span>${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>
       <span class="pts">${fmt(sc[p.id] || 0)}</span><span class="delta">${gains[p.id] ? '+' + fmt(gains[p.id]) : ''}</span></div>`).join('');
 }
 
@@ -625,6 +716,7 @@ V.reveal = () => {
     ${rv.info ? `<div class="card infocard"><b>${q.cat === 'İngilizce' ? 'Öğren' : 'Biliyor muydun?'}</b><p>${esc(rv.info)}</p></div>` : ''}
     <div class="row between" style="margin:20px 0 10px"><b>Sıralama</b><span class="small muted">Soru ${qi + 1} / ${R.questions.length}</span></div>
     <div class="stack" style="gap:8px">${rankList(R, qi)}</div>
+    ${reactBar()}
     <div class="grow" style="min-height:16px"></div>
     <button class="linkbtn" data-act="report">Bu soruda hata var, bildir</button>
     ${isHost()
@@ -650,7 +742,7 @@ async function claimBoard(R) {
     const up = {[`lbClaim/${code}/${gid}/${me}`]: true};
     Object.values(P).forEach((p, i) => {
       const o = cur[i] || {s: 0, g: 0};
-      up[`lb/${p}/${me}`] = {s: (o.s || 0) + mine, g: (o.g || 0) + 1, n: S.me.name, av: S.me.av, c: code, gid};
+      up[`lb/${p}/${me}`] = {s: (o.s || 0) + mine, g: (o.g || 0) + 1, n: S.me.name, av: S.me.av, fr: S.me.fr || '', c: code, gid};
     });
     await update(ref(db), up);
     S.lbDone = gid; S.lbCache = {};
@@ -681,9 +773,9 @@ V.board = () => {
   else if (data.err) body = '<p class="status">Tablo yüklenemedi. Biraz sonra tekrar dene.</p>';
   else if (!data.rows.length) body = '<div class="card" style="text-align:center"><b>Henüz kimse yok</b><p class="small muted" style="margin-top:6px">Bir oyun bitir, bu tablonun ilk adı sen ol!</p></div>';
   else body = `<div class="stack" style="gap:8px">${data.rows.map((r, i) => `
-      <div class="rank ${r.id === uid() ? 'me' : ''}"><span class="n">${i + 1}</span>${avatar(r.id === uid() ? S.me.av : r.av)}<b>${esc(r.id === uid() ? S.me.name : r.n)}</b>
+      <div class="rank ${r.id === uid() ? 'me' : ''}"><span class="n">${i + 1}</span>${avatar(r.id === uid() ? S.me.av : r.av, '', r.id === uid() ? S.me.fr : r.fr)}<b>${esc(r.id === uid() ? S.me.name : r.n)}</b>
         <span class="pts">${fmt(r.s)}</span></div>`).join('')}
-      ${data.mine && data.mine.out ? `<div class="rank me"><span class="n">–</span>${avatar(S.me.av)}<b>${esc(S.me.name)}</b><span class="pts">${fmt(data.mine.s)}</span></div>` : ''}
+      ${data.mine && data.mine.out ? `<div class="rank me"><span class="n">–</span>${avatar(S.me.av, '', S.me.fr)}<b>${esc(S.me.name)}</b><span class="pts">${fmt(data.mine.s)}</span></div>` : ''}
     </div>`;
   const sub = {d: 'Bugün gece yarısı sıfırlanır.', w: 'Her pazartesi sıfırlanır.', m: 'Her ayın başında sıfırlanır.'}[S.lbTab];
   return `
@@ -700,13 +792,14 @@ V.final = () => {
   const R = S.R, sc = R.scores || {};
   const s = players(R).sort((a, b) => (sc[b.id] || 0) - (sc[a.id] || 0));
   const myRank = s.findIndex(p => p.id === uid()) + 1;
-  const pod = (p, place, h) => p ? `<div class="pod"><div class="row" style="justify-content:center">${avatar(p.av)}</div><div class="nm">${esc(p.name)}</div><div class="sc">${fmt(sc[p.id] || 0)}</div><div class="blk" style="height:${h}px;background:${COLORS[(place - 1) % 4]}">${place}</div></div>` : '<div></div>';
+  const pod = (p, place, h) => p ? `<div class="pod"><div class="row" style="justify-content:center">${avatar(p.av, '', p.fr)}</div><div class="nm">${esc(p.name)}</div><div class="sc">${fmt(sc[p.id] || 0)}</div><div class="blk" style="height:${h}px;background:${COLORS[(place - 1) % 4]}">${place}</div></div>` : '<div></div>';
   return `
   <div class="screen">
     <h2 style="text-align:center;margin-top:10px">${myRank === 1 ? 'Kazandın!' : `${myRank}. oldun`}</h2>
     <p class="muted small" style="text-align:center;margin-top:4px">${S.lbDone === R.gid ? 'Puanın günlük, haftalık ve aylık tablolara eklendi.' : (R.scores && R.scores[uid()] ? 'Puanın lider tablolarına ekleniyor…' : '')}</p>
     <div class="podium">${pod(s[1], 2, 70)}${pod(s[0], 1, 104)}${pod(s[2], 3, 50)}</div>
-    <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av)}<b>${esc(p.name)}</b><span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
+    <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b><span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
+    ${reactBar()}
     <div class="grow" style="min-height:20px"></div>
     <div class="stack">
       ${R.quick
@@ -796,7 +889,7 @@ async function syncBoardProfile() {
     const me = uid(), up = {};
     const keys = Object.values(periods());
     const rows = await Promise.all(keys.map(p => get(ref(db, `lb/${p}/${me}`)).then(x => x.exists()).catch(() => false)));
-    keys.forEach((p, i) => { if (rows[i]) { up[`lb/${p}/${me}/n`] = S.me.name; up[`lb/${p}/${me}/av`] = S.me.av; } });
+    keys.forEach((p, i) => { if (rows[i]) { up[`lb/${p}/${me}/n`] = S.me.name; up[`lb/${p}/${me}/av`] = S.me.av; up[`lb/${p}/${me}/fr`] = S.me.fr || ''; } });
     if (Object.keys(up).length) await update(ref(db), up);
     S.lbCache = {};
   } catch (e) { console.error(e); }
@@ -856,6 +949,7 @@ function onRoom(R) {
   if (S.lastN != null && np > S.lastN && R.status === 'lobby') SFX.play('pop');
   S.lastN = np;
   S.R = R;
+  showReacts(R);
   const map = {lobby: 'lobby', countdown: 'count', question: 'question', reveal: 'reveal', final: 'final'};
   const scr = map[R.status] || 'lobby';
   const key = R.status + ':' + (R.qi != null ? R.qi : '');
@@ -894,7 +988,7 @@ async function createRoom(opts = {}) {
     const extra = opts.quick ? {quick: true, qm: 'open'} : {};
     await set(ref(db, 'rooms/' + code), Object.assign(extra, {
       host: uid(), status: 'lobby', count: 10, createdAt: serverTimestamp(),
-      players: {[uid()]: {name: S.me.name, av: S.me.av, online: true, joinedAt: serverTimestamp()}}
+      players: {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: serverTimestamp()}}
     }));
     S.busy = false; enterRoom(code);
   } catch (e) { console.error(e); S.busy = false; render(); toast('Oda açılamadı, tekrar dene'); }
@@ -910,7 +1004,7 @@ async function joinRoom(code, silent) {
     if (R.players && R.players[uid()]) { S.busy = false; enterRoom(code); return true; }
     if (R.status !== 'lobby') { S.busy = false; if (!silent) render(); toast('Bu odada oyun başlamış, bitince tekrar dene'); return false; }
     if (Object.keys(R.players || {}).length >= 30) { S.busy = false; if (!silent) render(); toast('Oda dolu'); return false; }
-    await set(ref(db, `rooms/${code}/players/${uid()}`), {name: S.me.name, av: S.me.av, online: true, joinedAt: serverTimestamp()});
+    await set(ref(db, `rooms/${code}/players/${uid()}`), {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: serverTimestamp()});
     S.busy = false; enterRoom(code); return true;
   } catch (e) { console.error(e); S.busy = false; if (!silent) render(); toast('Odaya katılılamadı'); return false; }
 }
@@ -933,7 +1027,7 @@ async function quickPlay() {
     list.sort((a, b) => b.online - a.online);
     for (const c of list) {
       try {
-        await set(ref(db, `rooms/${c.code}/players/${uid()}`), {name: S.me.name, av: S.me.av, online: true, joinedAt: serverTimestamp()});
+        await set(ref(db, `rooms/${c.code}/players/${uid()}`), {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: serverTimestamp()});
         S.busy = false; enterRoom(c.code); return;
       } catch (e) { /* oda bu arada başlamış olabilir, sıradakini dene */ }
     }
@@ -1180,6 +1274,8 @@ app.addEventListener('click', e => {
   else if (a === 'claim') claimDaily();
   else if (a === 'dqpick') answerDaily(+el.dataset.i);
   else if (a === 'buy') buyItem(el.dataset.id);
+  else if (a === 'shoptab') { S.shopTab = el.dataset.t; render(); }
+  else if (a === 'react') sendReact(el.dataset.p, +el.dataset.e);
   else if (a === 'equip') equipItem(el.dataset.id);
   else if (a === 'tsound') { S.sound = !S.sound; ls.set('zuqio-sound', S.sound ? '1' : '0'); if (S.sound) SFX.play('correct'); render(); }
   else if (a === 'thaptic') { S.haptic = !S.haptic; ls.set('zuqio-haptic', S.haptic ? '1' : '0'); if (S.haptic) buzz(40); render(); }

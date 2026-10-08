@@ -34,15 +34,21 @@
           },
           "$other": {
             ".validate": false
+          },
+          "shield": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2 && ((!data.exists() && (newData.val() === 0 || (newData.val() === 1 && newData.parent().child('coins').val() <= data.parent().child('coins').val() - 40))) || (data.exists() && (newData.val() <= data.val() || (newData.val() === data.val() + 1 && newData.parent().child('coins').val() <= data.parent().child('coins').val() - 40))))"
           }
         },
         "owned": {
           "$item": {
-            ".validate": "newData.val() === true && $item.matches(/^av[0-9]+$/) && newData.parent().parent().child('wallet').child('coins').val() < data.parent().parent().child('wallet').child('coins').val()"
+            ".validate": "newData.val() === true && $item.matches(/^(av|fr|re)[0-9]+$/) && newData.parent().parent().child('wallet').child('coins').val() < data.parent().parent().child('wallet').child('coins').val()"
           }
         },
         "$other": {
           ".validate": false
+        },
+        "fr": {
+          ".validate": "newData.isString() && (newData.val() === '' || newData.parent().child('owned').child(newData.val()).val() === true)"
         }
       }
     },
@@ -71,6 +77,9 @@
             },
             "$other": {
               ".validate": false
+            },
+            "fr": {
+              ".validate": "newData.isString() && newData.val().length <= 4"
             }
           }
         },
@@ -88,6 +97,12 @@
               ".write": "auth != null && auth.uid === $uid && !data.exists() && root.child('rooms').child($code).child('status').val() === 'question'",
               ".validate": "($key === 'half' || $key === 'hint' || $key === 'double' || $key === 'freeze') && newData.val() === root.child('rooms').child($code).child('qi').val()"
             }
+          }
+        },
+        "react": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('rooms').child($code).child('players').child($uid).exists()",
+            ".validate": "newData.hasChildren(['e','p','t']) && newData.child('t').val() === now && (!data.exists() || now > data.child('t').val() + 1200) && newData.child('e').isNumber() && ((newData.child('p').val() === 're0' && newData.child('e').val() >= 0 && newData.child('e').val() <= 2) || (root.child('users').child($uid).child('owned').child(newData.child('p').val()).val() === true && ((newData.child('p').val() === 're1' && newData.child('e').val() >= 3 && newData.child('e').val() <= 5) || (newData.child('p').val() === 're2' && newData.child('e').val() >= 6 && newData.child('e').val() <= 8) || (newData.child('p').val() === 're3' && newData.child('e').val() >= 9 && newData.child('e').val() <= 11))))"
           }
         }
       }
@@ -127,6 +142,9 @@
           },
           "$other": {
             ".validate": false
+          },
+          "fr": {
+            ".validate": "newData.isString() && newData.val().length <= 4"
           }
         }
       }
