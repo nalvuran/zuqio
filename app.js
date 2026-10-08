@@ -140,7 +140,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 48';
+const APP_VERSION = '0.5 (test) · yapı 49';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -472,6 +472,51 @@ function annBanner() {
     <svg class="annleaf" viewBox="0 0 100 100" aria-hidden="true"><path d="M22 78C14 46 34 18 82 16C84 58 62 84 28 82" fill="#fff"/><path d="M20 82C34 62 50 44 68 30" fill="none" stroke="#2A9444" stroke-width="4" stroke-linecap="round"/></svg>
     <p>${esc(A.text)}</p></div></div>`;
 }
+/* ===== Ana ekrana ekle ===== */
+const isStandalone = () => !!(window.navigator.standalone || (window.matchMedia && matchMedia('(display-mode: standalone)').matches));
+const UA = navigator.userAgent || '';
+const A2 = {
+  ios: /iPad|iPhone|iPod/.test(UA) || (/Macintosh/.test(UA) && navigator.maxTouchPoints > 1),
+  android: /Android/.test(UA),
+  inApp: /Instagram|FBAN|FBAV|FB_IAB|TikTok|Snapchat|Line\/|Twitter|MicroMessenger|GSA\//.test(UA),
+  chromeIOS: /CriOS/.test(UA)
+};
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.deferredInstall = e; if (S.screen === 'home') render(); });
+window.addEventListener('appinstalled', () => { S.deferredInstall = null; S.installed = true; if (S.screen === 'home') render(); });
+function a2Link() {
+  if (isStandalone() || S.installed) return '';
+  return `<div style="text-align:center;margin-top:10px"><button class="a2link" data-act="a2hs">📲 Ana ekrana ekle</button></div>`;
+}
+const SHARE_IC = '<svg class="a2ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4M8.5 7.5 12 4l3.5 3.5M6 11H5v9h14v-9h-1"/></svg>';
+function a2Sheet() {
+  if (!S.a2open) return '';
+  let title = 'Ana ekrana ekle', steps;
+  if (A2.inApp) {
+    title = 'Önce tarayıcıda aç';
+    steps = ['Bu pencere uygulama içi bir tarayıcı, buradan ekleme yapılamıyor.', 'Sağ üstteki veya alttaki <b>⋯</b> menüsüne dokun.', '<b>Tarayıcıda aç</b> (Safari ya da Chrome) seçeneğini seç.', 'Açılınca bu düğmeye tekrar bas.'];
+  } else if (A2.ios && A2.chromeIOS) {
+    steps = [`Adres çubuğunun yanındaki <b>Paylaş</b> ${SHARE_IC} simgesine dokun.`, 'Listeyi aşağı kaydır, <b>Ana Ekrana Ekle</b>’yi seç.', 'Sağ üstte <b>Ekle</b>’ye dokun.'];
+  } else if (A2.ios) {
+    steps = [`Ekranın altındaki <b>Paylaş</b> ${SHARE_IC} simgesine dokun (iPad’de adres çubuğunun yanında).`, 'Listeyi aşağı kaydır, <b>Ana Ekrana Ekle</b>’yi seç.', 'Sağ üstte <b>Ekle</b>’ye dokun.'];
+  } else if (A2.android) {
+    steps = ['Sağ üstteki <b>⋮</b> menüsüne dokun.', '<b>Ana ekrana ekle</b> ya da <b>Uygulamayı yükle</b>’yi seç.', '<b>Ekle</b>’ye dokun.'];
+  } else {
+    steps = ['Adres çubuğunun sağındaki <b>Yükle</b> simgesine bas.', 'Ya da tarayıcı menüsünden <b>Zuqio’yu yükle</b>’yi seç.'];
+  }
+  return `<div class="annmodal" data-act="a2close"><div class="a2card" role="dialog" aria-label="${title}" data-stop="1">
+    <button class="annx" data-act="a2close" aria-label="Kapat">✕</button>
+    <b class="a2t">${title}</b>
+    <ol class="a2steps">${steps.map(t => `<li>${t}</li>`).join('')}</ol></div></div>`;
+}
+async function a2hs() {
+  if (S.deferredInstall) {
+    const ev = S.deferredInstall; S.deferredInstall = null;
+    try { ev.prompt(); await ev.userChoice; } catch (e) {}
+    render(); return;
+  }
+  S.a2open = true; render();
+}
+
 const MONTHS_TR = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
 const monthLabel = key => { const m = /^m(\d{4})-(\d{2})$/.exec(key || ''); return m ? MONTHS_TR[+m[2] - 1] : ''; };
 function winPop() {
@@ -554,10 +599,10 @@ V.profile = () => `
 
 V.home = () => `
   <div class="screen">
-    ${winPop() || annBanner()}
+    ${winPop() || annBanner()}${a2Sheet()}
     <div class="top"><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton">${COIN}<b>${coins()}</b></button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle">${esc(S.me.name)}${avatar(S.me.av, '', S.me.fr)}</button></div>
     <div class="grow"></div>${LOGO()}
-    <div class="grow" style="min-height:24px"></div>
+    <div class="grow" style="min-height:24px">${a2Link()}</div>
     <div class="stack" style="gap:14px">
       <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">HIZLI OYNA</span></button>
       <button class="btn purple big" data-go="friends"><span class="ic">${ICON.users}</span><span class="lb">ARKADAŞLARINLA OYNA</span></button>
@@ -1946,6 +1991,8 @@ app.addEventListener('click', e => {
   else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
   else if (a === 'qzplay') { const q = S.myQuizzes[el.dataset.id]; createRoom({quiz: el.dataset.id, quizTitle: q.title, quizN: Object.keys(q.qs || {}).length}); }
   else if (a === 'quizoff') update(roomRef(), {quiz: null, quizTitle: null, quizN: null}).catch(() => toast('Değiştirilemedi'));
+  else if (a === 'a2hs') a2hs();
+  else if (a === 'a2close') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.a2open = false; render(); }
   else if (a === 'bookdl') downloadBook();
   else if (a === 'winclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; if (S.win) ls.set('zuqio-win-' + S.win.key, '1'); render(); }
   else if (a === 'annclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; if (S.ann) ls.set('zuqio-ann', String(S.ann.t)); render(); }
