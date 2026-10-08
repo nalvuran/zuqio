@@ -140,7 +140,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 53';
+const APP_VERSION = '0.5 (test) · yapı 54';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -864,6 +864,7 @@ function quickStartIn() {
   return Math.max(0, Math.ceil((R.autoAt + QUICK_WAIT - now()) / 1000));
 }
 
+function qmPct() { return Math.max(0, Math.min(100, 100 - (now() - (S.qmSince || now())) / QUICK_SEARCH * 100)); }
 V.quickLobby = () => {
   const R = S.R, ps = players(R).filter(p => p.online !== false), sec = quickStartIn();
   return `
@@ -872,6 +873,7 @@ V.quickLobby = () => {
     <div class="card stack" style="align-items:center;gap:8px;text-align:center">
       <h2 id="qmtitle">${ps.length < QUICK_MIN ? 'Rakip aranıyor…' : 'Rakipler bulundu!'}</h2>
       <p class="muted" id="qmsub">${ps.length < QUICK_MIN ? 'Biri katılınca oyun kısa süre içinde başlayacak. 10 saniye içinde rakip bulunamazsa bilgisayara karşı oynayabilirsin.' : `Oyun <b>${sec != null ? sec : '…'}</b> saniye içinde başlıyor`}</p>
+      ${ps.length < QUICK_MIN && S.qmSince && now() - S.qmSince <= QUICK_SEARCH ? `<div class="qmbar"><i id="qmfill" style="width:${qmPct()}%"></i></div>` : ''}
     </div>
     <div class="row between plhead" style="margin:18px 0 10px"><b>Oyuncular</b><span class="muted small">${ps.length} / ${QUICK_MAX}</span></div>
     <div class="plist">
@@ -1227,6 +1229,7 @@ function tick() {
     if (r <= 0 && S.q && !S.q.timeUpShown) { S.q.timeUpShown = true; render(); }
   }
   if (S.screen === 'lobby' && S.R && S.R.quick) {
+    const fill = document.getElementById('qmfill'); if (fill) fill.style.width = qmPct().toFixed(1) + '%';
     const sub = document.getElementById('qmsub'), sec = quickStartIn();
     if (sub && sec != null) { const b = sub.querySelector('b'); if (b && b.textContent !== String(sec)) b.textContent = sec; }
   }
