@@ -2,11 +2,45 @@ import { firebaseConfig, APP_NAME } from './firebase-config.js';
 import { QUESTIONS } from './questions.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getDatabase, ref, get, set, update, remove, onValue, onDisconnect, serverTimestamp, query, orderByChild, equalTo, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { getDatabase, ref as fbRef, get as fbGet, set as fbSet, update as fbUpdate, remove as fbRemove, onValue as fbOnValue, onDisconnect as fbOnDisconnect, serverTimestamp, query, orderByChild, equalTo, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 const fb = initializeApp(firebaseConfig);
 const auth = getAuth(fb);
 const db = getDatabase(fb);
+
+/* ================= yerel oda katmanı (bilgisayara karşı mod) =================
+   "rooms/L…" ve "keys/L…" yolları Firebase'e gitmez, telefonun belleğinde tutulur.
+   Böylece oyun motorunun tamamı botlu oyunda da aynen çalışır. */
+const LOCAL = {};
+const TS_JSON = JSON.stringify(serverTimestamp());
+const localSubs = [];
+const isLocalPath = p => /^(rooms|keys)\/L/.test(p || '');
+const lparts = p => p.split('/').filter(Boolean);
+const lclone = v => v == null ? null : JSON.parse(JSON.stringify(v));
+function lres(v) {
+  if (v && typeof v === 'object' && !Array.isArray(v) && JSON.stringify(v) === TS_JSON) return Date.now() + S.offset;
+  if (Array.isArray(v)) return v.map(lres);
+  if (v && typeof v === 'object') { const o = {}; for (const k in v) if (v[k] != null) o[k] = lres(v[k]); return Object.keys(o).length ? o : null; }
+  return v;
+}
+function lget(p) { let n = LOCAL; for (const k of lparts(p)) { if (n == null || typeof n !== 'object') return null; n = n[k]; } return n === undefined ? null : n; }
+function lset(p, v) {
+  const ks = lparts(p); let n = LOCAL;
+  for (let i = 0; i < ks.length - 1; i++) { if (n[ks[i]] == null || typeof n[ks[i]] !== 'object') n[ks[i]] = {}; n = n[ks[i]]; }
+  v = lres(v); if (v == null) delete n[ks[ks.length - 1]]; else n[ks[ks.length - 1]] = v;
+}
+const lsnap = (v, key) => ({key, val: () => lclone(v), exists: () => v != null, forEach(cb) { if (v && typeof v === 'object') for (const k in v) cb(lsnap(v[k], k)); }});
+function lnotify() { setTimeout(() => { for (const sb of localSubs.slice()) { const v = lget(sb.p), j = JSON.stringify(v); if (j !== sb.last) { sb.last = j; sb.cb(lsnap(v)); } } }, 0); }
+const ref = (d, p) => isLocalPath(p) ? {__local: true, p} : fbRef(d, p);
+const get = r => r && r.__local ? Promise.resolve(lsnap(lget(r.p))) : fbGet(r);
+const set = (r, v) => { if (r && r.__local) { lset(r.p, v); lnotify(); return Promise.resolve(); } return fbSet(r, v); };
+const remove = r => set(r, null);
+const update = (r, o) => { if (r && r.__local) { for (const k in o) lset(r.p + '/' + k, o[k]); lnotify(); return Promise.resolve(); } return fbUpdate(r, o); };
+const onValue = (r, cb, err) => {
+  if (r && r.__local) { const sb = {p: r.p, cb, last: undefined}; localSubs.push(sb); lnotify(); return () => { const i = localSubs.indexOf(sb); if (i >= 0) localSubs.splice(i, 1); }; }
+  return fbOnValue(r, cb, err);
+};
+const onDisconnect = r => r && r.__local ? {set: () => Promise.resolve(), cancel: () => Promise.resolve()} : fbOnDisconnect(r);
 
 /* ================= yardımcılar ================= */
 const ICON = {
@@ -355,7 +389,7 @@ async function equipItem(id) {
 /* ================= tepkiler ================= */
 const myPacks = () => REACT_PACKS.filter(p => !p.price || owned(p.id));
 function reactBar() {
-  if (!S.code) return '';
+  if (!S.code || isBotRoom()) return '';
   return `<div class="reactbar" role="group" aria-label="Tepki gönder">${myPacks().map(p => p.e.map((e, k) =>
     `<button data-act="react" data-p="${p.id}" data-e="${REACT_PACKS.indexOf(p) * 3 + k}" aria-label="Tepki ${e}">${e}</button>`).join('')).join('')}</div>`;
 }
@@ -576,6 +610,7 @@ V.friends = () => `
         <button class="btn" data-go="join">${ICON.key}Kodla katıl</button>
         <button class="btn" data-act="soon" data-n="Açık odalar">${ICON.list}Açık odalar</button>
       </div>
+      <button class="btn outline" data-act="bot" ${S.busy ? 'disabled' : ''}>🤖 Bilgisayara karşı oyna<span class="small muted" style="margin-left:6px">· antrenman</span></button>
     </div>
   </div>`;
 
@@ -621,6 +656,42 @@ function catSummary(R) {
   if (c.includes('İngilizce')) return 'İngilizce öğrenme';
   return c.length <= 2 ? c.join(', ') : c.length + ' kategori';
 }
+const BOT_NAMES = ['Zeka', 'Bilgin', 'Kıvılcım', 'Pusula', 'Atlas', 'Sincap', 'Mercan', 'Fener'];
+const isBotRoom = () => !!(S.R && S.R.bot);
+async function startBotGame() {
+  if (S.busy) return;
+  const prev = S.code, prevR = S.R;
+  if (prev) {
+    leaveLocal();
+    if (prevR && prevR.host === uid()) { remove(ref(db, 'keys/' + prev)).catch(() => {}); remove(ref(db, 'rooms/' + prev)).catch(() => {}); }
+    else set(ref(db, `rooms/${prev}/players/${uid()}`), null).catch(() => {});
+  }
+  const code = 'L' + Date.now().toString(36);
+  const names = shuffle(BOT_NAMES).slice(0, 3), avs = shuffle([0, 1, 2, 3, 4, 5, 6, 7].filter(a => a !== S.me.av));
+  const ps = {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: now()}};
+  names.forEach((n, i) => { ps['bot' + i] = {name: n + ' 🤖', av: avs[i], fr: '', online: true, joinedAt: now() + i + 1, skill: 0.45 + Math.random() * 0.3}; });
+  lset('rooms/' + code, {host: uid(), status: 'lobby', count: 10, diff: 'mix', bot: true, createdAt: now(), players: ps});
+  enterRoom(code);
+  setTimeout(() => { if (S.code === code) startGame(); }, 60);
+}
+// Her yeni soruda botların cevabını zamanla
+const botPlan = {};
+function planBots(R) {
+  const key = S.code + ':' + R.qi; if (botPlan[key]) return; botPlan[key] = true;
+  const q = R.questions[R.qi], a = S.keys && S.keys.a ? S.keys.a[R.qi] : null; if (a == null) return;
+  for (const [id, p] of Object.entries(R.players || {})) {
+    if (!id.startsWith('bot')) continue;
+    const sk = p.skill || 0.6, delay = 2500 + Math.random() * (R.qDur * (1.05 - sk) * 0.9);
+    setTimeout(() => {
+      const cur = S.R; if (!cur || S.code !== key.split(':')[0] || cur.status !== 'question' || cur.qi !== R.qi) return;
+      let v;
+      if (q.t === 'mc') { v = Math.random() < sk ? a : shuffle([0, 1, 2, 3].filter(i => i !== a))[0]; }
+      else { const spread = q.tolAbs ? q.tolAbs * (1.3 - sk) : Math.abs(a) * 0.35 * (1.2 - sk); v = Math.round(a + (Math.random() * 2 - 1) * spread); }
+      set(ref(db, `rooms/${S.code}/answers/${R.qi}/${id}`), {v, t: serverTimestamp()});
+    }, delay);
+  }
+}
+
 const QUICK_MIN = 2, QUICK_FULL = 6, QUICK_WAIT = 15000, QUICK_MAX = 8;
 function quickStartIn() {
   const R = S.R; if (!R || !R.quick || typeof R.autoAt !== 'number') return null;
@@ -640,6 +711,13 @@ V.quickLobby = () => {
     <div class="plist">
       ${ps.map(p => `<div class="pitem">${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>${p.id === uid() ? '<span class="tag" style="margin-left:auto">Sen</span>' : ''}</div>`).join('')}
     </div>
+    ${ps.length < QUICK_MIN && S.qmSince && now() - S.qmSince > QUICK_WAIT ? `
+      <div class="card stack" style="gap:10px;margin-top:16px;text-align:center">
+        <b>Şu an rakip bulunamadı</b>
+        <p class="small muted">Bilgisayara karşı antrenman yapabilirsin. Bu oyunlar liderlik tablosuna sayılmaz.</p>
+        <button class="btn primary big" data-act="bot"><span class="ic">${ICON.play}</span><span class="lb">BİLGİSAYARA KARŞI OYNA</span></button>
+        <button class="btn ghost" data-act="keepwait">Beklemeye devam et</button>
+      </div>` : ''}
     <div class="grow"></div>
     <p class="demo">10 soru · karışık kategoriler</p>
   </div>`;
@@ -815,6 +893,7 @@ function periods() {
   return {d: 'd' + d, w: 'w' + w, m: 'm' + m};
 }
 async function claimBoard(R) {
+  if (R.bot) return; // bilgisayara karşı oyunlar antrenmandır, tabloya sayılmaz
   const me = uid(), gid = R.gid, mine = (R.scores || {})[me] || 0;
   if (!gid || !mine || S.lbDone === gid || S.lbBusy === gid) return;
   S.lbBusy = gid;
@@ -865,7 +944,7 @@ V.board = () => {
     <div class="top">${backBtn('data-go="home"')}</div>
     <h2 style="margin-bottom:12px">Liderlik tablosu</h2>
     <div class="tabs" role="tablist">${Object.keys(labels).map(k => `<button role="tab" class="${S.lbTab === k ? 'on' : ''}" aria-selected="${S.lbTab === k}" data-act="lbtab" data-t="${k}">${labels[k]}</button>`).join('')}</div>
-    <p class="small muted" style="margin-bottom:12px">${sub} Tüm oyunlar sayılır.</p>
+    <p class="small muted" style="margin-bottom:12px">${sub} Bilgisayara karşı antrenman oyunları sayılmaz.</p>
     ${body}
   </div>`;
 };
@@ -878,13 +957,17 @@ V.final = () => {
   return `
   <div class="screen">
     <h2 style="text-align:center;margin-top:10px">${myRank === 1 ? 'Kazandın!' : `${myRank}. oldun`}</h2>
-    <p class="muted small" style="text-align:center;margin-top:4px">${S.lbDone === R.gid ? 'Puanın günlük, haftalık ve aylık tablolara eklendi.' : (R.scores && R.scores[uid()] ? 'Puanın lider tablolarına ekleniyor…' : '')}</p>
+    <p class="muted small" style="text-align:center;margin-top:4px">${R.bot ? 'Antrenman oyunuydu, liderlik tablosuna sayılmaz.' : S.lbDone === R.gid ? 'Puanın günlük, haftalık ve aylık tablolara eklendi.' : (R.scores && R.scores[uid()] ? 'Puanın lider tablolarına ekleniyor…' : '')}</p>
     <div class="podium">${pod(s[1], 2, 70)}${pod(s[0], 1, 104)}${pod(s[2], 3, 50)}</div>
     <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b><span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
     ${reactBar()}
     <div class="grow" style="min-height:20px"></div>
     <div class="stack">
-      ${R.quick
+      ${R.bot
+        ? `<button class="btn primary big" data-act="botagain"><span class="ic">${ICON.play}</span><span class="lb">TEKRAR OYNA</span></button>
+           <button class="btn outline" data-act="quickfrombot">Gerçek rakip ara</button>
+           <button class="btn ghost" data-act="leave">Ana menü</button>`
+        : R.quick
         ? `<button class="btn primary big" data-act="quickagain"><span class="ic">${ICON.play}</span><span class="lb">YENİ HIZLI OYUN</span></button>
            <button class="btn ghost" data-act="leave">Ana menü</button>`
         : isHost()
@@ -907,6 +990,8 @@ function render() {
 
 /* ================= saat ================= */
 function tick() {
+  if (S.screen === 'lobby' && S.R && S.R.quick && S.R.status === 'lobby' && !S.qmOffered && S.qmSince && now() - S.qmSince > QUICK_WAIT
+      && players(S.R).filter(p => p.online !== false).length < QUICK_MIN) { S.qmOffered = true; render(); return; }
   if (S.screen === 'question' && S.R && S.R.status === 'question') {
     const r = remaining(), dl = S.R.qDur || 20000;
     const hex = document.getElementById('hex'), bar = document.getElementById('tbar'), st = document.getElementById('st');
@@ -997,8 +1082,9 @@ async function saveProfile() {
 /* ================= oda ================= */
 function enterRoom(code) {
   if (S.unsubRoom) S.unsubRoom();
+  S.qmSince = now(); S.qmOffered = false;
   S.code = code; S.R = null; S.keys = null; S.lastKey = ''; S.q = null; S.lastN = null;
-  ls.set('zuqio-room', code);
+  if (code[0] !== 'L') ls.set('zuqio-room', code);
   markOnline();
   S.unsubRoom = onValue(roomRef(), snap => onRoom(snap.val()), err => { console.error(err); toast('Odaya erişilemedi'); leaveLocal(); go('home'); });
   wakeOn();
@@ -1038,6 +1124,7 @@ function onRoom(R) {
   const key = R.status + ':' + (R.qi != null ? R.qi : '');
   if (key !== S.lastKey) {
     S.lastKey = key;
+    if (R.status === 'question' && R.bot) planBots(R);
     if (R.status === 'question') { S.q = {qi: R.qi, frozenUntil: 0, sent: null, timeUpShown: false, lastSec: null}; SFX.play('go'); }
     if (R.status === 'reveal') {
       const g = (R.reveal && R.reveal[R.qi] && R.reveal[R.qi].gains || {})[uid()] || 0;
@@ -1127,7 +1214,7 @@ async function leaveRoom() {
     return;
   }
   if (isHost()) {
-    if (!R.quick && !confirm('Odayı kapatırsan herkes odadan çıkar. Emin misin?')) return;
+    if (!R.quick && !R.bot && !confirm('Odayı kapatırsan herkes odadan çıkar. Emin misin?')) return;
     const code = S.code; leaveLocal(); go('home');
     try { await remove(ref(db, 'keys/' + code)); await remove(ref(db, 'rooms/' + code)); } catch (e) { console.error(e); }
   } else {
@@ -1370,6 +1457,10 @@ app.addEventListener('click', e => {
   else if (a === 'thaptic') { S.haptic = !S.haptic; ls.set('zuqio-haptic', S.haptic ? '1' : '0'); if (S.haptic) buzz(40); render(); }
   else if (a === 'create') createRoom();
   else if (a === 'quick') quickPlay();
+  else if (a === 'bot') startBotGame();
+  else if (a === 'keepwait') { S.qmSince = now(); S.qmOffered = false; render(); }
+  else if (a === 'botagain') { (async () => { await playAgain(); startGame(); })(); }
+  else if (a === 'quickfrombot') { leaveLocal(); quickPlay(); }
   else if (a === 'quickagain') { const code = S.code, me = uid(); leaveLocal(); set(ref(db, `rooms/${code}/players/${me}/online`), false).catch(() => {}); quickPlay(); }
   else if (a === 'joincode') joinRoom((document.getElementById('code').value || '').replace(/\D/g, ''));
   else if (a === 'share') shareCode();
