@@ -392,6 +392,21 @@ V.home = () => `
     </nav>
   </div>`;
 
+function untilTomorrow() {
+  const ms = (dayIdx() + 1) * 86400000 - 10800000 - now();
+  const h = Math.floor(ms / 3600000), m = Math.floor(ms % 3600000 / 60000);
+  return `Yeni soru ${h} sa ${m} dk sonra`;
+}
+async function shareDaily() {
+  const ok = dailyState().qRes === 1;
+  const text = `${APP_NAME} · Günün sorusu ${ok ? '🟩 Bildim!' : '🟥 Bu sefer olmadı'}\nSen de dene:`;
+  const url = location.origin + location.pathname;
+  try {
+    if (navigator.share) { await navigator.share({title: APP_NAME, text, url}); return; }
+    await navigator.clipboard.writeText(text + ' ' + url); toast('Kopyalandı, istediğin yere yapıştır');
+  } catch (e) { if (e && e.name !== 'AbortError') toast('Paylaşılamadı'); }
+}
+
 V.daily = () => {
   const st = dailyState(), dq = dailyQuestion(), pick = S.dqPick && S.dqPick.day === dayIdx() ? S.dqPick.i : null;
   const nextAmt = DAILY[st.claimed ? st.next % 7 : st.next - 1];
@@ -401,18 +416,23 @@ V.daily = () => {
     <div class="stack" style="gap:14px">
       <h2>Günlük ödül</h2>
       <div class="days" aria-label="7 günlük seri">${DAILY.map((amt, i) => `<div class="day ${i + 1 <= st.done ? 'done' : ''} ${!st.claimed && i + 1 === st.next ? 'today' : ''}"><span class="n">${i + 1}. gün</span>${COIN}<b>${amt}</b></div>`).join('')}</div>
-      <button class="btn primary big" data-act="claim" ${st.claimed || S.busy ? 'disabled' : ''}><span class="ic">${ICON.gift}</span><span class="lb">${st.claimed ? 'BUGÜNÜN ÖDÜLÜ ALINDI' : `ÖDÜLÜ AL · +${DAILY[st.next - 1]}`}</span></button>
+      ${st.claimed
+        ? `<div class="donebox">✓ Bugünün ödülü alındı</div>`
+        : `<button class="btn primary big" data-act="claim" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.gift}</span><span class="lb">ÖDÜLÜ AL · +${DAILY[st.next - 1]}</span></button>`}
       <p class="small muted" style="text-align:center">${st.claimed ? `Yarın gel, +${nextAmt} jeton seni bekliyor. Seri bozulmasın!` : (st.saved ? 'Dün gelemedin ama seri koruyucun serini kurtaracak!' : 'Her gün gelirsen ödül büyür, 7. gün en büyük ödül.')}${shields() ? ` · Seri koruyucu: ${shields()}` : ''}</p>
-      <div class="card stack" style="gap:10px">
+      ${st.qDone ? (() => {
+        const ok = st.qRes === 1;
+        return `<div class="card stack dqdone" style="gap:10px">
+          <div class="row between"><span class="tag">Günün sorusu</span><span class="small muted" id="dqcd">${untilTomorrow()}</span></div>
+          <p class="small muted">${esc(dq.q.q)}</p>
+          <div class="dqres ${ok ? 'ok' : 'no'}"><b>${ok ? '✓ Doğru bildin' : '✗ Bu sefer olmadı'}</b><span>${ok ? `+${QUESTION_REWARD.right} jeton` : `Doğrusu: ${esc(dq.o[dq.a])} · +${QUESTION_REWARD.wrong} jeton`}</span></div>
+          <button class="btn outline" data-act="dqshare">Sonucu paylaş</button>
+        </div>`;
+      })() : `<div class="card stack" style="gap:10px">
         <div class="row between"><span class="tag">Günün sorusu</span><span class="small muted">Doğru +${QUESTION_REWARD.right} · Yanlış +${QUESTION_REWARD.wrong}</span></div>
         <p class="qtext" style="font-size:1.2rem">${esc(dq.q.q)}</p>
-        <div class="answers dqa">${dq.o.map((o, i) => {
-          const cls = ['ans', 'c' + i];
-          if (st.qDone) { if (i === dq.a) cls.push('right'); else if (pick === i) cls.push('wrongpick'); else cls.push('dim'); }
-          return `<button class="${cls.join(' ')}" data-act="dqpick" data-i="${i}" ${st.qDone || S.busy ? 'disabled' : ''}>${icon(i)}<span>${esc(o)}</span></button>`;
-        }).join('')}</div>
-        ${st.qDone ? `<p class="small muted" style="text-align:center">${st.qRes === 1 ? 'Doğru bildin!' : 'Doğru cevap yeşil çerçeveli.'} Yeni soru yarın.</p>` : ''}
-      </div>
+        <div class="answers dqa">${dq.o.map((o, i) => `<button class="ans c${i}" data-act="dqpick" data-i="${i}" ${S.busy ? 'disabled' : ''}>${icon(i)}<span>${esc(o)}</span></button>`).join('')}</div>
+      </div>`}
     </div>
   </div>`;
 };
@@ -841,7 +861,7 @@ function tick() {
   }
   if (S.screen === 'count' && S.R) { const el = document.getElementById('cnt'); if (el && el.textContent !== String(countNum())) { el.textContent = countNum(); buzz(20); SFX.play('tick'); } }
 }
-setInterval(() => { tick(); hostStep(); }, 150);
+setInterval(() => { if (S.screen === 'daily') { const c = document.getElementById('dqcd'); if (c) c.textContent = untilTomorrow(); } tick(); hostStep(); }, 150);
 
 /* ================= giriş ve profil ================= */
 getRedirectResult(auth).catch(() => {});
@@ -1273,6 +1293,7 @@ app.addEventListener('click', e => {
   else if (a === 'soon') toast(el.dataset.n + ' çok yakında');
   else if (a === 'claim') claimDaily();
   else if (a === 'dqpick') answerDaily(+el.dataset.i);
+  else if (a === 'dqshare') shareDaily();
   else if (a === 'buy') buyItem(el.dataset.id);
   else if (a === 'shoptab') { S.shopTab = el.dataset.t; render(); }
   else if (a === 'react') sendReact(el.dataset.p, +el.dataset.e);
