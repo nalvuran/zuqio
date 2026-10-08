@@ -681,9 +681,9 @@ V.board = () => {
   else if (data.err) body = '<p class="status">Tablo yüklenemedi. Biraz sonra tekrar dene.</p>';
   else if (!data.rows.length) body = '<div class="card" style="text-align:center"><b>Henüz kimse yok</b><p class="small muted" style="margin-top:6px">Bir oyun bitir, bu tablonun ilk adı sen ol!</p></div>';
   else body = `<div class="stack" style="gap:8px">${data.rows.map((r, i) => `
-      <div class="rank ${r.id === uid() ? 'me' : ''}"><span class="n">${i + 1}</span>${avatar(r.av)}<b>${esc(r.n)}</b>
+      <div class="rank ${r.id === uid() ? 'me' : ''}"><span class="n">${i + 1}</span>${avatar(r.id === uid() ? S.me.av : r.av)}<b>${esc(r.id === uid() ? S.me.name : r.n)}</b>
         <span class="pts">${fmt(r.s)}</span></div>`).join('')}
-      ${data.mine && data.mine.out ? `<div class="rank me"><span class="n">–</span>${avatar(data.mine.av)}<b>${esc(data.mine.n)}</b><span class="pts">${fmt(data.mine.s)}</span></div>` : ''}
+      ${data.mine && data.mine.out ? `<div class="rank me"><span class="n">–</span>${avatar(S.me.av)}<b>${esc(S.me.name)}</b><span class="pts">${fmt(data.mine.s)}</span></div>` : ''}
     </div>`;
   const sub = {d: 'Bugün gece yarısı sıfırlanır.', w: 'Her pazartesi sıfırlanır.', m: 'Her ayın başında sıfırlanır.'}[S.lbTab];
   return `
@@ -790,6 +790,18 @@ async function login() {
   S.busy = false; render();
 }
 
+// Profil değişince bu dönemin tablolarındaki kendi satırının ad ve avatarını da güncelle
+async function syncBoardProfile() {
+  try {
+    const me = uid(), up = {};
+    const keys = Object.values(periods());
+    const rows = await Promise.all(keys.map(p => get(ref(db, `lb/${p}/${me}`)).then(x => x.exists()).catch(() => false)));
+    keys.forEach((p, i) => { if (rows[i]) { up[`lb/${p}/${me}/n`] = S.me.name; up[`lb/${p}/${me}/av`] = S.me.av; } });
+    if (Object.keys(up).length) await update(ref(db), up);
+    S.lbCache = {};
+  } catch (e) { console.error(e); }
+}
+
 async function saveProfile() {
   const v = (document.getElementById('pnm').value || '').trim().slice(0, 16);
   if (!v) { toast('Bir ad yaz'); return; }
@@ -799,6 +811,7 @@ async function saveProfile() {
     if (!(S.me && S.me.createdAt)) data.createdAt = serverTimestamp();
     await update(ref(db, 'users/' + uid()), data);   // update: cüzdan ve satın alınanlar silinmesin
     S.me = Object.assign({}, S.me, {name: v, av: S.pick, plan: data.plan});
+    syncBoardProfile();
     const first = S.firstProfile; S.firstProfile = false; S.busy = false;
     toast('Profil kaydedildi');
     if (first) afterLogin(); else go('home');
