@@ -170,7 +170,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 98';
+const APP_VERSION = '0.5 (test) · yapı 99';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -829,17 +829,19 @@ V.how = () => `
     <div class="top">${backBtn('data-go="settings"')}</div>
     <div class="stack">
       <h2>Nasıl oynanır?</h2>
-      <div class="card stack" style="gap:10px;border-color:var(--green,#2fbf71)">
+      <div class="card stack" style="gap:10px">
+        <p><b>Rakip bul.</b> Başka oyuncuları 10 saniye boyunca arar. Kimse çıkmazsa bilgisayara karşı oynarsın.</p>
+        <p><b>Arkadaşlarınla oyna.</b> Oda aç, 6 haneli kodu ya da bağlantıyı paylaş. Odaya en fazla 32 kişi katılabilir.</p>
+      </div>
+      <div class="card stack" style="gap:10px;border-color:var(--green)">
         <p style="font-size:1.08rem"><b>${ic('doc')}Notlarınla çalış</b></p>
         <p>Ders notunu, kitabını ya da kılavuzunu <b>PDF</b> olarak yükle. Zuqio önce <b>kısa bir özet</b> çıkarır.</p>
         <p>Özeti okuyup onaylayınca <b>5 ya da 10 soru</b> hazırlanır. Soru başına <b>15, 30 ya da 45 saniye</b> seçebilirsin.</p>
         <p>Sorular oyun başlayana kadar görünmez; sınav gibi çalışırsın. Tek başına oynayabilir ya da arkadaşlarınla oda açıp birlikte çözebilirsin.</p>
         <p class="small muted">PDF en fazla 5 MB ve 40 sayfa olabilir. Günde bir PDF yükleyebilirsin. Yüklediğin dosya yapay zekâ ile işlenir; kişisel bilgi içeren belge yükleme.</p>
-        <button class="btn green" data-act="myquizzes">Notlarınla çalış'a git</button>
       </div>
       <div class="card stack" style="gap:10px">
-        <p><b>Rakip bul.</b> Başka oyuncuları 10 saniye boyunca arar. Kimse çıkmazsa bilgisayara karşı oynarsın.</p>
-        <p><b>Arkadaşlarınla oyna.</b> Oda aç, 6 haneli kodu ya da bağlantıyı paylaş. Odaya en fazla 32 kişi katılabilir.</p>
+        <p><b>Bilgisayara karşı oyna.</b> Kategori, zorluk ve soru sayısını seç, bilgisayar oyuncularla yarış.</p>
         <p><b>Hızlı ve doğru cevap ver.</b> Ne kadar erken bilirsen o kadar çok puan alırsın.</p>
         <p><b>Tahmin sorularında</b> şık yok: sayını yaz, doğruya ne kadar yakınsan o kadar çok puan.</p>
         <p><b>Konu paketleri:</b> tek bir konuya odaklanan hazır sorular (örneğin Türkiye plakaları).</p>
