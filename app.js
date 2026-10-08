@@ -143,7 +143,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 63';
+const APP_VERSION = '0.5 (test) · yapı 64';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1450,7 +1450,7 @@ async function createRoom(opts = {}) {
     let code = null;
     for (let i = 0; i < 6 && !code; i++) { const c = genCode(); const s = await get(ref(db, 'rooms/' + c)); if (!s.exists()) code = c; }
     if (!code) throw new Error('no-code');
-    const extra = opts.quick ? {quick: true, qm: 'open'} : (opts.quiz ? {quiz: opts.quiz, quizTitle: opts.quizTitle, quizN: opts.quizN} : {});
+    const extra = opts.quick ? {quick: true, qm: 'open'} : (opts.quiz ? Object.assign({quiz: opts.quiz, quizTitle: opts.quizTitle, quizN: opts.quizN}, opts.quizDur ? {quizDur: opts.quizDur} : {}) : {});
     await set(ref(db, 'rooms/' + code), Object.assign(extra, {
       host: uid(), status: 'lobby', count: 10, createdAt: serverTimestamp(),
       players: {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: serverTimestamp()}}
@@ -1653,7 +1653,7 @@ async function nextQ() {
   const R = S.R; const qi = (typeof R.qi === 'number' ? R.qi : -1) + 1;
   if (qi >= R.questions.length) { await update(roomRef(), {status: 'final'}); return; }
   const q = R.questions[qi];
-  await update(roomRef(), {status: 'question', qi, qk: String(qi), qStartAt: serverTimestamp(), qDur: q.t === 'mc' ? 20000 : 30000});
+  await update(roomRef(), {status: 'question', qi, qk: String(qi), qStartAt: serverTimestamp(), qDur: R.quizDur ? R.quizDur * 1000 : (q.t === 'mc' ? 20000 : 30000)});
 }
 
 function calcGain(q, a, v, frac) {
@@ -1759,6 +1759,7 @@ V.quizzes = () => {
       <h2>Zuqio’larım</h2>
       <p class="muted">Kendi Zuqio’nu oluştur, arkadaşlarınla hemen oyna. İstersen havuza gönder; onaylanınca herkesin oyunlarında çıkar.</p>
       <button class="btn primary big" data-act="qznew"><span class="ic">${ICON.plus || '+'}</span><span class="lb">YENİ ZUQIO</span></button>
+      <button class="btn purple big" data-act="pdfnew"><span class="ic">📄</span><span class="lb">PDF’TEN ÜRET</span></button>
       ${S.myQuizzes == null ? '<p class="status">Yükleniyor…</p>' : !list.length ? '<div class="card"><p class="small muted">Henüz bir Zuqio’n yok.</p></div>' : list.map(q => {
         const st = QZ_ST[q.status] || QZ_ST.draft, n = Object.keys(q.qs || {}).length;
         return `<div class="card stack" style="gap:8px">
@@ -1774,6 +1775,60 @@ V.quizzes = () => {
     </div>
   </div>`;
 };
+
+const PDF_MAX = 5 * 1024 * 1024;
+V.pdfgen = () => {
+  const P = S.pdf;
+  return `
+  <div class="screen">
+    <div class="top">${backBtn('data-go="quizzes"')}</div>
+    <div class="stack" style="gap:14px">
+      <h2>PDF’ten Zuqio üret</h2>
+      <p class="muted">Ders notunu ya da çalışma kâğıdını yükle; önce kısa bir özet, sonra bu nottan sorular hazırlansın. Hazır olunca düzenleyip arkadaşlarınla oynayabilirsin.</p>
+      <label class="btn outline" for="pdffile" style="justify-content:center;gap:8px;${P.busy ? 'opacity:.5;pointer-events:none' : ''}">📄 ${P.file ? esc(P.file.name) : 'PDF seç'}</label>
+      <input type="file" id="pdffile" accept="application/pdf,.pdf" hidden ${P.busy ? 'disabled' : ''}>
+      <span class="small muted">En fazla 5 MB. ${P.file ? Math.round(P.file.size / 1024) + ' KB seçildi.' : ''}</span>
+      <span class="small muted lbl">Soru sayısı</span>
+      <div class="chips">${[5, 10].map(n => `<button class="${P.count === n ? 'on' : ''}" data-act="pdfcount" data-n="${n}" ${P.busy ? 'disabled' : ''}>${n}</button>`).join('')}</div>
+      <span class="small muted lbl">Cevaplama süresi</span>
+      <div class="chips">${[15, 30, 45].map(n => `<button class="${P.dur === n ? 'on' : ''}" data-act="pdfdur" data-n="${n}" ${P.busy ? 'disabled' : ''}>${n} sn</button>`).join('')}</div>
+      ${P.err ? `<div class="card"><p class="small" style="color:#FF9DA0">${esc(P.err)}</p></div>` : ''}
+      ${P.busy ? '<div class="card"><p class="small">Notun okunuyor, özet ve sorular hazırlanıyor… Bu 20–40 saniye sürebilir, ekranı kapatma.</p></div>' : ''}
+      <p class="small muted">Günde 1 PDF üretebilirsin. Üretilen sorular yapay zekâ ile hazırlanır ve hata içerebilir; oynamadan önce mutlaka kontrol et. PDF’in içeriği soru üretmek için Google’ın Gemini hizmetine gönderilir ve bizde saklanmaz. Kişisel ya da gizli belge yükleme, yalnızca kendi notlarını yükle.</p>
+    </div>
+    <div class="grow" style="min-height:16px"></div>
+    <button class="btn primary big" data-act="pdfgo" ${P.busy || !P.file ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">${P.busy ? 'HAZIRLANIYOR…' : 'ÜRET'}</span></button>
+  </div>`;
+};
+async function pdfGenerate() {
+  const P = S.pdf; if (!P || P.busy || !P.file) return;
+  if (P.file.size > PDF_MAX) { P.err = 'Dosya 5 MB’tan büyük. Daha küçük bir PDF seç.'; render(); return; }
+  P.busy = true; P.err = ''; render();
+  try {
+    let admin = false;
+    try { admin = (await get(ref(db, 'admins/' + uid()))).exists(); } catch (e) {}
+    if (!admin) {
+      const sn = await get(ref(db, 'aiuse/' + uid()));
+      if (sn.exists() && sn.val().dd === dayIdx()) { P.busy = false; P.err = 'Bugünkü hakkını kullandın. Yarın tekrar dene.'; render(); return; }
+    }
+    const {makeFromPdf} = await import('./ai.js');
+    const out = await Promise.race([makeFromPdf(P.file, P.count), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 90000))]);
+    try { await set(ref(db, 'aiuse/' + uid()), {dd: dayIdx(), t: serverTimestamp()}); } catch (e) { console.error(e); }
+    S.qz = {title: out.title, cat: 'Ders notu', qs: out.qs, status: 'draft', summary: out.summary, dur: P.dur, src: 'pdf'};
+    S.pdf = null; go('qzedit'); toast('Hazır! Soruları kontrol et.');
+  } catch (e) {
+    console.error(e);
+    const m = String((e && e.message) || ''), c = String((e && e.code) || '');
+    P.busy = false;
+    P.err = e && e.msg ? 'Bu belgeden soru üretilemedi: ' + e.msg
+      : m === 'timeout' ? 'Çok uzun sürdü. Daha küçük bir PDF ile tekrar dene.'
+      : m === 'few' || m === 'parse' ? 'Bu belgeden yeterli soru çıkmadı. Başka bir PDF dene.'
+      : /429|quota|RESOURCE|rate/i.test(m + c) ? 'Şu an çok yoğunuz. Biraz sonra tekrar dene.'
+      : /413|too large/i.test(m) ? 'Dosya çok büyük. Daha küçük bir PDF seç.'
+      : 'Üretilemedi, tekrar dene. (' + (c || m || 'hata').slice(0, 60) + ')';
+    render();
+  }
+}
 function blankQ(t, cat) { cat = cat || NON_EN[0]; return t === 'num' ? {t: 'num', q: '', a: '', unit: '', cat} : {t: 'mc', q: '', o: ['', '', '', ''], cat}; }
 V.qzedit = () => {
   const Z = S.qz, locked = Z.status === 'pending';
@@ -1785,10 +1840,14 @@ V.qzedit = () => {
       ${locked ? '<div class="card"><p class="small">Bu Zuqio onay bekliyor. Düzenlemek için önce gönderimi geri çek.</p><button class="btn outline" data-act="qzwithdraw" style="margin-top:8px">Gönderimi geri çek</button></div>' : ''}
       <label class="small muted" for="qzt">Zuqio adı</label>
       <input class="field" id="qzt" maxlength="40" value="${esc(Z.title)}" placeholder="Örn. 90'lar dizileri" ${locked ? 'disabled' : ''}>
+      ${Z.summary != null ? `<label class="small muted" for="qzs">Özet (yapay zekâ hazırladı, hataları düzeltebilirsin)</label>
+      <textarea class="field" id="qzs" rows="9" maxlength="3000" ${locked ? 'disabled' : ''}>${esc(Z.summary)}</textarea>` : ''}
+      <span class="small muted lbl">Cevaplama süresi</span>
+      <div class="chips">${[15, 30, 45].map(n => `<button class="${Z.dur === n ? 'on' : ''}" data-act="qzdur" data-n="${n}" ${locked ? 'disabled' : ''}>${n} sn</button>`).join('')}</div>
       ${Z.qs.map((q, i) => `
         <div class="card stack qzq" style="gap:8px" data-i="${i}">
           <div class="row between"><b>${i + 1}. soru · ${q.t === 'num' ? 'Tahmin' : 'Çoktan seçmeli'}</b>${locked || Z.qs.length < 2 ? '' : `<button class="btn ghost" data-act="qzdel" data-i="${i}" aria-label="Soruyu sil">Sil</button>`}</div>
-          <select class="field" data-f="cat" aria-label="Kategori" ${locked ? 'disabled' : ''}>${NON_EN.map(c => `<option ${q.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
+          <select class="field" data-f="cat" aria-label="Kategori" ${locked ? 'disabled' : ''}>${(NON_EN.includes(q.cat) || !q.cat ? NON_EN : [...NON_EN, q.cat]).map(c => `<option ${q.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
           <textarea class="field" data-f="q" maxlength="200" rows="2" placeholder="Soru" ${locked ? 'disabled' : ''}>${esc(q.q)}</textarea>
           ${q.t === 'num' ? `
             <div class="row" style="gap:8px"><input class="field" data-f="a" inputmode="decimal" placeholder="Doğru sayı" value="${esc(q.a)}" ${locked ? 'disabled' : ''}>
@@ -1803,15 +1862,15 @@ V.qzedit = () => {
     <div class="grow" style="min-height:16px"></div>
     ${locked ? '' : `<div class="stack">
       <button class="btn primary big" data-act="qzsave" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">KAYDET</span></button>
-      ${Z.status !== 'approved' ? `<button class="btn outline" data-act="qzsubmit" ${S.busy ? 'disabled' : ''}>Kaydet ve havuza gönder</button>` : ''}
+      ${Z.status !== 'approved' && Z.src !== 'pdf' ? `<button class="btn outline" data-act="qzsubmit" ${S.busy ? 'disabled' : ''}>Kaydet ve havuza gönder</button>` : ''}
       ${Z.id ? '<button class="btn ghost" data-act="qzremove">Zuqio’yu sil</button>' : ''}
     </div>`}
   </div>`;
 };
 function readQz() {
   const Z = S.qz; if (!Z || Z.status === 'pending') return;
-  const t = document.getElementById('qzt');
-  if (t) Z.title = t.value;
+  const t = document.getElementById('qzt'), sm = document.getElementById('qzs');
+  if (t) Z.title = t.value; if (sm) Z.summary = sm.value;
   document.querySelectorAll('.qzq').forEach(el => {
     const q = Z.qs[+el.dataset.i]; if (!q) return;
     el.querySelectorAll('[data-f]').forEach(f => {
@@ -1843,6 +1902,9 @@ async function saveQz(status) {
     : {t: 'num', q: q.q.trim(), a: parseFloat(String(q.a).replace(',', '.')), unit: String(q.unit).trim(), cat: q.cat});
   const id = Z.id || ('z' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
   const data = {owner: uid(), name: S.me.name, title: Z.title.trim().slice(0, 40), cat: qs[0].cat, qs, status, t: serverTimestamp()};
+  if (Z.summary != null) data.summary = String(Z.summary).slice(0, 3000);
+  if (Z.dur) data.dur = Z.dur;
+  if (Z.src) data.src = Z.src;
   S.busy = true; render();
   try {
     await set(ref(db, 'quizzes/' + id), data);
@@ -1907,6 +1969,16 @@ async function useJoker(key) {
 /* ================= ekran açık kalsın ================= */
 async function wakeOn() { try { if ('wakeLock' in navigator && !S.wake) S.wake = await navigator.wakeLock.request('screen'); } catch (e) {} }
 function wakeOff() { try { S.wake && S.wake.release(); } catch (e) {} S.wake = null; }
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t && t.id === 'pdffile' && S.pdf) {
+    const f = t.files && t.files[0]; if (!f) return;
+    if (!/pdf$/i.test(f.type || f.name)) { S.pdf.file = null; S.pdf.err = 'Sadece PDF dosyası seçebilirsin.'; }
+    else if (f.size > PDF_MAX) { S.pdf.file = null; S.pdf.err = 'Dosya 5 MB’tan büyük. Daha küçük bir PDF seç.'; }
+    else { S.pdf.file = f; S.pdf.err = ''; }
+    render();
+  }
+});
 document.addEventListener('visibilitychange', () => {
   // arka plana geçince müzik ve sesler dursun, geri gelince devam etsin
   try { if (SFX.ctx) { if (document.visibilityState === 'hidden') SFX.ctx.suspend(); else SFX.ctx.resume(); } } catch (e) {}
@@ -1996,17 +2068,22 @@ app.addEventListener('click', e => {
   else if (a === 'joinopen') { stopOpenRooms(); joinRoom(el.dataset.code); }
   else if (a === 'tpublic') { const on = !S.R.public; update(roomRef(), {public: on || null, pub: on ? 'open' : null}).then(() => toast(on ? 'Oda artık açık odalar listesinde' : 'Oda gizlendi')).catch(() => toast('Değiştirilemedi')); }
   else if (a === 'myquizzes') { S.myQuizzes = S.myQuizzes || null; go('quizzes'); loadMyQuizzes(); }
-  else if (a === 'qznew') { S.qz = {title: '', cat: NON_EN[0], qs: [blankQ('mc')], status: 'draft'}; go('qzedit'); }
-  else if (a === 'qzedit') { const q = S.myQuizzes[el.dataset.id]; S.qz = {id: el.dataset.id, title: q.title, cat: q.cat, status: q.status, why: q.why,
+  else if (a === 'qznew') { S.qz = {title: '', cat: NON_EN[0], qs: [blankQ('mc')], status: 'draft', dur: null}; go('qzedit'); }
+  else if (a === 'qzedit') { const q = S.myQuizzes[el.dataset.id]; S.qz = {id: el.dataset.id, title: q.title, cat: q.cat, status: q.status, why: q.why, summary: q.summary != null ? q.summary : null, dur: q.dur || null, src: q.src || null,
       qs: Object.values(q.qs || {}).map(x => x.t === 'num' ? {t: 'num', q: x.q, a: String(x.a), unit: x.unit, cat: x.cat || q.cat} : {t: 'mc', q: x.q, o: x.o.slice(), cat: x.cat || q.cat})}; go('qzedit'); }
   else if (a === 'qzback') { go('quizzes'); }
+  else if (a === 'qzdur') { readQz(); S.qz.dur = S.qz.dur === +el.dataset.n ? null : +el.dataset.n; render(); }
+  else if (a === 'pdfnew') { S.pdf = {file: null, count: 5, dur: 30, busy: false, err: ''}; go('pdfgen'); }
+  else if (a === 'pdfcount') { S.pdf.count = +el.dataset.n; render(); }
+  else if (a === 'pdfdur') { S.pdf.dur = +el.dataset.n; render(); }
+  else if (a === 'pdfgo') pdfGenerate();
   else if (a === 'qzadd') { readQz(); S.qz.qs.push(blankQ(el.dataset.t, S.qz.qs.length ? S.qz.qs[S.qz.qs.length - 1].cat : null)); render(); setTimeout(() => { const all = document.querySelectorAll('.qzq'); all[all.length - 1].scrollIntoView({behavior: 'smooth', block: 'center'}); }, 30); }
   else if (a === 'qzdel') { readQz(); S.qz.qs.splice(+el.dataset.i, 1); render(); }
   else if (a === 'qzsave') saveQz('draft');
   else if (a === 'qzsubmit') { if (confirm('Zuqio onaya gönderilsin mi? Onaylanan sorular herkesin oyunlarında çıkabilir.')) saveQz('pending'); }
   else if (a === 'qzwithdraw') { (async () => { try { await update(ref(db, 'quizzes/' + S.qz.id), {status: 'draft', t: serverTimestamp()}); S.qz.status = 'draft'; S.myQuizzes[S.qz.id].status = 'draft'; render(); } catch (e) { toast('Geri çekilemedi'); } })(); }
   else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
-  else if (a === 'qzplay') { const q = S.myQuizzes[el.dataset.id]; createRoom({quiz: el.dataset.id, quizTitle: q.title, quizN: Object.keys(q.qs || {}).length}); }
+  else if (a === 'qzplay') { const q = S.myQuizzes[el.dataset.id]; createRoom({quiz: el.dataset.id, quizTitle: q.title, quizN: Object.keys(q.qs || {}).length, quizDur: q.dur || null}); }
   else if (a === 'quizoff') update(roomRef(), {quiz: null, quizTitle: null, quizN: null}).catch(() => toast('Değiştirilemedi'));
   else if (a === 'a2hs') a2hs();
   else if (a === 'a2close') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.a2open = false; render(); }
