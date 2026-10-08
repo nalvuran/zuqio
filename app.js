@@ -172,7 +172,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 110';
+const APP_VERSION = '0.5 (test) · yapı 111';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -732,9 +732,9 @@ V.shop = () => {
 };
 
 V.settings = () => `
-  <div class="screen">
+  <div class="screen setscr">
     <div class="top">${backBtn('data-go="home"')}</div>
-    <div class="stack" style="gap:14px">
+    <div class="stack">
       <h2>Ayarlar</h2>
       <div class="card stack" style="gap:0;padding:0 16px">
         <div class="setrow"><div><b>Müzik</b></div>
@@ -750,14 +750,16 @@ V.settings = () => `
         <a class="setrow" href="gizlilik.html" target="_blank" rel="noopener"><div><b>Gizlilik politikası</b></div><span class="muted">›</span></a>
         <a class="setrow" href="kosullar.html" target="_blank" rel="noopener"><div><b>Kullanım koşulları</b></div><span class="muted">›</span></a>
       </div>
-      <div class="card stack" style="gap:4px">
+      <div class="card stack verc" style="gap:3px">
         <b>${esc(APP_NAME)}</b>
         <span class="small muted">Sürüm ${APP_VERSION}</span>
         <span class="small muted">Şu an test aşamasındayız. Gördüğün hataları ve önerilerini bize ilet, birlikte geliştirelim.</span>
       </div>
-      <button class="btn ghost" data-act="logout">Çıkış yap</button>
-      <button class="btn ghost" data-act="delacct" style="color:var(--red)" ${S.busy ? 'disabled' : ''}>Hesabımı sil</button>
-      <span class="small muted" style="text-align:center">Hesabını silersen profilin, jetonların, puanların ve hazırladığın quizler kalıcı olarak silinir.</span>
+      <div class="menu-grid setbtns">
+        <button class="btn ghost" data-act="logout">Çıkış yap</button>
+        <button class="btn ghost" data-act="delacct" style="color:var(--red)" ${S.busy ? 'disabled' : ''}>Hesabımı sil</button>
+      </div>
+      <span class="small muted fine" style="text-align:center">Hesabını silersen profilin, jetonların, puanların ve hazırladığın quizler kalıcı olarak silinir.</span>
     </div>
   </div>`;
 
