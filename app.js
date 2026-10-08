@@ -1424,4 +1424,16 @@ app.addEventListener('keydown', e => {
 const qp = new URLSearchParams(location.search).get('oda');
 if (qp && /^\d{6}$/.test(qp)) { S.pendingCode = qp; history.replaceState(null, '', location.pathname); }
 render();
-if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').then(r => {
+    // uygulama her öne geldiğinde güncelleme var mı bak
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') r.update().catch(() => {}); });
+  }).catch(() => {}));
+  // yeni sürüm devreye girince, oyunun ortasında değilsek sayfayı sessizce yenile
+  const hadCtrl = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadCtrl) return;
+    const reload = () => location.reload();
+    if (!S.code) reload(); else { const iv = setInterval(() => { if (!S.code) { clearInterval(iv); reload(); } }, 2000); }
+  });
+}
