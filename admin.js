@@ -1,11 +1,14 @@
 import { firebaseConfig, APP_NAME } from './firebase-config.js';
 import { QUESTIONS } from './questions.js';
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { initializeAuth, setPersistence, browserLocalPersistence, browserSessionPersistence, indexedDBLocalPersistence, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getDatabase, ref, get, set, update, remove, onValue, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 const fb = initializeApp(firebaseConfig, 'admin');
-const auth = getAuth(fb);
+// Oturum önce localStorage'a yazılır (iPhone'da ana ekran uygulamasında IndexedDB bağlantısı kopabiliyor)
+const auth = initializeAuth(fb, {persistence: [browserLocalPersistence, indexedDBLocalPersistence]});
+const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
 const db = getDatabase(fb);
 const app = document.getElementById('app');
 
@@ -57,8 +60,9 @@ function vLogin() {
   return `<div class="wrap narrow">
     <h1>${esc(APP_NAME)} <span>Yönetim</span></h1>
     <form class="card stack" id="lf">
-      <label>E-posta<input class="field" id="em" type="email" autocomplete="username" required></label>
+      <label>E-posta<input class="field" id="em" type="email" autocomplete="username" value="${esc(lsGet('zq_admin_em') || '')}" required></label>
       <label>Şifre<input class="field" id="pw" type="password" autocomplete="current-password" required></label>
+      <label class="row" style="gap:8px;align-items:center"><input type="checkbox" id="rm" ${lsGet('zq_admin_rm') === '0' ? '' : 'checked'}> Beni hatırla</label>
       <button class="btn primary" type="submit">Giriş yap</button>
     </form>
     <p class="muted small">Bu sayfa sadece yöneticiler içindir.</p>
@@ -342,7 +346,8 @@ function render() {
 app.addEventListener('submit', async e => {
   if (e.target.id !== 'lf') return; e.preventDefault();
   const em = document.getElementById('em').value.trim(), pw = document.getElementById('pw').value;
-  try { await signInWithEmailAndPassword(auth, em, pw); }
+  const rm = document.getElementById('rm').checked; lsSet('zq_admin_rm', rm ? '1' : '0'); lsSet('zq_admin_em', rm ? em : '');
+  try { await setPersistence(auth, rm ? browserLocalPersistence : browserSessionPersistence); await signInWithEmailAndPassword(auth, em, pw); }
   catch (err) { toast(['auth/invalid-credential', 'auth/wrong-password', 'auth/user-not-found'].includes(err.code) ? 'E-posta veya şifre hatalı' : 'Giriş yapılamadı (' + err.code + ')'); }
 });
 app.addEventListener('focusout', () => setTimeout(() => { if (S.dirty) render(); }, 0));
