@@ -56,6 +56,7 @@ const ICON = {
   again:'<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>',
   hint:'<svg viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z"/></svg>',
   play:'<svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z" fill="currentColor"/></svg>',
+  bot:'<svg viewBox="0 0 24 24"><rect x="4.5" y="8" width="15" height="11" rx="3.5"/><path d="M12 8V4.5"/><circle cx="12" cy="3.6" r="1"/><path d="M9 13v1M15 13v1"/><path d="M2.5 12.5v3M21.5 12.5v3"/></svg>',
   user1:'<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4.5 21a7.5 7.5 0 0 1 15 0"/></svg>',
   users:'<svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14a6.5 6.5 0 0 1 3.5 6"/></svg>',
   home:'<svg viewBox="0 0 24 24"><path d="M4 11 12 4l8 7M6 10v10h12V10M10 20v-6h4v6"/></svg>',
@@ -141,7 +142,7 @@ const fmtQ = (q, v) => q && q.tolAbs ? String(Math.round(v)) : fmt(v);
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const buzz = ms => { try { if (S.haptic !== false && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 57';
+const APP_VERSION = '0.5 (test) · yapı 58';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -607,7 +608,7 @@ V.home = () => `
     <div class="stack" style="gap:14px">
       <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.user1}</span><span class="lb">RAKİP BUL</span></button>
       <button class="btn purple big" data-go="friends"><span class="ic">${ICON.users}</span><span class="lb">ARKADAŞLARINLA OYNA</span></button>
-      <button class="btn outline big" data-act="bot" ${S.busy ? 'disabled' : ''}><span class="ic">🤖</span><span class="lb">BİLGİSAYARA KARŞI OYNA</span></button>
+      <button class="btn outline big" data-act="bot" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.bot}</span><span class="lb">BİLGİSAYARA KARŞI OYNA</span></button>
     </div>
   </div>`;
 
@@ -885,7 +886,7 @@ V.quickLobby = () => {
       <div class="card stack" style="gap:10px;margin-top:16px;text-align:center">
         <b>Şu an rakip bulunamadı</b>
         <p class="small muted">Bilgisayara karşı antrenman yapabilirsin. Bu oyunlar liderlik tablosuna sayılmaz.</p>
-        <button class="btn primary big" data-act="bot"><span class="ic">${ICON.play}</span><span class="lb">BİLGİSAYARA KARŞI OYNA</span></button>
+        <button class="btn primary big" data-act="bot"><span class="ic">${ICON.bot}</span><span class="lb">BİLGİSAYARA KARŞI OYNA</span></button>
         <button class="btn ghost" data-act="keepwait">Beklemeye devam et</button>
       </div>` : ''}
     <div class="grow"></div>
