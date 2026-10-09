@@ -887,6 +887,6 @@ export const PACKS = [
     mu("Gece ve gündüzün oluşmasının nedeni nedir?", "Dünya’nın kendi ekseni etrafında dönmesi", "Dünya’nın Güneş etrafında dönmesi", "Ay’ın Dünya etrafında dönmesi", "Güneş’in kendi etrafında dönmesi"),
     mu("Güneş sisteminin en yüksek dağı olan Olympus Mons hangi gezegendedir?", "Mars", "Venüs", "Jüpiter", "Dünya"),
     mu("Güneş nasıl bir gök cismidir?", "Yıldız", "Gezegen", "Uydu", "Kuyruklu yıldız"),
-    mu("Dünya, Güneş çevresindeki bir turunu yaklaşık ne kadar sürede tamamlar?", "365 gün", "30 gün", "24 saat", "12 ay 3 gün")
+    mu("Dünya, Güneş çevresindeki bir turunu yaklaşık ne kadar sürede tamamlar?", "365 gün", "30 gün", "24 saat", "7 gün")
   ]}
 ];
