@@ -185,7 +185,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 126';
+const APP_VERSION = '0.5 (test) · yapı 127';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -445,6 +445,46 @@ async function buyItem(id) {
     SFX.play('coin'); toast(it.kind === 'shield' ? 'Seri koruyucu hazır!' : `${it.name} artık senin!`);
   } catch (e) { console.error(e); toast('Satın alınamadı, tekrar dene'); }
   S.busy = false; render();
+}
+
+/* ================= seviye ================= */
+const XP_DAILY = 200, LV_COIN = 10;
+const xpAt = L => 30 * (L - 1) * (L - 1) + 20 * (L - 1); // L. seviyeye ulaşmak için gereken toplam XP
+const levelOf = xp => { let L = 1; while (L < 100 && xpAt(L + 1) <= (xp || 0)) L++; return L; };
+const LV_TITLES = [[20, 'Efsane'], [15, 'Usta'], [10, 'Bilgin'], [6, 'Bilgi Avcısı'], [3, 'Meraklı'], [1, 'Çaylak']];
+const lvTitle = L => (LV_TITLES.find(t => L >= t[0]) || LV_TITLES[LV_TITLES.length - 1])[1];
+const myLv = () => levelOf(S.me && S.me.xp);
+const lvBadge = p => p && p.lv > 1 ? `<span class="lvb" title="Seviye ${p.lv}">${p.lv}</span>` : '';
+// Oyun sonunda gerçek oyunlardan XP: her oyun 10 XP + her doğru cevap için 2 XP, günde en çok 200 XP
+async function claimXp(R) {
+  if (R.bot || R.study || (R.hp || 0) < 2) return;
+  const gid = R.gid; if (!gid || S.xpDone === gid || S.xpBusy === gid) return;
+  const ok = Object.values(R.reveal || {}).filter(r => r && r.gains && r.gains[uid()] > 0).length;
+  if (!(R.scores || {})[uid()] && !ok) { S.xpDone = gid; return; }
+  S.xpBusy = gid;
+  try {
+    const w = await freshWallet(), m = S.me, d = dayIdx();
+    const used = m.xpd === d ? (m.xpt || 0) : 0, gain = Math.min(Math.min(10 + 2 * ok, 60), XP_DAILY - used);
+    if (gain > 0) {
+      const xp1 = (m.xp || 0) + gain, lv0 = m.lv || 1, lv1 = levelOf(xp1);
+      const up = {xp: xp1, xpd: d, xpt: used + gain};
+      if (lv1 > lv0) { up.lv = lv1; up['wallet/coins'] = (w.coins || 0) + LV_COIN * (lv1 - lv0); }
+      await update(ref(db, 'users/' + uid()), up);
+      S.me = Object.assign({}, S.me, {xp: xp1, xpd: d, xpt: used + gain}, up.lv ? {lv: up.lv} : {});
+      if (up['wallet/coins'] != null) S.me.wallet = Object.assign({}, S.me.wallet, {coins: up['wallet/coins']});
+      S.xpGain = {gid, gain, up: lv1 > lv0 ? lv1 : 0};
+      if (lv1 > lv0) { SFX.play('coin'); toast(`Seviye atladın: ${lvTitle(lv1)}! +${LV_COIN * (lv1 - lv0)} jeton`); }
+    } else S.xpGain = {gid, gain: 0, up: 0, cap: used >= XP_DAILY};
+    S.xpDone = gid;
+  } catch (e) { console.error(e); }
+  S.xpBusy = null; if (S.screen === 'final') render();
+}
+const xpLine = R => { const g = S.xpGain; return g && g.gid === R.gid ? (g.gain > 0 ? `<p class="small" style="text-align:center;margin:4px 0 0;color:var(--yellow)">+${g.gain} XP${g.up ? ` · Seviye ${g.up}` : ''}</p>` : g.cap ? '<p class="small muted" style="text-align:center;margin:4px 0 0">Bugünlük XP sınırına ulaştın</p>' : '') : ''; };
+function lvCard() {
+  const xp = (S.me && S.me.xp) || 0, L = levelOf(xp), a = xpAt(L), b = xpAt(L + 1), pct = Math.round((xp - a) / (b - a) * 100);
+  return `<div class="card stack lvcard" style="gap:8px"><div class="row between"><b>Seviye ${L} · ${lvTitle(L)}</b><span class="small muted">${xp} XP</span></div>
+    <div class="lvbar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
+    <p class="small muted" style="margin:0">Sonraki seviyeye ${b - xp} XP. Rakiplerle ve arkadaşlarınla oynadığın oyunlardan XP kazanırsın, her seviye ${LV_COIN} jeton verir.</p></div>`;
 }
 
 /* ================= hediye ================= */
@@ -712,6 +752,7 @@ V.profile = () => `
     <div class="stack" style="gap:16px">
       <h2>${S.firstProfile ? 'Hoş geldin!' : 'Profil'}</h2>
       ${S.firstProfile ? '<p class="muted">Oyunda görünecek adını ve avatarını seç. Sonra istediğin zaman değiştirebilirsin.</p>' : ''}
+      ${S.firstProfile ? '' : lvCard()}
       <div class="avatar avbig">${avSVG(S.pick)}</div>
       <label class="small muted" for="pnm">Oyunda görünecek adın</label>
       <input class="field" id="pnm" maxlength="25" autocomplete="nickname" value="${esc(S.draft)}">
@@ -730,7 +771,7 @@ V.profile = () => `
 V.home = () => `
   <div class="screen">
     ${giftPop() || winPop() || annBanner()}${a2Sheet()}
-    <div class="top home-top"><button class="gearbtn" data-go="settings" aria-label="Ayarlar">${ICON.gear}</button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle"><span class="mn">${esc(S.me.name)}</span>${avatar(S.me.av, '', S.me.fr)}</button><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton" style="justify-self:end">${COIN}<b>${coins()}</b></button></div>
+    <div class="top home-top"><button class="gearbtn" data-go="settings" aria-label="Ayarlar">${ICON.gear}</button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle"><span class="mn">${esc(S.me.name)}</span>${avatar(S.me.av, '', S.me.fr)}<span class="mlv">Seviye ${myLv()}</span></button><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton" style="justify-self:end">${COIN}<b>${coins()}</b></button></div>
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px">${a2Link()}</div>
     <div class="stack home-btns" style="gap:14px">
@@ -975,7 +1016,7 @@ async function startBotGame() {
   }
   const code = 'L' + Date.now().toString(36);
   const names = shuffle(BOT_NAMES).slice(0, 3), avs = shuffle([0, 1, 2, 3, 4, 5, 6, 7].filter(a => a !== S.me.av));
-  const ps = {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: now()}};
+  const ps = {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', lv: myLv(), online: true, joinedAt: now()}};
   names.forEach((n, i) => { ps['bot' + i] = {name: n + ' ' + BOT_MARK, av: avs[i], fr: '', online: true, joinedAt: now() + i + 1, skill: 0.45 + Math.random() * 0.3}; });
   lset('rooms/' + code, {host: uid(), status: 'lobby', count: 10, diff: 'mix', bot: true, createdAt: now(), players: ps});
   enterRoom(code); // oyun, oda sahibi (sen) “Oyunu başlat”a basınca başlar; önce soru sayısı, zorluk ve kategori seçilir
@@ -987,7 +1028,7 @@ function startStudy(id) {
   const q = (S.myQuizzes || {})[id]; if (!q || !q.qs) return;
   if (S.code) leaveLocal();
   const code = 'L' + Date.now().toString(36);
-  const ps = {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: now()}};
+  const ps = {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', lv: myLv(), online: true, joinedAt: now()}};
   lset('rooms/' + code, {host: uid(), status: 'lobby', count: 10, diff: 'mix', bot: true, study: true, quiz: id, quizTitle: q.title,
     quizN: Object.keys(q.qs || {}).length, quizDur: 0, createdAt: now(), players: ps});
   enterRoom(code);
@@ -1099,7 +1140,7 @@ V.lobby = () => {
     </div>`}
     <div class="row between" style="margin:18px 0 10px"><b>${R.bot ? 'Rakiplerin' : 'Oyuncular'}</b><span class="muted small">${ps.length} kişi</span></div>
     <div class="plist">
-      ${ps.map(p => `<div class="pitem ${p.online === false ? 'off' : ''}">${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>
+      ${ps.map(p => `<div class="pitem ${p.online === false ? 'off' : ''}">${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>${lvBadge(p)}
         <span style="margin-left:auto" class="row">${p.id === R.host && !R.bot ? '<span class="tag">Oda sahibi</span>' : ''}${p.id === uid() ? '<span class="tag">Sen</span>' : ''}</span></div>`).join('')}
     </div>
     ${reactBar()}
@@ -1366,8 +1407,9 @@ V.final = () => {
   <div class="screen">
     <h2 style="text-align:center;margin-top:10px">${myRank === 1 ? 'Kazandın!' : `${myRank}. oldun`}</h2>
     <p class="muted small" style="text-align:center;margin-top:4px">${R.bot ? 'Antrenman oyunuydu, liderlik tablosuna sayılmaz.' : R.quiz ? 'Topluluk Zuqio’ları liderlik tablosuna sayılmaz.' : S.lbDone === R.gid ? 'Puanın günlük, haftalık ve aylık tablolara eklendi.' : (R.scores && R.scores[uid()] ? 'Puanın lider tablolarına ekleniyor…' : '')}</p>
+    ${xpLine(R)}
     <div class="podium">${pod(s[1], 2, 70)}${pod(s[0], 1, 104)}${pod(s[2], 3, 50)}</div>
-    <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b><span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
+    <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>${lvBadge(p)}<span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
     ${reactBar()}
     ${wrongBlock(R)}
     ${giftBtn(R)}${giftSheet()}
@@ -1629,7 +1671,7 @@ function onRoom(R) {
       SFX.play(g > 0 ? 'correct' : (ansOf(R, R.qi)[uid()] ? 'wrong' : 'timeup'));
     }
     if (R.status === 'final') {
-      claimBoard(R);
+      claimBoard(R); claimXp(R);
       const sc = R.scores || {}, mine = sc[uid()] || 0, top = Math.max(0, ...Object.values(sc));
       SFX.play(mine > 0 && mine >= top ? 'win' : 'end');
     }
@@ -1656,7 +1698,7 @@ async function createRoom(opts = {}) {
     const extra = opts.quick ? {quick: true, qm: 'open'} : (opts.quiz ? Object.assign({quiz: opts.quiz, quizTitle: opts.quizTitle, quizN: opts.quizN}, opts.quizDur ? {quizDur: opts.quizDur} : {}) : {});
     await set(ref(db, 'rooms/' + code), Object.assign(extra, {
       host: uid(), status: 'lobby', count: 10, createdAt: serverTimestamp(),
-      players: {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: serverTimestamp()}}
+      players: {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', lv: myLv(), online: true, joinedAt: serverTimestamp()}}
     }));
     S.busy = false; enterRoom(code);
   } catch (e) { console.error(e); S.busy = false; render(); toast('Oda açılamadı, tekrar dene'); }
@@ -1672,7 +1714,7 @@ async function joinRoom(code, silent) {
     if (R.players && R.players[uid()]) { S.busy = false; enterRoom(code); return true; }
     if (R.status !== 'lobby') { S.busy = false; if (!silent) render(); toast('Bu odada oyun başlamış, bitince tekrar dene'); return false; }
     if (Object.keys(R.players || {}).length >= 32) { S.busy = false; if (!silent) render(); toast('Oda dolu'); return false; }
-    await set(ref(db, `rooms/${code}/players/${uid()}`), {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: serverTimestamp()});
+    await set(ref(db, `rooms/${code}/players/${uid()}`), {name: S.me.name, av: S.me.av, fr: S.me.fr || '', lv: myLv(), online: true, joinedAt: serverTimestamp()});
     S.busy = false; enterRoom(code); return true;
   } catch (e) { console.error(e); S.busy = false; if (!silent) render(); toast('Odaya katılılamadı'); return false; }
 }
@@ -1695,7 +1737,7 @@ async function quickPlay() {
     list.sort((a, b) => b.online - a.online);
     for (const c of list) {
       try {
-        await set(ref(db, `rooms/${c.code}/players/${uid()}`), {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: serverTimestamp()});
+        await set(ref(db, `rooms/${c.code}/players/${uid()}`), {name: S.me.name, av: S.me.av, fr: S.me.fr || '', lv: myLv(), online: true, joinedAt: serverTimestamp()});
         S.busy = false; enterRoom(c.code); return;
       } catch (e) { /* oda bu arada başlamış olabilir, sıradakini dene */ }
     }

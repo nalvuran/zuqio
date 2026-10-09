@@ -18,7 +18,7 @@
         },
         "wallet": {
           "coins": {
-            ".validate": "newData.isNumber() && newData.val() >= 0 && ((!data.exists() && newData.val() <= 60) || (data.exists() && (newData.val() <= data.val() || (newData.val() <= data.val() + 60 && (newData.parent().child('claimDay').val() !== data.parent().child('claimDay').val() || newData.parent().child('qDay').val() !== data.parent().child('qDay').val())) || (newData.parent().child('rf').isString() && root.child('gifts').child(newData.parent().child('rf').val()).child('from').val() === auth.uid && (root.child('gifts').child(newData.parent().child('rf').val()).child('st').val() === 'x' || root.child('gifts').child(newData.parent().child('rf').val()).child('st').val() === 'p') && !newData.parent().parent().parent().parent().child('gifts').child(newData.parent().child('rf').val()).exists() && newData.val() <= data.val() + root.child('gifts').child(newData.parent().child('rf').val()).child('price').val()))))"
+            ".validate": "newData.isNumber() && newData.val() >= 0 && ((!data.exists() && newData.val() <= 60) || (data.exists() && (newData.val() <= data.val() || (newData.val() <= data.val() + 60 && (newData.parent().child('claimDay').val() !== data.parent().child('claimDay').val() || newData.parent().child('qDay').val() !== data.parent().child('qDay').val())) || (newData.parent().child('rf').isString() && root.child('gifts').child(newData.parent().child('rf').val()).child('from').val() === auth.uid && (root.child('gifts').child(newData.parent().child('rf').val()).child('st').val() === 'x' || root.child('gifts').child(newData.parent().child('rf').val()).child('st').val() === 'p') && !newData.parent().parent().parent().parent().child('gifts').child(newData.parent().child('rf').val()).exists() && newData.val() <= data.val() + root.child('gifts').child(newData.parent().child('rf').val()).child('price').val()) || (newData.parent().child('lv').val() > (data.parent().child('lv').exists() ? data.parent().child('lv').val() : 1) && newData.val() <= data.val() + 10 * (newData.parent().child('lv').val() - (data.parent().child('lv').exists() ? data.parent().child('lv').val() : 1))))))"
           },
           "claimDay": {
             ".validate": "newData.isNumber() && (!data.exists() || newData.val() > data.val()) && newData.val() <= (now + 10800000) / 86400000"
@@ -52,6 +52,18 @@
         },
         "fr": {
           ".validate": "newData.isString() && (newData.val() === '' || newData.parent().child('owned').child(newData.val()).val() === true)"
+        },
+        "xp": {
+          ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() - (data.exists() ? data.val() : 0) > 0 && newData.val() - (data.exists() ? data.val() : 0) <= 60 && newData.val() - (data.exists() ? data.val() : 0) <= newData.parent().child('xpt').val() - ((newData.parent().child('xpd').val() === data.parent().child('xpd').val() && data.parent().child('xpt').exists()) ? data.parent().child('xpt').val() : 0)"
+        },
+        "xpd": {
+          ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() <= (now + 10800000) / 86400000 && newData.val() > (now + 10800000) / 86400000 - 1 && (!data.exists() || newData.val() >= data.val())"
+        },
+        "xpt": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 200 && (newData.parent().child('xpd').val() === data.parent().child('xpd').val() ? newData.val() >= (data.exists() ? data.val() : 0) : true)"
+        },
+        "lv": {
+          ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 1 && newData.val() <= 100 && newData.val() >= (data.exists() ? data.val() : 1) && 30 * (newData.val() - 1) * (newData.val() - 1) + 20 * (newData.val() - 1) <= newData.parent().child('xp').val()"
         },
         "email": {
           ".validate": "newData.isString() && newData.val().length <= 120 && newData.val() === auth.token.email"
@@ -91,6 +103,9 @@
             },
             "fr": {
               ".validate": "newData.isString() && newData.val().length <= 4"
+            },
+            "lv": {
+              ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 100"
             }
           }
         },
