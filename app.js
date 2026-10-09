@@ -78,6 +78,7 @@ const ICON = {
   help:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.5-2.7 4M12 17.5h.01"/></svg>',
   chart:'<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
   share:'<svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 13v6h14v-6"/></svg>',
+  giftnav:'<svg viewBox="0 0 24 24"><rect x="3" y="9" width="18" height="4" rx="1"/><path d="M5 13v7.5h14V13M12 9v11.5M12 9S10.3 4.6 7.8 5.3 8.4 9 12 9zM12 9s1.4-3.2 3.2-3.4"/><circle cx="18.6" cy="5.2" r="2.7" fill="#E6B84A" stroke="#B8872A" stroke-width="1"/><path d="M22 2v2.4M20.8 3.2h2.4" stroke="#F3D27F" stroke-width="1.2"/></svg>',
   gift:'<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8S10.5 3.5 8 4.2 8.4 8 12 8zM12 8s1.5-4.5 4-3.8S15.6 8 12 8z"/></svg>',
   back:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>'
 };
@@ -1614,7 +1615,7 @@ function gnav() {
       <button data-go="home" class="${on('home').trim()}">${ICON.home}ANA SAYFA</button>
       <button data-go="shop" class="${on('shop').trim()}">${ICON.shop}MAĞAZA</button>
       <button data-act="openboard" class="${on('board').trim()}">${ICON.trophy}LİDERLİK</button>
-      <button data-go="daily" class="${(on('daily') + dot).trim()}">${ICON.gift}GÜNLÜK</button>
+      <button data-go="daily" class="${(on('daily') + dot).trim()}">${ICON.giftnav}GÜNLÜK</button>
     </nav></div>`;
 }
 function render() {
