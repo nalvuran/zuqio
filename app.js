@@ -189,7 +189,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 135';
+const APP_VERSION = '0.5 (test) · yapı 136';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -527,6 +527,7 @@ async function claimStats(R) {
     S.stDone = gid;
   } catch (e) { console.error(e); }
   S.stBusy = null;
+  if (R.wr && S.screen === 'final') render();
 }
 const wrongIds = () => ((S.me && S.me.st && S.me.st.wr) || '').split(',').filter(x => x && bankQ(x));
 function startWrongs() {
@@ -1421,11 +1422,11 @@ V.reveal = () => {
   else if (q.t === 'mc') {
     const ok2 = mine.v !== a && mine.v2 === a && myJ('second') === qi && gain > 0;
     const ok = mine.v === a || ok2;
-    cls = ok ? 'good' : 'bad'; title = ok ? `+${fmt(gain)}` : 'Yanlış';
+    cls = ok ? 'good' : 'bad'; title = ok ? (R.wr ? 'Doğru' : `+${fmt(gain)}`) : 'Yanlış';
     sub = ok2 ? 'İkinci şans işe yaradı! (yarı puan)' : ok ? (myJ('double') === qi ? 'Doğru! Çifte puan işe yaradı' : 'Doğru!') : `Doğru cevap: ${esc(q.o[a])}`;
   } else {
     cls = gain >= 700 ? 'good' : gain > 0 ? 'mid' : 'bad';
-    title = gain > 0 ? `+${fmt(gain)}` : 'Çok uzak';
+    title = gain > 0 ? (R.wr ? (gain >= 700 ? 'Çok yakın' : 'Yaklaştın') : `+${fmt(gain)}`) : 'Çok uzak';
     sub = `Doğru cevap: ${fmtQ(q, a)} ${esc(q.unit)} · Senin tahminin: ${fmtQ(q, mine.v)}`;
   }
   const last = qi === R.questions.length - 1;
@@ -1433,9 +1434,9 @@ V.reveal = () => {
   <div class="screen">
     <div class="verdict ${cls}"><b>${title}</b><p>${sub}</p></div>
     ${rv.info ? `<div class="card infocard"><b>${q.cat === 'İngilizce' ? 'Öğren' : q.cat === 'Ders notu' ? 'Açıklama' : 'Biliyor muydun?'}</b><p>${esc(rv.info)}</p></div>` : ''}
-    <div class="row between" style="margin:20px 0 10px"><b>Sıralama</b><span class="small muted">Soru ${qi + 1} / ${R.questions.length}</span></div>
+    ${R.wr ? `<p class="small muted" style="text-align:center;margin-top:16px">Soru ${qi + 1} / ${R.questions.length}</p>` : `<div class="row between" style="margin:20px 0 10px"><b>Sıralama</b><span class="small muted">Soru ${qi + 1} / ${R.questions.length}</span></div>
     <div class="stack" style="gap:8px">${rankList(R, qi)}</div>
-    ${reactBar()}
+    ${reactBar()}`}
     <div class="grow" style="min-height:16px"></div>
     <button class="linkbtn" data-act="report">Bu soruda hata var, bildir</button>
     ${isHost()
@@ -1570,6 +1571,25 @@ V.final = () => {
     <div class="stack">
       <button class="btn primary big" data-act="studyagain"><span class="ic">${ICON.play}</span><span class="lb">TEKRAR ÇALIŞ</span></button>
       <button class="btn ghost" data-act="leave">Ana menü</button>
+    </div>
+  </div>`;
+  }
+  if (R.wr) {
+    const total = (R.questions || []).length, ok = Object.values(R.reveal || {}).filter(r => r && r.gains && r.gains[uid()] > 0).length;
+    const left = wrongIds().length;
+    return `
+  <div class="screen">
+    <h2 style="text-align:center;margin-top:10px">Tekrar bitti</h2>
+    <div class="card stack" style="align-items:center;text-align:center;gap:6px;margin-top:18px">
+      <div style="font-size:3rem;font-weight:800;line-height:1.1">${ok} / ${total}</div>
+      <p class="muted">soruyu doğru bildin</p>
+      <p class="small muted">${left ? `Tekrar edilecek ${left} soru kaldı` : 'Tekrar edilecek yanlış soru kalmadı'}</p>
+    </div>
+    ${wrongBlock(R)}
+    <div class="grow" style="min-height:20px"></div>
+    <div class="stack">
+      ${left ? `<button class="btn primary big" data-act="wrongsagain"><span class="ic">${ICON.play}</span><span class="lb">KALAN YANLIŞLARIMI ÇÖZ</span></button>` : ''}
+      <button class="btn ${left ? 'ghost' : 'primary big'}" data-act="leave">Ana menü</button>
     </div>
   </div>`;
   }
@@ -2576,6 +2596,7 @@ app.addEventListener('click', e => {
   else if (a === 'giftyes') answerGift(el.dataset.id, true);
   else if (a === 'giftno') { if (confirm('Hediye gönderene geri çevrilsin mi?')) answerGift(el.dataset.id, false); }
   else if (a === 'qzstudy') startStudy(el.dataset.id);
+  else if (a === 'wrongsagain') { startWrongs(); }
   else if (a === 'studyagain') { const id = S.R && S.R.quiz; leaveLocal(); if (id) startStudy(id); else go('home'); }
   else if (a === 'qzplay') { const q = S.myQuizzes[el.dataset.id]; createRoom({quiz: el.dataset.id, quizTitle: q.title, quizN: Object.keys(q.qs || {}).length, quizDur: q.dur || null}); }
   else if (a === 'quizoff') update(roomRef(), {quiz: null, quizTitle: null, quizN: null}).catch(() => toast('Değiştirilemedi'));
