@@ -441,7 +441,11 @@ app.addEventListener('click', async e => {
     }
     else if (a === 'prsent') { await update(ref(db, 'prizes/' + id), {sent: !S.prizes[id].sent}); return; }
     else if (a === 'prclear') { if (!confirm('Kazanan kaydı silinsin mi?')) return; await remove(ref(db, 'prizes/' + id)); return; }
-    else if (a === 'prdel') { if (!confirm('Bu oyuncunun ödül puanı silinsin mi?')) return; await remove(ref(db, `lbp/${curPrizeKey()}/${id}`)); toast('Silindi'); loadPrize(); return; }
+    else if (a === 'prdel') { if (!confirm('Bu oyuncunun puanı ödül tablosundan silinsin mi? (Bu ayın tablosundaysa günlük, haftalık ve aylık tablolardan da silinir.)')) return;
+      const P = periods(), k = curPrizeKey();
+      await remove(ref(db, `lbp/${k}/${id}`));
+      if (k === P.m) await Promise.all([remove(ref(db, `lb/${P.d}/${id}`)), remove(ref(db, `lb/${P.w}/${id}`)), remove(ref(db, `lb/${P.m}/${id}`))]);
+      toast('Silindi'); loadPrize(); loadLb(); return; }
     else if (a === 'pooltab') { S.poolTab = el.dataset.t; render(); return; }
     else if (a === 'qedit' || a === 'qdel') {
       const q = QUESTIONS.find(x => qidOf(x) === id); if (!q) return;
@@ -500,8 +504,10 @@ app.addEventListener('click', async e => {
     else if (a === 'lbtab') { S.lbTab = el.dataset.t; render(); }
     else if (a === 'lbreload') loadLb();
     else if (a === 'lbdel') {
-      const r = (S.lb[S.lbTab] || {})[id]; if (!confirm(`${r ? r.n : ''} adlı oyuncunun bu dönemdeki puanı silinsin mi?`)) return;
-      await remove(ref(db, `lb/${periods()[S.lbTab]}/${id}`)); toast('Silindi'); loadLb();
+      const r = (S.lb[S.lbTab] || {})[id]; if (!confirm(`${r ? r.n : ''} adlı oyuncunun puanı günlük, haftalık, aylık ve ödül tablolarından silinsin mi?`)) return;
+      const P = periods();
+      await Promise.all([remove(ref(db, `lb/${P.d}/${id}`)), remove(ref(db, `lb/${P.w}/${id}`)), remove(ref(db, `lb/${P.m}/${id}`)), remove(ref(db, `lbp/${P.m}/${id}`))]);
+      toast('Tüm tablolardan silindi'); loadLb();
     }
     else if (a === 'lbreset') {
       if (!confirm('Bu dönemin tüm tablosu silinecek. Emin misin?')) return;
