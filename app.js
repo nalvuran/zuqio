@@ -335,7 +335,7 @@ onValue(ref(db, '.info/connected'), s => { if (s.val()) markOnline(); });
 function go(screen) { S.screen = screen; render(); app.scrollTop = 0; }
 
 /* ================= jeton, günlük ödül, mağaza ================= */
-const COIN = `<svg class="coin" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10.5" fill="#FFC21A" stroke="#E39A00" stroke-width="1.5"/><circle cx="12" cy="12" r="6.6" fill="none" stroke="#E39A00" stroke-width="1.3"/><path d="M12 8.4l1.1 2.4 2.6.3-1.9 1.8.5 2.6-2.3-1.3-2.3 1.3.5-2.6-1.9-1.8 2.6-.3z" fill="#E39A00"/></svg>`;
+const COIN = `<svg class="coin" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="cgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE27A"/><stop offset=".55" stop-color="#F4B71A"/><stop offset="1" stop-color="#C98A00"/></linearGradient><linearGradient id="cgB" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#E5A100"/><stop offset="1" stop-color="#FFD24D"/></linearGradient></defs><circle cx="12" cy="12" r="11" fill="url(#cgA)" stroke="#B87800" stroke-width=".9"/><circle cx="12" cy="12" r="8.3" fill="url(#cgB)" stroke="#FFF1B0" stroke-opacity=".7" stroke-width=".7"/><path d="M8.3 8.6h7.4L9 15.4h7.2" fill="none" stroke="#8A5A00" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 const DAILY = [10, 10, 15, 15, 20, 25, 50];
 const QUESTION_REWARD = {right: 20, wrong: 5};
 const SHOP = [
@@ -940,9 +940,13 @@ V.profile = () => `
   </div>`;
 
 V.home = () => `
-  <div class="screen">
+  <div class="screen home2">
+    <svg class="hdeco tr" viewBox="0 0 100 110" aria-hidden="true"><defs><linearGradient id="trg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7A57EA"/><stop offset="1" stop-color="#4A2CB5"/></linearGradient></defs><path d="M26 10h48v34c0 16-11 28-24 28S26 60 26 44z" fill="url(#trg)"/><path d="M26 18H8c0 20 8 30 22 32M74 18h18c0 20-8 30-22 32" fill="none" stroke="#6A48DC" stroke-width="7" stroke-linecap="round"/><rect x="44" y="70" width="12" height="16" fill="#5A39CC"/><rect x="28" y="86" width="44" height="14" rx="5" fill="#4A2CB5"/><path d="M50 22l5 11 12 1-9 8 3 12-11-7-11 7 3-12-9-8 12-1z" fill="#9C84FF"/></svg>
+    <svg class="hdeco bolt" viewBox="0 0 48 70" aria-hidden="true"><defs><linearGradient id="blg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE066"/><stop offset="1" stop-color="#F2A100"/></linearGradient></defs><path d="M30 2L4 38h16L14 68l30-42H27z" fill="url(#blg)" stroke="#FFF1A8" stroke-width="2" stroke-linejoin="round"/></svg>
+    <svg class="hdeco sh sh1" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 18L10 2l4 10z" fill="#FFC21A"/></svg>
+    <svg class="hdeco sh sh2" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 18L10 2l4 10z" fill="#E5333B"/></svg>
     ${giftPop() || winPop() || annBanner()}${a2Sheet()}
-    <div class="top home-top"><button class="gearbtn" data-go="settings" aria-label="Ayarlar">${ICON.gear}</button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle"><span class="mn">${esc(S.me.name)}</span>${avatar(S.me.av, '', S.me.fr)}<span class="mlv">Seviye ${myLv()}</span></button><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton" style="justify-self:end">${COIN}<b>${coins()}</b></button></div>
+    <div class="top home-top"><button class="gearbtn" data-go="settings" aria-label="Ayarlar">${ICON.gear}</button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle"><span class="mn">${esc(S.me.name)}</span>${avatar(S.me.av, '', S.me.fr)}<span class="mlv">Seviye ${myLv()}</span></button><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton" style="justify-self:end"><b>${coins()}</b>${COIN}</button></div>
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px">${a2Link()}</div>
     <div class="stack home-btns" style="gap:14px">
