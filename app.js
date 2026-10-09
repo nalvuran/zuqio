@@ -189,7 +189,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 155';
+const APP_VERSION = '0.5 (test) · yapı 156';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1471,7 +1471,7 @@ function periods() {
 }
 const PRIZE_MIN = 3, PRIZE_DAILY_CAP = 5000; // ödül yarışı kuralları
 async function claimBoard(R) {
-  if (R.bot || R.quiz) return; // antrenman ve kendi quiz oyunları tabloya sayılmaz
+  if (R.bot || R.quiz || S.isOwner) return; // antrenman, kendi quiz oyunları ve yönetici hesabı tabloya sayılmaz
   const me = uid(), gid = R.gid, mine = (R.scores || {})[me] || 0;
   if (!gid || !mine || S.lbDone === gid || S.lbBusy === gid) return;
   S.lbBusy = gid;
@@ -1518,8 +1518,9 @@ async function loadBoard() {
     const snap = await get(query(ref(db, path), orderByChild('s'), limitToLast(50)));
     const rows = []; snap.forEach(c => { rows.push(Object.assign({id: c.key}, c.val())); });
     rows.sort((a, b) => b.s - a.s);
-    let mine = rows.find(r => r.id === uid());
-    if (!mine) { const m = await get(ref(db, `${path}/${uid()}`)); if (m.exists()) mine = Object.assign({id: uid(), out: true}, m.val()); }
+    if (S.isOwner) { const i = rows.findIndex(r => r.id === uid()); if (i >= 0) rows.splice(i, 1); } // yönetici hesabı tabloda görünmez
+    let mine = S.isOwner ? null : rows.find(r => r.id === uid());
+    if (!mine && !S.isOwner) { const m = await get(ref(db, `${path}/${uid()}`)); if (m.exists()) mine = Object.assign({id: uid(), out: true}, m.val()); }
     S.lbCache[key] = {rows, mine};
   } catch (e) { console.error(e); S.lbCache[key] = {err: true}; }
   if (S.screen === 'board') render();
@@ -1616,7 +1617,7 @@ V.final = () => {
   return `
   <div class="screen">
     <h2 style="text-align:center;margin-top:10px">${R.chal && S.chalData ? ((sc[uid()] || 0) > S.chalData.score ? 'Meydan okumayı kazandın!' : (sc[uid()] || 0) === S.chalData.score ? 'Berabere!' : 'Bu sefer olmadı') : myRank === 1 ? 'Kazandın!' : `${myRank}. oldun`}</h2>
-    <p class="muted small" style="text-align:center;margin-top:4px">${R.chal ? 'Meydan okuma oyunu liderlik tablosuna sayılmaz.' : R.bot ? 'Antrenman oyunuydu, liderlik tablosuna sayılmaz.' : R.quiz ? 'Topluluk Zuqio’ları liderlik tablosuna sayılmaz.' : S.lbDone === R.gid ? 'Puanın günlük, haftalık ve aylık tablolara eklendi.' : (R.scores && R.scores[uid()] ? 'Puanın lider tablolarına ekleniyor…' : '')}</p>
+    <p class="muted small" style="text-align:center;margin-top:4px">${R.chal ? 'Meydan okuma oyunu liderlik tablosuna sayılmaz.' : R.bot ? 'Antrenman oyunuydu, liderlik tablosuna sayılmaz.' : R.quiz ? 'Topluluk Zuqio’ları liderlik tablosuna sayılmaz.' : S.isOwner ? 'Yönetici hesabı liderlik tablolarına sayılmaz.' : S.lbDone === R.gid ? 'Puanın günlük, haftalık ve aylık tablolara eklendi.' : (R.scores && R.scores[uid()] ? 'Puanın lider tablolarına ekleniyor…' : '')}</p>
     ${xpLine(R)}
     ${R.chal ? chalCard(R) : `<div class="podium">${pod(s[1], 2, 70)}${pod(s[0], 1, 104)}${pod(s[2], 3, 50)}</div>`}
     <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>${lvBadge(p)}<span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
