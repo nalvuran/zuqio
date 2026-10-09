@@ -761,6 +761,7 @@ V.settings = () => `
       <div class="card stack" style="gap:0;padding:0 16px">
         <button class="setrow" data-act="openprofile"><div><b>Profili düzenle</b><span class="small muted">${esc(S.me.name)}</span></div>${avatar(S.me.av, '', S.me.fr)}</button>
         <button class="setrow" data-go="how"><div><b>Nasıl oynanır?</b></div><span class="muted">›</span></button>
+        ${S.isOwner ? '<a class="setrow" href="admin.html"><div><b>Yönetim paneli</b></div><span class="muted">›</span></a>' : ''}
         <a class="setrow" href="gizlilik.html" target="_blank" rel="noopener"><div><b>Gizlilik politikası</b></div><span class="muted">›</span></a>
         <a class="setrow" href="kosullar.html" target="_blank" rel="noopener"><div><b>Kullanım koşulları</b></div><span class="muted">›</span></a>
       </div>
@@ -1314,8 +1315,18 @@ setInterval(() => {
 /* ================= giriş ve profil ================= */
 getRedirectResult(auth).catch(() => {});
 
+// Yalnızca sahibin hesabında "Yönetim paneli" satırı görünür (e-posta yerine özeti karşılaştırılır; asıl koruma admin girişidir)
+const OWNER_HASH = '2523564be765f8cd215145edd6fd919b3c662c763fff5168aa5267623a313273';
+async function checkOwner(email) {
+  try {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(email || '').trim().toLowerCase()));
+    return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('') === OWNER_HASH;
+  } catch (e) { return false; }
+}
 onAuthStateChanged(auth, async u => {
   S.user = u;
+  S.isOwner = false;
+  if (u) checkOwner(u.email).then(ok => { if (ok) { S.isOwner = true; if (S.screen === 'settings') render(); } });
   if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } if (annSub) { annSub(); annSub = null; } S.me = null; go('login'); return; }
   watchAnn(); checkWin(); loadApproved().then(loadFixes);
   try {
