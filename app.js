@@ -185,7 +185,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 125';
+const APP_VERSION = '0.5 (test) · yapı 126';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -447,6 +447,90 @@ async function buyItem(id) {
   S.busy = false; render();
 }
 
+/* ================= hediye ================= */
+const GIFT_DAILY = 3;
+const giftDayCount = () => { try { const o = JSON.parse(ls.get('zuqio-gift') || '{}'); return o.d === dayIdx() ? (o.n || 0) : 0; } catch (e) { return 0; } };
+const giftDayAdd = () => ls.set('zuqio-gift', JSON.stringify({d: dayIdx(), n: giftDayCount() + 1}));
+const giftPreview = id => { const it = shopItem(id); return !it ? '' : it.kind === 'av' ? avatar(it.av) : avatar(S.me.av, '', it.id); };
+const giftTargets = R => players(R).filter(p => p.id !== uid() && !p.id.startsWith('bot') && p.online !== false);
+let giftSubs = [];
+const giftDone = new Set();
+function watchGifts() {
+  if (giftSubs.length) return;
+  const me = uid();
+  giftSubs.push(onValue(query(ref(db, 'gifts'), orderByChild('to'), equalTo(me)), sn => { S.gIn = sn.val() || {}; if (S.screen === 'home') render(); }, () => {}));
+  giftSubs.push(onValue(query(ref(db, 'gifts'), orderByChild('from'), equalTo(me)), sn => { S.gOut = sn.val() || {}; settleGifts(); }, () => {}));
+}
+function stopGifts() { giftSubs.forEach(f => { try { f(); } catch (e) {} }); giftSubs = []; S.gIn = {}; S.gOut = {}; giftDone.clear(); }
+// Gönderdiğim hediyeler: reddedildiyse jeton iadesi, kabul edildiyse kayıt temizliği
+async function settleGifts() {
+  for (const [id, g] of Object.entries(S.gOut || {})) {
+    if (giftDone.has(id) || (g.st !== 'x' && g.st !== 'a')) continue;
+    giftDone.add(id);
+    const who = g.tn || 'Oyuncu';
+    try {
+      if (g.st === 'x') {
+        const w = await freshWallet();
+        await update(ref(db), {['gifts/' + id]: null, ['users/' + uid() + '/wallet/coins']: (w.coins || 0) + g.price, ['users/' + uid() + '/wallet/rf']: id});
+        await freshWallet(); toast(`${who} hediyeni kabul etmedi, jetonların iade edildi`);
+      } else { await remove(ref(db, 'gifts/' + id)); toast(`${who} hediyeni kabul etti`); }
+    } catch (e) { console.error(e); giftDone.delete(id); }
+    render();
+  }
+}
+async function sendGift(to, toName, item) {
+  const it = shopItem(item); if (!it || !it.price || S.busy || (it.kind !== 'av' && it.kind !== 'fr')) return;
+  if (giftDayCount() >= GIFT_DAILY) { toast('Bugünlük hediye hakkın doldu'); return; }
+  const w = await freshWallet();
+  if ((w.coins || 0) < it.price) { toast(`Yeterli jetonun yok (${it.price} gerekli)`); render(); return; }
+  if (!confirm(`${toName} adlı oyuncuya ${it.name} hediye etmek için ${it.price} jeton harcanacak. Kabul etmezse jetonların iade edilir. Gönderilsin mi?`)) return;
+  S.busy = true;
+  try {
+    const id = giftId(to, item);
+    await update(ref(db), {['gifts/' + id]: {from: uid(), to, item, price: it.price, st: 'p', fn: S.me.name, tn: toName, t: serverTimestamp()},
+      ['users/' + uid() + '/wallet/coins']: (w.coins || 0) - it.price});
+    giftDayAdd(); await freshWallet(); S.giftUI = null; SFX.play('coin'); toast(`Hediye ${toName} için gönderildi`);
+  } catch (e) { console.error(e); toast('Gönderilemedi. Bu eşya onda zaten olabilir ya da bekleyen bir hediye vardır'); }
+  S.busy = false; render();
+}
+const giftId = (to, item) => to + '_' + item;
+async function answerGift(id, yes) {
+  const g = (S.gIn || {})[id]; if (!g || S.busy) return;
+  S.busy = true;
+  try {
+    if (yes) {
+      await update(ref(db), {['users/' + uid() + '/owned/' + g.item]: true, ['gifts/' + id + '/st']: 'a'});
+      remove(ref(db, 'gifts/' + id)).catch(() => {});
+      await freshWallet(); SFX.play('coin'); const it = shopItem(g.item); toast(`${it ? it.name : 'Hediye'} artık senin!`);
+    } else { await update(ref(db, 'gifts/' + id), {st: 'x'}); toast('Hediye geri çevrildi'); }
+  } catch (e) { console.error(e); toast('İşlem yapılamadı, tekrar dene'); }
+  S.busy = false; render();
+}
+function giftPop() {
+  S.giftLater = S.giftLater || {};
+  const e = Object.entries(S.gIn || {}).find(([id, g]) => g.st === 'p' && !S.giftLater[id] && shopItem(g.item)); if (!e) return '';
+  const [id, g] = e, it = shopItem(g.item);
+  return `<div class="annmodal" data-act="giftlater" data-id="${esc(id)}"><div class="giftcard" role="dialog" aria-label="Hediye" data-stop="1">
+    <button class="annx" data-act="giftlater" data-id="${esc(id)}" aria-label="Sonra bak">✕</button>
+    <div class="giftprev">${giftPreview(g.item)}</div>
+    <p><b>${esc(g.fn)}</b> sana hediye gönderdi</p><p class="giftname">${esc(it.name)}</p>
+    <div class="stack" style="gap:8px;width:100%"><button class="btn primary big" data-act="giftyes" data-id="${esc(id)}" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.gift}</span><span class="lb">KABUL ET</span></button>
+    <button class="btn ghost" data-act="giftno" data-id="${esc(id)}" ${S.busy ? 'disabled' : ''}>Kabul etmiyorum</button></div></div></div>`;
+}
+const giftBtn = R => (R && !R.bot && !R.study && giftTargets(R).length) ? `<button class="btn outline" data-act="giftopen">${ic('gift')}Hediye gönder</button>` : '';
+function giftSheet() {
+  const u = S.giftUI, R = S.R; if (!u || !R) return '';
+  let body = '';
+  if (u.step === 'player') body = `<h3>Kime göndermek istiyorsun?</h3><div class="stack" style="gap:8px">${giftTargets(R).map(p => `<button class="rank" data-act="giftpick" data-id="${esc(p.id)}">${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b></button>`).join('')}</div>`;
+  else {
+    const items = SHOP.map(x => x.id).concat(FRAMES.map(x => x.id)).map(shopItem).filter(Boolean);
+    body = `<h3>${esc(u.name)} için bir hediye seç</h3><p class="small muted" style="margin:0 0 10px">Jetonların hemen düşer. Kabul edilmezse iade edilir.</p><div class="shopgrid">${items.map(it => `<button class="shopitem" data-act="giftitem" data-id="${it.id}" aria-label="${esc(it.name)}" ${coins() < it.price ? 'disabled' : ''}>
+      ${giftPreview(it.id)}${it.kind === 'fr' ? `<b class="small">${esc(it.name)}</b>` : ''}<span class="price">${COIN}${it.price}</span></button>`).join('')}</div>`;
+  }
+  return `<div class="annmodal" data-act="giftclose"><div class="giftsheet" role="dialog" aria-label="Hediye gönder" data-stop="1">
+    <div class="row between" style="margin-bottom:10px">${u.step === 'item' ? '<button class="btn ghost" data-act="giftback">‹ Geri</button>' : '<span></span>'}<span class="coinbar">${COIN}<b>${coins()}</b></span><button class="annx" style="position:static" data-act="giftclose" aria-label="Kapat">✕</button></div>${body}</div></div>`;
+}
+
 async function equipItem(id) {
   const it = shopItem(id) || (id === 'fr0' ? {kind: 'fr'} : null);
   if (!it || (id !== 'fr0' && !owned(id))) return;
@@ -645,7 +729,7 @@ V.profile = () => `
 
 V.home = () => `
   <div class="screen">
-    ${winPop() || annBanner()}${a2Sheet()}
+    ${giftPop() || winPop() || annBanner()}${a2Sheet()}
     <div class="top home-top"><button class="gearbtn" data-go="settings" aria-label="Ayarlar">${ICON.gear}</button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle"><span class="mn">${esc(S.me.name)}</span>${avatar(S.me.av, '', S.me.fr)}</button><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton" style="justify-self:end">${COIN}<b>${coins()}</b></button></div>
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px">${a2Link()}</div>
@@ -1286,6 +1370,7 @@ V.final = () => {
     <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b><span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
     ${reactBar()}
     ${wrongBlock(R)}
+    ${giftBtn(R)}${giftSheet()}
     <div class="grow" style="min-height:20px"></div>
     <div class="stack">
       ${R.bot
@@ -1380,8 +1465,8 @@ onAuthStateChanged(auth, async u => {
   S.user = u;
   S.isOwner = false;
   if (u) checkOwner(u.email).then(ok => { if (ok) { S.isOwner = true; if (S.screen === 'settings') render(); } });
-  if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } if (annSub) { annSub(); annSub = null; } S.me = null; go('login'); return; }
-  watchAnn(); checkWin(); loadApproved().then(loadFixes);
+  if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } if (annSub) { annSub(); annSub = null; } stopGifts(); S.me = null; go('login'); return; }
+  watchAnn(); watchGifts(); checkWin(); loadApproved().then(loadFixes);
   try {
     const snap = await get(ref(db, 'users/' + u.uid));
     const ban = await get(ref(db, 'bans/' + u.uid)).catch(() => null);
@@ -2258,6 +2343,14 @@ app.addEventListener('click', e => {
   else if (a === 'qzwithdraw') { (async () => { try { await update(ref(db, 'quizzes/' + S.qz.id), {status: 'draft', t: serverTimestamp()}); S.qz.status = 'draft'; S.myQuizzes[S.qz.id].status = 'draft'; render(); } catch (e) { toast('Geri çekilemedi'); } })(); }
   else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
   else if (a === 'tdet') { S.showDet = !S.showDet; render(); }
+  else if (a === 'giftopen') { if (giftDayCount() >= GIFT_DAILY) { toast('Bugünlük hediye hakkın doldu'); return; } S.giftUI = {step: 'player'}; render(); }
+  else if (a === 'giftclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.giftUI = null; render(); }
+  else if (a === 'giftback') { S.giftUI = {step: 'player'}; render(); }
+  else if (a === 'giftpick') { const p = players(S.R).find(x => x.id === el.dataset.id); if (p) { S.giftUI = {step: 'item', to: p.id, name: p.name}; render(); } }
+  else if (a === 'giftitem') { if (S.giftUI && S.giftUI.to) sendGift(S.giftUI.to, S.giftUI.name, el.dataset.id); }
+  else if (a === 'giftlater') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.giftLater = S.giftLater || {}; S.giftLater[el.dataset.id] = true; render(); }
+  else if (a === 'giftyes') answerGift(el.dataset.id, true);
+  else if (a === 'giftno') { if (confirm('Hediye gönderene geri çevrilsin mi?')) answerGift(el.dataset.id, false); }
   else if (a === 'qzstudy') startStudy(el.dataset.id);
   else if (a === 'studyagain') { const id = S.R && S.R.quiz; leaveLocal(); if (id) startStudy(id); else go('home'); }
   else if (a === 'qzplay') { const q = S.myQuizzes[el.dataset.id]; createRoom({quiz: el.dataset.id, quizTitle: q.title, quizN: Object.keys(q.qs || {}).length, quizDur: q.dur || null}); }

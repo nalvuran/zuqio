@@ -18,7 +18,7 @@
         },
         "wallet": {
           "coins": {
-            ".validate": "newData.isNumber() && newData.val() >= 0 && ((!data.exists() && newData.val() <= 60) || (data.exists() && (newData.val() <= data.val() || (newData.val() <= data.val() + 60 && (newData.parent().child('claimDay').val() !== data.parent().child('claimDay').val() || newData.parent().child('qDay').val() !== data.parent().child('qDay').val())))))"
+            ".validate": "newData.isNumber() && newData.val() >= 0 && ((!data.exists() && newData.val() <= 60) || (data.exists() && (newData.val() <= data.val() || (newData.val() <= data.val() + 60 && (newData.parent().child('claimDay').val() !== data.parent().child('claimDay').val() || newData.parent().child('qDay').val() !== data.parent().child('qDay').val())) || (newData.parent().child('rf').isString() && root.child('gifts').child(newData.parent().child('rf').val()).child('from').val() === auth.uid && (root.child('gifts').child(newData.parent().child('rf').val()).child('st').val() === 'x' || root.child('gifts').child(newData.parent().child('rf').val()).child('st').val() === 'p') && !newData.parent().parent().parent().parent().child('gifts').child(newData.parent().child('rf').val()).exists() && newData.val() <= data.val() + root.child('gifts').child(newData.parent().child('rf').val()).child('price').val()))))"
           },
           "claimDay": {
             ".validate": "newData.isNumber() && (!data.exists() || newData.val() > data.val()) && newData.val() <= (now + 10800000) / 86400000"
@@ -28,6 +28,9 @@
           },
           "streak": {
             ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 7"
+          },
+          "rf": {
+            ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,80}$/)"
           },
           "qRes": {
             ".validate": "newData.isNumber()"
@@ -41,7 +44,7 @@
         },
         "owned": {
           "$item": {
-            ".validate": "newData.val() === true && $item.matches(/^(av|fr|re)[0-9]+$/) && newData.parent().parent().child('wallet').child('coins').val() < data.parent().parent().child('wallet').child('coins').val()"
+            ".validate": "newData.val() === true && $item.matches(/^(av|fr|re)[0-9]+$/) && (newData.parent().parent().child('wallet').child('coins').val() < data.parent().parent().child('wallet').child('coins').val() || (root.child('gifts').child(auth.uid + '_' + $item).child('to').val() === auth.uid && root.child('gifts').child(auth.uid + '_' + $item).child('st').val() === 'p' && newData.parent().parent().parent().parent().child('gifts').child(auth.uid + '_' + $item).child('st').val() === 'a'))"
           }
         },
         "$other": {
@@ -197,6 +200,21 @@
       "$id": {
         ".write": "auth != null && ((!data.exists() && !root.child('bans').child(auth.uid).exists()) || (!newData.exists() && root.child('admins').child(auth.uid).exists()))",
         ".validate": "newData.hasChildren(['q','by','t']) && newData.child('by').val() === auth.uid && newData.child('t').val() === now && newData.child('q').isString() && newData.child('q').val().length <= 400 && (!newData.child('note').exists() || newData.child('note').val().length <= 300) && (!newData.child('qk').exists() || (newData.child('qk').isString() && newData.child('qk').val().length <= 20))"
+      }
+    },
+    "gifts": {
+      ".read": "auth != null && ((query.orderByChild === 'to' && query.equalTo === auth.uid) || (query.orderByChild === 'from' && query.equalTo === auth.uid) || root.child('admins').child(auth.uid).exists())",
+      ".indexOn": [
+        "to",
+        "from"
+      ],
+      "$gid": {
+        ".read": "auth != null && (data.child('to').val() === auth.uid || data.child('from').val() === auth.uid)",
+        ".write": "auth != null && ((!data.exists() && newData.child('from').val() === auth.uid && !root.child('bans').child(auth.uid).exists()) || (data.exists() && newData.exists() && data.child('to').val() === auth.uid && data.child('st').val() === 'p') || (data.exists() && !newData.exists() && (data.child('from').val() === auth.uid || (data.child('to').val() === auth.uid && data.child('st').val() === 'a'))) || root.child('admins').child(auth.uid).exists())",
+        ".validate": "!newData.exists() || (newData.hasChildren(['from','to','item','price','st','fn','t']) && newData.child('from').isString() && newData.child('to').isString() && newData.child('to').val() !== newData.child('from').val() && newData.child('item').isString() && newData.child('item').val().matches(/^(av|fr)[0-9]+$/) && $gid === newData.child('to').val() + '_' + newData.child('item').val() && newData.child('price').isNumber() && newData.child('price').val() >= 1 && newData.child('price').val() <= 500 && newData.child('fn').isString() && newData.child('fn').val().length >= 1 && newData.child('fn').val().length <= 25 && (!newData.child('tn').exists() || (newData.child('tn').isString() && newData.child('tn').val().length <= 25)) && (data.exists() ? (newData.child('from').val() === data.child('from').val() && newData.child('to').val() === data.child('to').val() && newData.child('item').val() === data.child('item').val() && newData.child('price').val() === data.child('price').val() && newData.child('fn').val() === data.child('fn').val() && newData.child('t').val() === data.child('t').val() && (newData.child('st').val() === 'a' || newData.child('st').val() === 'x')) : (newData.child('st').val() === 'p' && newData.child('t').val() === now && root.child('users').child(newData.child('to').val()).child('name').exists() && !root.child('users').child(newData.child('to').val()).child('owned').child(newData.child('item').val()).exists() && newData.parent().parent().child('users').child(auth.uid).child('wallet').child('coins').val() <= root.child('users').child(auth.uid).child('wallet').child('coins').val() - newData.child('price').val())))",
+        "$other": {
+          ".validate": "$other === 'from' || $other === 'to' || $other === 'item' || $other === 'price' || $other === 'st' || $other === 'fn' || $other === 'tn' || $other === 't'"
+        }
       }
     },
     "announce": {
