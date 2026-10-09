@@ -189,7 +189,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 142';
+const APP_VERSION = '0.5 (test) · yapı 143';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1728,9 +1728,17 @@ onAuthStateChanged(auth, async u => {
 async function afterLogin() {
   watchMe(); watchQuick();
   if (S.pendingChal) { const m = S.pendingChal; S.pendingChal = null; ls.set('zuqio-room', ''); openChallenge(m); return; }
-  const code = S.pendingCode || ls.get('zuqio-room');
+  // Uygulama yeniden açılınca ana ekran gelir. Sadece davet bağlantısı ya da yarıda kalmış (başlamış) oyun odasına dönülür.
+  const code = S.pendingCode, saved = ls.get('zuqio-room');
   S.pendingCode = null;
   if (code) { const ok = await joinRoom(code, true); if (ok) return; }
+  else if (saved) {
+    try {
+      const sn = await get(ref(db, 'rooms/' + saved)), R = sn.val();
+      if (R && !R.quick && R.status !== 'lobby' && R.status !== 'final' && R.players && R.players[uid()]) { if (await joinRoom(saved, true)) return; }
+    } catch (e) { /* ana ekrana düş */ }
+    ls.del('zuqio-room');
+  }
   go('home');
 }
 
