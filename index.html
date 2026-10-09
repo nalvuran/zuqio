@@ -525,6 +525,11 @@ body::before{background:radial-gradient(120% 70% at 50% 24%, #2A1D86 0%, var(--b
 .home-top .me-chip .avatar{width:46px; height:46px}
 .home-top .me-chip .mn{font-size:1.13rem}
 .home-top .me-chip .mlv{font-size:.83rem}
+/* çevrimiçi yeşil nokta */
+.avo{position:relative; display:inline-flex; flex:0 0 auto}
+.onl{position:absolute; right:-1px; bottom:-1px; width:13px; height:13px; border-radius:50%; background:#43D17A; border:2.5px solid #1B1356; box-shadow:0 0 0 0 rgba(67,209,122,.55); animation:onlp 2.4s ease-in-out infinite}
+@keyframes onlp{0%,100%{opacity:.7; box-shadow:0 0 0 0 rgba(67,209,122,.45)}50%{opacity:1; box-shadow:0 0 0 5px rgba(67,209,122,0)}}
+@media (prefers-reduced-motion:reduce){.onl{animation:none}}
 /* rakip arıyor kutusu */
 .qmban{position:absolute; left:12px; right:12px; bottom:calc(100% + 10px); max-width:436px; margin:0 auto; display:flex; align-items:center; gap:8px; padding:8px 8px 8px 16px; border-radius:999px; background:linear-gradient(180deg,#352A9A,#241A74); border:1.5px solid #E6B84A; box-shadow:0 8px 22px rgba(0,0,0,.45); animation:qmin .25s ease-out}
 .qmban .qmt{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600}

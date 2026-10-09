@@ -4,7 +4,7 @@ import { PACKS } from './questions-packs.js';
 const BASE_QS = QUESTIONS.slice(); // günün sorusu herkeste aynı olsun diye sadece hazır sorulardan seçilir
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, reauthenticateWithPopup, deleteUser } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getDatabase, ref as fbRef, get as fbGet, set as fbSet, update as fbUpdate, remove as fbRemove, onValue as fbOnValue, onDisconnect as fbOnDisconnect, serverTimestamp, query, orderByChild, equalTo, limitToLast } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
+import { getDatabase, ref as fbRef, get as fbGet, set as fbSet, update as fbUpdate, remove as fbRemove, onValue as fbOnValue, onDisconnect as fbOnDisconnect, serverTimestamp, query, orderByChild, equalTo, limitToLast, startAt } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 const fb = initializeApp(firebaseConfig);
 const auth = getAuth(fb);
@@ -189,7 +189,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 157';
+const APP_VERSION = '0.5 (test) · yapı 158';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -791,6 +791,27 @@ function showReacts(R) {
 }
 
 let unsubMe = null;
+/* ================= çevrimiçi durumu (yeşil nokta) ================= */
+const PRES_FRESH = 120000;
+const presOn = () => ls.get('zuqio-pres') !== '0';
+function presTick() {
+  if (!uid() || !S.me || document.visibilityState !== 'visible' || !presOn() || hiddenMe()) return;
+  set(ref(db, 'presence/' + uid()), {t: serverTimestamp()}).catch(() => {});
+}
+function presClear() { if (uid()) remove(ref(db, 'presence/' + uid())).catch(() => {}); }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') presTick(); else presClear(); });
+async function refreshOnl() {
+  try {
+    const sn = await get(query(ref(db, 'presence'), orderByChild('t'), startAt(now() - PRES_FRESH)));
+    const o = {}; sn.forEach(c => { const v = c.val(); if (v && typeof v.t === 'number' && v.t >= now() - PRES_FRESH) o[c.key] = true; });
+    if (presOn() && uid() && !hiddenMe() && document.visibilityState === 'visible') o[uid()] = true;
+    const sig = Object.keys(o).sort().join(',');
+    if (sig !== S.onlSig) { S.onlSig = sig; S.onl = o; if (S.screen === 'board') render(); }
+  } catch (e) { /* sessizce geç */ }
+}
+const onlAv = (id, av, fr) => `<span class="avo">${avatar(av, '', fr)}${S.onl && S.onl[id] ? '<i class="onl" title="Çevrimiçi"></i>' : ''}</span>`;
+setInterval(() => { presTick(); if (S.screen === 'board') refreshOnl(); }, 30000);
+
 /* ================= kalma süresi (yönetici istatistiği için) ================= */
 function actTick() {
   if (!uid() || !S.me || document.visibilityState !== 'visible') return;
@@ -1070,6 +1091,8 @@ V.settings = () => `
           <button class="switch ${S.sound ? 'on' : ''}" role="switch" aria-checked="${S.sound}" aria-label="Ses efektleri" data-act="tsound"></button></div>
         <div class="setrow"><div><b>Titreşim</b>${HAP_OK ? '' : '<span class="small muted">Bu cihaz titreşimi desteklemiyor</span>'}</div>
           <button class="switch ${S.haptic && HAP_OK ? 'on' : ''}" role="switch" aria-checked="${!!(S.haptic && HAP_OK)}" aria-label="Titreşim" data-act="thaptic" ${HAP_OK ? '' : 'disabled'}></button></div>
+        <div class="setrow"><div><b>Çevrimiçi olduğumu göster</b><span class="small muted">Liderlik tablosunda adının yanında yeşil bir nokta görünür</span></div>
+          <button class="switch ${presOn() ? 'on' : ''}" role="switch" aria-checked="${presOn()}" aria-label="Çevrimiçi olduğumu göster" data-act="tpres"></button></div>
         <div class="setrow"><div><b>Rakip arayan olunca haber ver</b><span class="small muted">Biri Rakip Bul'a basınca üstte küçük bir kutu çıkar</span></div>
           <button class="switch ${qmOn() ? 'on' : ''}" role="switch" aria-checked="${qmOn()}" aria-label="Rakip arayan bildirimi" data-act="tqmn"></button></div>
       </div>
@@ -1514,6 +1537,7 @@ async function loadHidden() {
 const hiddenMe = () => !!(S.lbHide && uid() && S.lbHide[uid()]);
 async function loadBoard() {
   const key = boardKey();
+  refreshOnl();
   S.lbCache = S.lbCache || {};
   if (S.tabP === undefined) loadPrizeInfo();
   if (S.lbCache[key]) return;
@@ -1539,9 +1563,9 @@ V.board = () => {
   else if (data.err) body = '<p class="status">Tablo yüklenemedi. Biraz sonra tekrar dene.</p>';
   else if (!data.rows.length) body = '<div class="card" style="text-align:center"><b>Henüz kimse yok</b><p class="small muted" style="margin-top:6px">Bir oyun bitir, bu tablonun ilk adı sen ol!</p></div>';
   else body = `<div class="stack" style="gap:8px">${data.rows.map((r, i) => `
-      <div class="rank ${r.id === uid() ? 'me' : ''} ${i < 3 ? 'r' + (i + 1) : ''}"><span class="n">${i + 1}</span>${avatar(r.id === uid() ? S.me.av : r.av, '', r.id === uid() ? S.me.fr : r.fr)}<b>${esc(r.id === uid() ? S.me.name : r.n)}</b>
+      <div class="rank ${r.id === uid() ? 'me' : ''} ${i < 3 ? 'r' + (i + 1) : ''}"><span class="n">${i + 1}</span>${onlAv(r.id, r.id === uid() ? S.me.av : r.av, r.id === uid() ? S.me.fr : r.fr)}<b>${esc(r.id === uid() ? S.me.name : r.n)}</b>
         <span class="pts">${fmt(r.s)}</span></div>`).join('')}
-      ${data.mine && data.mine.out ? `<div class="rank me"><span class="n">–</span>${avatar(S.me.av, '', S.me.fr)}<b>${esc(S.me.name)}</b><span class="pts">${fmt(data.mine.s)}</span></div>` : ''}
+      ${data.mine && data.mine.out ? `<div class="rank me"><span class="n">–</span>${onlAv(uid(), S.me.av, S.me.fr)}<b>${esc(S.me.name)}</b><span class="pts">${fmt(data.mine.s)}</span></div>` : ''}
     </div>`;
   const sub = {d: 'Bugün gece yarısı sıfırlanır.', w: 'Her pazartesi sıfırlanır.', m: 'Her ayın başında sıfırlanır.', p: ''}[S.lbTab];
   const prize = S.lbTab !== 'p' ? '' : `<div class="card stack" style="gap:6px;margin-bottom:12px;border-color:rgba(255,194,26,.6)">
@@ -1747,7 +1771,7 @@ onAuthStateChanged(auth, async u => {
 });
 
 async function afterLogin() {
-  watchMe(); watchQuick(); loadHidden();
+  watchMe(); watchQuick(); loadHidden().then(presTick);
   if (S.pendingChal) { const m = S.pendingChal; S.pendingChal = null; ls.set('zuqio-room', ''); openChallenge(m); return; }
   // Uygulama yeniden açılınca her zaman ana ekran gelir. Sadece davet bağlantısıyla gelinirse odaya girilir.
   const code = S.pendingCode;
@@ -2578,6 +2602,7 @@ app.addEventListener('click', e => {
   else if (a === 'equip') equipItem(el.dataset.id);
   else if (a === 'tmusic') { S.music = !S.music; ls.set('zuqio-music', S.music ? '1' : '0'); if (S.music) MUSIC.start(); else MUSIC.stop(); render(); }
   else if (a === 'tsound') { S.sound = !S.sound; ls.set('zuqio-sound', S.sound ? '1' : '0'); if (S.sound) SFX.play('correct'); render(); }
+  else if (a === 'tpres') { ls.set('zuqio-pres', presOn() ? '0' : '1'); if (presOn()) presTick(); else presClear(); render(); }
   else if (a === 'qmjoin') qmJoin();
   else if (a === 'qmx') { S.qmSnooze = now() + QM_SNOOZE; qmRefresh(); }
   else if (a === 'tqmn') { ls.set('zuqio-qmn', qmOn() ? '0' : '1'); qmRefresh(); render(); }
