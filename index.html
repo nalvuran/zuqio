@@ -255,6 +255,10 @@ a.setrow{color:inherit; text-decoration:none}
 .btn.startbtn{background:var(--surface); color:#fff; border:1.5px solid var(--yellow); box-shadow:none}
 .btn.startbtn .ic{background:rgba(255,194,26,.16); color:var(--yellow)}
 .btn.startbtn:disabled{opacity:.55}
+.pitem b{min-width:0; flex:0 1 auto; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.pitem .tag, .pitem .row{flex:0 0 auto; white-space:nowrap}
+.setrow > div{min-width:0}
+.setrow .btn{flex:0 0 auto; white-space:nowrap; padding-left:14px; padding-right:14px; min-height:44px}
 .catrow{flex-shrink:0}
 .card.setrow, .card.setrow:last-child{border-bottom:1.5px solid var(--line)}
 .lobby .btn.big{min-height:56px; flex:0 0 auto}
