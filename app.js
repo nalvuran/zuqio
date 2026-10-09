@@ -181,7 +181,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 116';
+const APP_VERSION = '0.5 (test) · yapı 117';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -757,7 +757,6 @@ V.settings = () => `
       <div class="card stack" style="gap:0;padding:0 16px">
         <button class="setrow" data-act="openprofile"><div><b>Profili düzenle</b><span class="small muted">${esc(S.me.name)}</span></div>${avatar(S.me.av, '', S.me.fr)}</button>
         <button class="setrow" data-go="how"><div><b>Nasıl oynanır?</b></div><span class="muted">›</span></button>
-        <a class="setrow" href="mailto:destek@playzuqio.com"><div><b>Destek</b></div><span class="muted">›</span></a>
         <a class="setrow" href="gizlilik.html" target="_blank" rel="noopener"><div><b>Gizlilik politikası</b></div><span class="muted">›</span></a>
         <a class="setrow" href="kosullar.html" target="_blank" rel="noopener"><div><b>Kullanım koşulları</b></div><span class="muted">›</span></a>
       </div>
