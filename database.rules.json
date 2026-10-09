@@ -226,7 +226,7 @@
           ".validate": "newData.isString() && newData.val().length <= 3000"
         },
         "dur": {
-          ".validate": "newData.isNumber() && (newData.val() === 15 || newData.val() === 30 || newData.val() === 45)"
+          ".validate": "newData.isNumber() && (newData.val() === 0 || newData.val() === 15 || newData.val() === 30 || newData.val() === 45)"
         },
         "src": {
           ".validate": "newData.val() === 'pdf'"

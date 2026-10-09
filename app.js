@@ -896,6 +896,20 @@ async function startBotGame() {
   lset('rooms/' + code, {host: uid(), status: 'lobby', count: 10, diff: 'mix', bot: true, createdAt: now(), players: ps});
   enterRoom(code); // oyun, oda sahibi (sen) “Oyunu başlat”a basınca başlar; önce soru sayısı, zorluk ve kategori seçilir
 }
+// Süresiz çalışma: oda açmadan, tek başına (yerel), acele etmeden
+const STUDY_MS = 6 * 3600 * 1000;
+function startStudy(id) {
+  if (S.busy) return;
+  const q = (S.myQuizzes || {})[id]; if (!q || !q.qs) return;
+  if (S.code) leaveLocal();
+  const code = 'L' + Date.now().toString(36);
+  const ps = {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', online: true, joinedAt: now()}};
+  lset('rooms/' + code, {host: uid(), status: 'lobby', count: 10, diff: 'mix', bot: true, study: true, quiz: id, quizTitle: q.title,
+    quizN: Object.keys(q.qs || {}).length, quizDur: 0, createdAt: now(), players: ps});
+  enterRoom(code);
+  const go1 = () => { if (S.code === code && S.R && S.R.status === 'lobby') startGame(); };
+  setTimeout(go1, 60); setTimeout(go1, 400);
+}
 // Her yeni soruda botların cevabını zamanla
 const botPlan = {};
 function planBots(R) {
@@ -984,6 +998,7 @@ V.cats = () => {
 
 V.lobby = () => {
   const R = S.R, ps = players(R), host = isHost();
+  if (R.study) return `<div class="screen"><div class="grow"></div><p class="status" style="text-align:center">Çalışma hazırlanıyor…</p><div class="grow"></div></div>`;
   if (R.quick) return V.quickLobby();
   if (S.catsOpen && host) return V.cats();
   return `
@@ -1041,6 +1056,7 @@ function statusText() {
   const ps = players(R).filter(p => p.online !== false), A = ansOf(R, R.qi);
   const n = ps.filter(p => A[p.id]).length;
   if (S.q && S.q.frozenUntil > now()) return 'Süre donduruldu';
+  if (R.study) return (A[uid()] || (S.q && S.q.sent != null)) ? 'Cevabın alındı' : '';
   const mine = A[uid()] || (S.q && S.q.sent != null);
   if (mine && remaining() > 0 && myJ('second') === R.qi && R.questions[R.qi].t === 'mc' && !(A[uid()] && A[uid()].v2 != null) && !(S.q && S.q.sent2 != null)) return 'İkinci şansını seç: doğruysa yarı puan';
   if (!mine && remaining() <= 0) return 'Süre doldu';
@@ -1080,13 +1096,13 @@ V.question = () => {
         <span class="small muted">Soru ${qi + 1} / ${R.questions.length}</span>
         <span><span class="tag">${esc(q.cat)}${q.sub ? ' · ' + esc(q.sub) : ''}${isNum ? ' · Tahmin' : ''}</span></span>
       </div>
-      <div class="hex" id="hex">${Math.ceil(remaining() / 1000)}</div>
+      ${R.study ? '' : `<div class="hex" id="hex">${Math.ceil(remaining() / 1000)}</div>`}
     </div>
-    <div class="bar"><i id="tbar"></i></div>
+    ${R.study ? '' : '<div class="bar"><i id="tbar"></i></div>'}
     <p class="qtext">${esc(q.q)}</p>
     <div class="grow" style="min-height:16px"></div>
     <p class="status" id="st">${statusText()}</p>
-    <div class="jokers" role="group" aria-label="Jokerler">${jk(isNum ? 'hint' : 'half')}${jk('double')}${jk('freeze')}${isNum ? '' : jk('second')}</div>
+    <div class="jokers" role="group" aria-label="Jokerler">${jk(isNum ? 'hint' : 'half')}${R.study ? '' : jk('double') + jk('freeze')}${isNum ? '' : jk('second')}</div>
     ${ans}
   </div>`;
 };
@@ -1223,6 +1239,22 @@ V.board = () => {
 
 V.final = () => {
   const R = S.R, sc = R.scores || {};
+  if (R.study) {
+    const total = (R.questions || []).length, ok = Object.values(R.reveal || {}).filter(r => r && r.gains && r.gains[uid()] > 0).length;
+    return `
+  <div class="screen">
+    <h2 style="text-align:center;margin-top:10px">Çalışma bitti</h2>
+    <div class="card stack" style="align-items:center;text-align:center;gap:6px;margin-top:18px">
+      <div style="font-size:3rem;font-weight:800;line-height:1.1">${ok} / ${total}</div>
+      <p class="muted">soruyu doğru cevapladın</p>
+    </div>
+    <div class="grow" style="min-height:20px"></div>
+    <div class="stack">
+      <button class="btn primary big" data-act="studyagain"><span class="ic">${ICON.play}</span><span class="lb">TEKRAR ÇALIŞ</span></button>
+      <button class="btn ghost" data-act="leave">Ana menü</button>
+    </div>
+  </div>`;
+  }
   const s = players(R).sort((a, b) => (sc[b.id] || 0) - (sc[a.id] || 0));
   const myRank = s.findIndex(p => p.id === uid()) + 1;
   const pod = (p, place, h) => p ? `<div class="pod"><div class="row" style="justify-content:center">${avatar(p.av, '', p.fr)}</div><div class="nm">${esc(p.name)}</div><div class="sc${place === 1 ? ' first' : ''}">${fmt(sc[p.id] || 0)}</div><div class="blk" style="height:${h}px;background:${COLORS[(place - 1) % 4]}">${place}</div></div>` : '<div></div>';
@@ -1718,7 +1750,7 @@ async function nextQ() {
   const R = S.R; const qi = (typeof R.qi === 'number' ? R.qi : -1) + 1;
   if (qi >= R.questions.length) { await update(roomRef(), {status: 'final'}); return; }
   const q = R.questions[qi];
-  await update(roomRef(), {status: 'question', qi, qk: String(qi), qStartAt: serverTimestamp(), qDur: R.quizDur ? R.quizDur * 1000 : (q.t === 'mc' ? 20000 : 30000)});
+  await update(roomRef(), {status: 'question', qi, qk: String(qi), qStartAt: serverTimestamp(), qDur: R.study ? STUDY_MS : R.quizDur ? R.quizDur * 1000 : (q.t === 'mc' ? 20000 : 30000)});
 }
 
 function calcGain(q, a, v, frac) {
@@ -1830,10 +1862,12 @@ V.quizzes = () => {
         const st = stOf(q), n = Object.keys(q.qs || {}).length;
         return `<div class="card stack" style="gap:8px">
           <div class="row between"><b>${esc(q.title)}</b><span class="qzst ${st[1]}">${st[0]}</span></div>
-          <span class="small muted">${esc(q.cat)} · ${n} soru</span>
+          <span class="small muted">${esc(q.cat)} · ${n} soru${q.dur === 0 ? ' · süresiz' : ''}</span>
           ${q.status === 'rejected' && q.why ? `<p class="small" style="color:#FF9DA0">Sebep: ${esc(q.why)}</p>` : ''}
           <div class="row" style="gap:8px">
-            <button class="btn primary" style="flex:1" data-act="qzplay" data-id="${q.id}" ${n < QZ_MIN ? 'disabled' : ''}>Oda aç ve oyna</button>
+            ${q.dur === 0
+              ? `<button class="btn primary" style="flex:1" data-act="qzstudy" data-id="${q.id}" ${n < QZ_MIN ? 'disabled' : ''}>Çalışmaya başla</button>`
+              : `<button class="btn primary" style="flex:1" data-act="qzplay" data-id="${q.id}" ${n < QZ_MIN ? 'disabled' : ''}>Oda aç ve oyna</button>`}
             <button class="btn outline" data-act="qzedit" data-id="${q.id}">Düzenle</button>
           </div>
         </div>`;
@@ -1882,7 +1916,8 @@ V.pdfgen = () => {
       <span class="small muted lbl">Soru sayısı</span>
       <div class="chips">${[5, 10].map(n => `<button class="${P.count === n ? 'on' : ''}" data-act="pdfcount" data-n="${n}" ${P.busy ? 'disabled' : ''}>${n}</button>`).join('')}</div>
       <span class="small muted lbl">Cevaplama süresi</span>
-      <div class="chips">${[15, 30, 45].map(n => `<button class="${P.dur === n ? 'on' : ''}" data-act="pdfdur" data-n="${n}" ${P.busy ? 'disabled' : ''}>${n} sn</button>`).join('')}</div>
+      <div class="chips">${[15, 30, 45, 0].map(n => `<button class="${P.dur === n ? 'on' : ''}" data-act="pdfdur" data-n="${n}" ${P.busy ? 'disabled' : ''}>${n ? n + ' sn' : 'Süresiz'}</button>`).join('')}</div>
+      ${P.dur === 0 ? '<p class="small muted">Süresiz seçersen oda açılmaz; tek başına, acele etmeden çalışırsın.</p>' : ''}
       ${P.err ? `<div class="card"><p class="small" style="color:#FF9DA0">${esc(P.err)}</p></div>` : ''}
       ${P.busy ? '<div class="card"><p class="small">Notun okunuyor, özet ve sorular hazırlanıyor… Bu 20–40 saniye sürebilir, ekranı kapatma.</p></div>' : ''}
       <p class="small muted">Günde 1 PDF üretebilirsin. Üretilen sorular yapay zekâ ile hazırlanır ve hata içerebilir; oynamadan önce mutlaka kontrol et. PDF’in içeriği soru üretmek için Google’ın Gemini hizmetine gönderilir ve bizde saklanmaz. Kişisel ya da gizli belge yükleme, yalnızca kendi notlarını yükle.</p>
@@ -1936,7 +1971,8 @@ V.qzedit = () => {
       ${Z.summary != null ? `<label class="small muted" for="qzs">Özet (yapay zekâ hazırladı, hataları düzeltebilirsin)</label>
       <textarea class="field" id="qzs" rows="9" maxlength="3000" ${locked ? 'disabled' : ''}>${esc(Z.summary)}</textarea>` : ''}
       <span class="small muted lbl">Cevaplama süresi</span>
-      <div class="chips">${[15, 30, 45].map(n => `<button class="${Z.dur === n ? 'on' : ''}" data-act="qzdur" data-n="${n}" ${locked ? 'disabled' : ''}>${n} sn</button>`).join('')}</div>
+      <div class="chips">${[15, 30, 45, 0].map(n => `<button class="${Z.dur === n ? 'on' : ''}" data-act="qzdur" data-n="${n}" ${locked ? 'disabled' : ''}>${n ? n + ' sn' : 'Süresiz'}</button>`).join('')}</div>
+      ${Z.dur === 0 ? '<p class="small muted">Süresiz seçersen oda açılmaz; tek başına, acele etmeden çalışırsın.</p>' : ''}
       ${Z.src === 'pdf' && !Z.showQs ? `<div class="card stack" style="gap:8px"><b>${ic('target')}${Z.qs.length} soru hazır</b>
         <p class="small muted">Sorular özetteki bilgilerden hazırlandı ve oyunda sürpriz olarak gelecek. Özeti oku; doğruysa onayla. Yapay zekâ hata yapabilir, oyunda yanlış bir soru görürsen “Soruyu bildir” düğmesini kullanabilirsin.</p></div>` : `${Z.qs.map((q, i) => `
         <div class="card stack qzq" style="gap:8px" data-i="${i}">
@@ -1997,7 +2033,7 @@ async function saveQz(status) {
   const id = Z.id || ('z' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
   const data = {owner: uid(), name: S.me.name, title: Z.title.trim().slice(0, 40), cat: qs[0].cat, qs, status, t: serverTimestamp()};
   if (Z.summary != null) data.summary = String(Z.summary).slice(0, 3000);
-  if (Z.dur) data.dur = Z.dur;
+  if (Z.dur != null) data.dur = Z.dur;
   if (Z.src) data.src = Z.src;
   S.busy = true; render();
   try {
@@ -2184,7 +2220,7 @@ app.addEventListener('click', e => {
   else if (a === 'tpublic') { const on = !S.R.public; update(roomRef(), {public: on || null, pub: on ? 'open' : null}).then(() => toast(on ? 'Oda artık açık odalar listesinde' : 'Oda gizlendi')).catch(() => toast('Değiştirilemedi')); }
   else if (a === 'myquizzes') { S.myQuizzes = S.myQuizzes || null; go('quizzes'); loadMyQuizzes(); }
   else if (a === 'qznew') { S.qz = {title: '', cat: NON_EN[0], qs: [blankQ('mc')], status: 'draft', dur: null}; go('qzedit'); }
-  else if (a === 'qzedit') { const q = S.myQuizzes[el.dataset.id]; S.qz = {id: el.dataset.id, title: q.title, cat: q.cat, status: q.status, why: q.why, summary: q.summary != null ? q.summary : null, dur: q.dur || null, src: q.src || null,
+  else if (a === 'qzedit') { const q = S.myQuizzes[el.dataset.id]; S.qz = {id: el.dataset.id, title: q.title, cat: q.cat, status: q.status, why: q.why, summary: q.summary != null ? q.summary : null, dur: q.dur != null ? q.dur : null, src: q.src || null,
       qs: Object.values(q.qs || {}).map(x => x.t === 'num' ? {t: 'num', q: x.q, a: String(x.a), unit: x.unit, cat: x.cat || q.cat} : {t: 'mc', q: x.q, o: x.o.slice(), cat: x.cat || q.cat})}; go('qzedit'); }
   else if (a === 'qzback') { go('quizzes'); }
   else if (a === 'qzdur') { readQz(); S.qz.dur = S.qz.dur === +el.dataset.n ? null : +el.dataset.n; render(); }
@@ -2198,6 +2234,8 @@ app.addEventListener('click', e => {
   else if (a === 'qzsubmit') { if (confirm('Zuqio onaya gönderilsin mi? Onaylanan sorular herkesin oyunlarında çıkabilir.')) saveQz('pending'); }
   else if (a === 'qzwithdraw') { (async () => { try { await update(ref(db, 'quizzes/' + S.qz.id), {status: 'draft', t: serverTimestamp()}); S.qz.status = 'draft'; S.myQuizzes[S.qz.id].status = 'draft'; render(); } catch (e) { toast('Geri çekilemedi'); } })(); }
   else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
+  else if (a === 'qzstudy') startStudy(el.dataset.id);
+  else if (a === 'studyagain') { const id = S.R && S.R.quiz; leaveLocal(); if (id) startStudy(id); else go('home'); }
   else if (a === 'qzplay') { const q = S.myQuizzes[el.dataset.id]; createRoom({quiz: el.dataset.id, quizTitle: q.title, quizN: Object.keys(q.qs || {}).length, quizDur: q.dur || null}); }
   else if (a === 'quizoff') update(roomRef(), {quiz: null, quizTitle: null, quizN: null}).catch(() => toast('Değiştirilemedi'));
   else if (a === 'a2hs') a2hs();
