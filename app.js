@@ -189,7 +189,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 140';
+const APP_VERSION = '0.5 (test) · yapı 141';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1321,8 +1321,8 @@ V.lobby = () => {
     </div>
     ${reactBar()}
     <div class="lsp"></div>
-    ${host && !R.bot ? `<div class="card setrow pubrow"><div><b>Herkese açık oda</b><span class="small muted">${R.public ? 'Açık odalar listesinde görünüyor' : 'Sadece kodu bilenler katılabilir'}</span></div>
-      <button class="switch ${R.public ? 'on' : ''}" role="switch" aria-checked="${!!R.public}" aria-label="Herkese açık oda" data-act="tpublic"></button></div>` : ''}
+    ${host && !R.bot ? `<div class="card setrow pubrow"><div><b>Odayı herkese aç</b><span class="small muted">${R.public ? 'Açık · Açık odalar listesinde görünüyor' : 'Kapalı · sadece kodu bilenler katılabilir'}</span></div>
+      <button class="switch ${R.public ? 'on' : ''}" role="switch" aria-checked="${!!R.public}" aria-label="Odayı herkese aç" data-act="tpublic"></button></div>` : ''}
     ${host && R.quiz ? `
       <div class="card setrow" style="margin-bottom:14px;padding:10px 16px"><div><b>${ic('doc')}${esc(R.quizTitle || 'Kendi Zuqio’n')}</b><span class="small muted">${R.quizN || ''} soru · topluluk Zuqio’su</span></div>
         <button class="btn ghost" data-act="quizoff">Hazır sorular</button></div>
