@@ -97,6 +97,11 @@
         },
         "seen": {
           ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+        },
+        "act": {
+          "$d": {
+            ".validate": "$d.matches(/^d[0-9]{1,6}$/) && newData.isNumber() && newData.val() >= 0 && newData.val() <= 1440"
+          }
         }
       },
       ".read": "auth != null && root.child('admins').child(auth.uid).exists()"

@@ -1,6 +1,6 @@
 // Zuqio service worker: önce ağdan dener (güncellemeler hemen gelsin),
 // bağlantı yoksa son kaydedilen sürümü gösterir.
-const CACHE = 'zuqio-v148';
+const CACHE = 'zuqio-v149';
 const ASSETS = ['./', 'index.html', 'app.js', 'questions.js', 'questions-en.js', 'questions-en2.js', 'questions-more1.js', 'questions-more2.js', 'questions-more3.js', 'questions-packs.js', 'ai.js', 'firebase-config.js', 'manifest.webmanifest',
   'ic0.png', 'ic1.png', 'ic2.png', 'ic3.png', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png', 'google-g.svg'];
 

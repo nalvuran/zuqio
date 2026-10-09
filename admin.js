@@ -54,7 +54,7 @@ async function loadLb() {
 }
 
 /* ---------------- ekranlar ---------------- */
-const TABS = {sum: 'Özet', apr: 'Onay', users: 'Üyeler', rep: 'Bildirimler', pool: 'Havuz', lb: 'Liderlik', rooms: 'Odalar', prize: 'Ödül', ann: 'Duyuru', adm: 'Yöneticiler'};
+const TABS = {sum: 'Özet', stat: 'İstatistik', apr: 'Onay', users: 'Üyeler', rep: 'Bildirimler', pool: 'Havuz', lb: 'Liderlik', rooms: 'Odalar', prize: 'Ödül', ann: 'Duyuru', adm: 'Yöneticiler'};
 
 function vLogin() {
   return `<div class="wrap narrow">
@@ -89,6 +89,46 @@ function vNotAdmin() {
 }
 
 function stat(label, val, sub) { return `<div class="stat"><span>${label}</span><b>${val}</b>${sub ? `<small>${sub}</small>` : ''}</div>`; }
+
+/* ---- istatistik ---- */
+const actOf = (u, d) => (u.act && u.act['d' + d]) || 0;
+const mm = m => m >= 60 ? Math.floor(m / 60) + ' sa ' + Math.round(m % 60) + ' dk' : (m < 10 && m > 0 ? m.toFixed(1).replace('.', ',') : Math.round(m)) + ' dk';
+function bars(vals, labels, fmtv, color) {
+  const mx = Math.max(1, ...vals);
+  return `<div class="bars" style="--c:${color}">${vals.map((v, i) => `<div class="bcol" title="${esc(labels[i])}: ${esc(fmtv(v))}"><i style="height:${Math.max(v ? 4 : 0, Math.round(v / mx * 100))}%"></i></div>`).join('')}</div>
+    <div class="row between small muted"><span>${esc(labels[0])}</span><span>en yüksek ${esc(fmtv(mx === 1 && !vals.some(v => v) ? 0 : Math.max(...vals)))}</span><span>${esc(labels[labels.length - 1])}</span></div>`;
+}
+function vStat() {
+  const us = Object.entries(S.users).map(([id, u]) => Object.assign({id}, u)), today = dayIdx();
+  const days = Array.from({length: 30}, (_, i) => today - 29 + i);
+  const lab = days.map(d => new Date(d * 86400000).toLocaleDateString('tr-TR', {day: 'numeric', month: 'short', timeZone: 'UTC'}));
+  const dau = days.map(d => us.filter(u => actOf(u, d) > 0).length);
+  const mins = days.map(d => us.reduce((s, u) => s + actOf(u, d), 0));
+  const tdAct = dau[29], tdMin = mins[29];
+  const w7 = days.slice(23), w7sum = w7.reduce((s, d) => s + us.reduce((x, u) => x + actOf(u, d), 0), 0);
+  const w7users = us.filter(u => w7.some(d => actOf(u, d) > 0)).length;
+  const started = days.find((d, i) => dau[i] > 0);
+  // kategori popülerliği
+  const cat = {};
+  us.forEach(u => Object.values((u.st && u.st.c) || {}).forEach(c => { if (!c || !c.t) return; const o = cat[c.t] || (cat[c.t] = {n: 0, ok: 0}); o.n += c.n || 0; o.ok += c.ok || 0; }));
+  const cl = Object.entries(cat).sort((a, b) => b[1].n - a[1].n), cmx = Math.max(1, ...cl.map(x => x[1].n));
+  const top = us.map(u => ({u, m: w7.reduce((s, d) => s + actOf(u, d), 0)})).filter(x => x.m > 0).sort((a, b) => b.m - a.m).slice(0, 10);
+  return `<div class="stats">
+      ${stat('Bugün aktif', fmt(tdAct), 'süre ölçülen kişi')}
+      ${stat('Bugün toplam süre', mm(tdMin))}
+      ${stat('Kişi başı bugün', tdAct ? mm(tdMin / tdAct) : '–', 'aktif kişi ortalaması')}
+      ${stat('Son 7 gün aktif', fmt(w7users), 'farklı kişi')}
+      ${stat('Kişi başı günlük (7 gün)', w7users ? mm(w7sum / w7users / 7) : '–', 'ortalama süre')}
+      ${stat('Ölçüm başlangıcı', started ? lab[days.indexOf(started)] : 'henüz yok', 'süre bu günden itibaren')}
+    </div>
+    <div class="card stack" style="margin-top:14px"><b>Günlük aktif kullanıcı (30 gün)</b>${bars(dau, lab, v => v + ' kişi', 'var(--yellow)')}</div>
+    <div class="card stack" style="margin-top:14px"><b>Günlük toplam süre (30 gün)</b>${bars(mins, lab, v => mm(v), '#7B5CFF')}</div>
+    <div class="card stack" style="margin-top:14px"><b>Kategori popülerliği</b>
+      ${cl.length ? cl.map(([t, o]) => `<div class="crow"><div class="row between"><span>${esc(t)}</span><span class="muted small">${fmt(o.n)} soru · %${o.n ? Math.round(o.ok / o.n * 100) : 0} doğru</span></div><div class="cbar"><i style="width:${Math.round(o.n / cmx * 100)}%"></i></div></div>`).join('') : '<p class="muted small">Henüz veri yok. Oyuncular oyun bitirdikçe dolar.</p>'}
+      <p class="muted small">Yalnızca istatistik kaydı başlandıktan sonra oynanan oyunlar sayılır.</p></div>
+    <div class="card stack" style="margin-top:14px"><b>Son 7 günde en çok vakit geçirenler</b>
+      ${top.length ? top.map(x => `<button class="row between item" data-act="user" data-id="${x.u.id}"><span>${esc(x.u.name || '(adsız)')}</span><span class="muted">${mm(x.m)}</span></button>`).join('') : '<p class="muted small">Henüz süre kaydı yok.</p>'}</div>`;
+}
 
 function vSum() {
   const us = Object.values(S.users), today = dayIdx(), week = Date.now() - 7 * 864e5;
@@ -139,6 +179,9 @@ function vUser(id) {
       <dt>Üyelik</dt><dd>${dt(u.createdAt)}</dd>
       <dt>Son görülme</dt><dd>${dt(u.seen)} (${ago(u.seen)})</dd>
       <dt>Jeton</dt><dd>${fmt(u.wallet && u.wallet.coins)} · seri ${u.wallet && u.wallet.streak || 0} gün · koruyucu ${u.wallet && u.wallet.shield || 0}</dd>
+      <dt>Seviye</dt><dd>${u.lv || 1} · ${fmt(u.xp || 0)} XP</dd>
+      <dt>Oyun</dt><dd>${u.st ? `${fmt(u.st.g || 0)} oyun · ${fmt(u.st.n || 0)} soru · %${u.st.n ? Math.round((u.st.ok || 0) / u.st.n * 100) : 0} doğru · en iyi seri ${u.st.bs || 0}${u.st.mn ? ` · ort. ${(u.st.ms / u.st.mn / 1000).toFixed(1).replace('.', ',')} sn/cevap` : ''}` : 'kayıt yok'}</dd>
+      <dt>Süre</dt><dd>bugün ${mm(actOf(u, dayIdx()))} · son 7 gün ${mm(Array.from({length: 7}, (_, i) => actOf(u, dayIdx() - i)).reduce((s, x) => s + x, 0))}</dd>
       <dt>Bu ay</dt><dd>${lbm ? `${fmt(lbm.s)} puan · ${lbm.g} oyun` : 'puan yok'}</dd>
       <dt>Satın aldıkları</dt><dd>${owned.length ? esc(owned.join(', ')) : '–'}</dd>
       <dt>UID</dt><dd><code>${esc(id)}</code></dd>
@@ -329,7 +372,7 @@ function render() {
   if (!S.user) { app.innerHTML = vLogin(); return; }
   if (!S.role) { app.innerHTML = vNotAdmin(); return; }
   const keep = document.activeElement && document.activeElement.id;
-  const body = {sum: vSum, apr: vApprove, pool: vPool, users: vUsers, rep: vReports, lb: vLb, rooms: vRooms, prize: vPrize, ann: vAnn, adm: vAdmins}[S.tab]();
+  const body = {sum: vSum, stat: vStat, apr: vApprove, pool: vPool, users: vUsers, rep: vReports, lb: vLb, rooms: vRooms, prize: vPrize, ann: vAnn, adm: vAdmins}[S.tab]();
   const nrep = Object.keys(S.reports).length, npend = Object.values(S.quizzes).filter(q => q.status === 'pending').length;
   app.innerHTML = `<div class="wrap">
     <header class="row between"><h1>${esc(APP_NAME)} <span>Yönetim</span></h1><button class="btn ghost" data-act="logout">Çıkış</button></header>

@@ -189,7 +189,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 148';
+const APP_VERSION = '0.5 (test) · yapı 149';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -791,11 +791,25 @@ function showReacts(R) {
 }
 
 let unsubMe = null;
+/* ================= kalma süresi (yönetici istatistiği için) ================= */
+function actTick() {
+  if (!uid() || !S.me || document.visibilityState !== 'visible') return;
+  const d = dayIdx(), a = S.me.act || {};
+  if (S.actD !== d) { S.actD = d; S.actM = a['d' + d] || 0; }
+  S.actM = Math.min(1440, S.actM + 0.5);
+  const up = {['act/d' + d]: S.actM};
+  Object.keys(a).forEach(k => { if (+k.slice(1) < d - 35) up['act/' + k] = null; });
+  update(ref(db, 'users/' + uid()), up).catch(() => {});
+}
+setInterval(actTick, 30000);
+
 function watchMe() {
   if (unsubMe) unsubMe();
   unsubMe = onValue(ref(db, 'users/' + uid()), snap => {
     const v = snap.val(); if (!v) return;
     S.me = v;
+    const sig = JSON.stringify(Object.assign({}, v, {act: 0, seen: 0})); // süre sayacı yazıları ekranı yenilemesin
+    if (sig === S.meSig) return; S.meSig = sig;
     if (['home', 'daily', 'shop', 'settings'].includes(S.screen) && !S.busy) render();
   });
 }
