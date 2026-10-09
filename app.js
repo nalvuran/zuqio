@@ -189,7 +189,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 151';
+const APP_VERSION = '0.5 (test) · yapı 152';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -741,7 +741,7 @@ function giftSheet() {
       ${giftPreview(it.id)}${it.kind === 'fr' ? `<b class="small">${esc(it.name)}</b>` : ''}<span class="price">${COIN}${it.price}</span></button>`).join('')}</div>`;
   }
   return `<div class="annmodal" data-act="giftclose"><div class="giftsheet" role="dialog" aria-label="Hediye gönder" data-stop="1">
-    <div class="row between" style="margin-bottom:10px">${u.step === 'item' ? '<button class="btn ghost" data-act="giftback">‹ Geri</button>' : '<span></span>'}<span class="coinbar">${COIN}<b>${coins()}</b></span><button class="annx" style="position:static" data-act="giftclose" aria-label="Kapat">✕</button></div>${body}</div></div>`;
+    <div class="row between" style="margin-bottom:10px">${u.step === 'item' ? '<button class="btn ghost" data-act="giftback">‹ Geri</button>' : '<span></span>'}<span class="coinbar"><b>${coins()}</b>${COIN}</span><button class="annx" style="position:static" data-act="giftclose" aria-label="Kapat">✕</button></div>${body}</div></div>`;
 }
 
 async function equipItem(id) {
@@ -990,7 +990,7 @@ V.daily = () => {
   const nextAmt = DAILY[st.claimed ? st.next % 7 : st.next - 1];
   return `
   <div class="screen">
-    <div class="top">${backBtn('data-go="home"')}<span class="coinbar">${COIN}<b>${coins()}</b></span></div>
+    <div class="top">${backBtn('data-go="home"')}<span class="coinbar"><b>${coins()}</b>${COIN}</span></div>
     <div class="stack" style="gap:14px">
       <div class="phead"><span class="pico">${ICON.giftnav}</span><h2>Günlük ödül</h2></div>
       <div class="days" aria-label="7 günlük seri">${DAILY.map((amt, i) => `<div class="day ${i + 1 <= st.done ? 'done' : ''} ${!st.claimed && i + 1 === st.next ? 'today' : ''} ${i === 6 ? 'big7' : ''}"><span class="n">${i + 1}. gün</span>${COIN}<b>${amt}</b></div>`).join('')}</div>
@@ -1048,7 +1048,7 @@ V.shop = () => {
     </div>`;
   return `
   <div class="screen">
-    <div class="top">${backBtn('data-go="home"')}<span class="coinbar">${COIN}<b>${coins()}</b></span></div>
+    <div class="top">${backBtn('data-go="home"')}<span class="coinbar"><b>${coins()}</b>${COIN}</span></div>
     <div class="stack" style="gap:14px">
       <div class="phead"><span class="pico">${ICON.shop}</span><h2>Mağaza</h2></div>
       <div class="tabs four" role="tablist" style="grid-template-columns:repeat(3,1fr)">${Object.keys(tabs).map(k => `<button role="tab" class="${tab === k ? 'on' : ''}" aria-selected="${tab === k}" data-act="shoptab" data-t="${k}">${tabs[k]}</button>`).join('')}</div>
