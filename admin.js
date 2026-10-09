@@ -34,7 +34,7 @@ function periods() {
   return {d: 'd' + d, w: 'w' + w, m: 'm' + m};
 }
 
-const S = {user: null, role: null, tab: 'sum', users: {}, bans: {}, reports: {}, quizzes: {}, pool: {}, fix: {}, edit: null, poolTab: 'b', prizeM: 'cur', prizeRows: null, bookInfo: null, prizes: {}, pq: '', pcat: '', rooms: {}, admins: {}, ann: null, lb: {}, lbTab: 'd', q: '', open: null, subs: []};
+const S = {hide: {}, user: null, role: null, tab: 'sum', users: {}, bans: {}, reports: {}, quizzes: {}, pool: {}, fix: {}, edit: null, poolTab: 'b', prizeM: 'cur', prizeRows: null, bookInfo: null, prizes: {}, pq: '', pcat: '', rooms: {}, admins: {}, ann: null, lb: {}, lbTab: 'd', q: '', open: null, subs: []};
 
 /* ---------------- veri ---------------- */
 function watch(path, key) {
@@ -42,7 +42,7 @@ function watch(path, key) {
 }
 function startData() {
   watch('users', 'users'); watch('bans', 'bans'); watch('reports', 'reports');
-  watch('rooms', 'rooms'); watch('admins', 'admins'); watch('quizzes', 'quizzes'); watch('approvedQs', 'pool'); watch('qfix', 'fix'); watch('prizes', 'prizes');
+  watch('rooms', 'rooms'); watch('admins', 'admins'); watch('quizzes', 'quizzes'); watch('approvedQs', 'pool'); watch('qfix', 'fix'); watch('prizes', 'prizes'); watch('lbhide', 'hide');
   S.subs.push(onValue(ref(db, 'announce'), sn => { S.ann = sn.val(); render(); }));
   loadLb();
 }
@@ -186,6 +186,8 @@ function vUser(id) {
       <dt>Satın aldıkları</dt><dd>${owned.length ? esc(owned.join(', ')) : '–'}</dd>
       <dt>UID</dt><dd><code>${esc(id)}</code></dd>
     </dl>
+    <button class="btn" data-act="${S.hide[id] ? 'lbshow' : 'lbhide'}" data-id="${id}">${S.hide[id] ? 'Liderlik tablolarında tekrar göster' : 'Liderlik tablolarında gizle'}</button>
+    ${S.hide[id] ? '<p class="muted small">Bu hesap tablolarda görünmez, yeni oyunlarının puanı da tablolara eklenmez.</p>' : ''}
     ${ban ? `<div class="warn">Askıda · ${dt(ban.t)}${ban.why ? ' · ' + esc(ban.why) : ''}</div>
       <button class="btn" data-act="unban" data-id="${id}">Askıyı kaldır</button>`
     : S.admins[id] === 'super' ? '' : `<button class="btn danger" data-act="ban" data-id="${id}">Hesabı askıya al</button>`}
@@ -502,6 +504,8 @@ app.addEventListener('click', async e => {
     }
     else if (a === 'pooldel') { if (!confirm('Bu soru havuzdan kaldırılsın mı?')) return; await remove(ref(db, 'approvedQs/' + id)); toast('Kaldırıldı'); }
     else if (a === 'lbtab') { S.lbTab = el.dataset.t; render(); }
+    else if (a === 'lbhide') { if (!confirm('Bu hesap liderlik tablolarında gizlensin mi? Puanları artık sayılmaz.')) return; await set(ref(db, 'lbhide/' + id), true); toast('Gizlendi'); }
+    else if (a === 'lbshow') { await remove(ref(db, 'lbhide/' + id)); toast('Tekrar gösterilecek'); }
     else if (a === 'lbreload') loadLb();
     else if (a === 'lbdel') {
       const r = (S.lb[S.lbTab] || {})[id]; if (!confirm(`${r ? r.n : ''} adlı oyuncunun puanı günlük, haftalık, aylık ve ödül tablolarından silinsin mi?`)) return;

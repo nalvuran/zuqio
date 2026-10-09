@@ -400,6 +400,13 @@
         }
       }
     },
+    "lbhide": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && root.child('admins').child(auth.uid).exists()",
+        ".validate": "newData.val() === true"
+      }
+    },
     "prizes": {
       ".read": "auth != null",
       "$m": {
