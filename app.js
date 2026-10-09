@@ -189,7 +189,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 136';
+const APP_VERSION = '0.5 (test) · yapı 137';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1056,6 +1056,8 @@ V.settings = () => `
           <button class="switch ${S.sound ? 'on' : ''}" role="switch" aria-checked="${S.sound}" aria-label="Ses efektleri" data-act="tsound"></button></div>
         <div class="setrow"><div><b>Titreşim</b>${HAP_OK ? '' : '<span class="small muted">Bu cihaz titreşimi desteklemiyor</span>'}</div>
           <button class="switch ${S.haptic && HAP_OK ? 'on' : ''}" role="switch" aria-checked="${!!(S.haptic && HAP_OK)}" aria-label="Titreşim" data-act="thaptic" ${HAP_OK ? '' : 'disabled'}></button></div>
+        <div class="setrow"><div><b>Rakip arayan olunca haber ver</b><span class="small muted">Biri Rakip Bul'a basınca üstte küçük bir kutu çıkar</span></div>
+          <button class="switch ${qmOn() ? 'on' : ''}" role="switch" aria-checked="${qmOn()}" aria-label="Rakip arayan bildirimi" data-act="tqmn"></button></div>
       </div>
       <div class="card stack" style="gap:0;padding:0 16px">
         <button class="setrow" data-act="openprofile"><div><b>Profili düzenle</b><span class="small muted">${esc(S.me.name)}</span></div>${avatar(S.me.av, '', S.me.fr)}</button>
@@ -1631,7 +1633,7 @@ function gnav() {
   if (!NAV_SCREENS.includes(S.screen) || S.R || (S.screen === 'profile' && S.firstProfile)) return '';
   const on = k => S.screen === k ? ' on' : '';
   const dot = (() => { const d = dailyState(); return !d.claimed || !d.qDone ? ' hasdot' : ''; })();
-  return `<div class="gnav-sp"></div><div class="gnav"><nav class="bottomnav" aria-label="Ana menü">
+  return `<div class="gnav-sp"></div><div class="gnav">${qmHtml()}<nav class="bottomnav" aria-label="Ana menü">
       <button data-go="home" class="${on('home').trim()}">${ICON.home}ANA SAYFA</button>
       <button data-go="shop" class="${on('shop').trim()}">${ICON.shop}MAĞAZA</button>
       <button data-act="openboard" class="${on('board').trim()}">${ICON.trophy}LİDERLİK</button>
@@ -1723,7 +1725,7 @@ onAuthStateChanged(auth, async u => {
 });
 
 async function afterLogin() {
-  watchMe();
+  watchMe(); watchQuick();
   if (S.pendingChal) { const m = S.pendingChal; S.pendingChal = null; ls.set('zuqio-room', ''); openChallenge(m); return; }
   const code = S.pendingCode || ls.get('zuqio-room');
   S.pendingCode = null;
@@ -1914,6 +1916,49 @@ async function joinRoom(code, silent) {
     await set(ref(db, `rooms/${code}/players/${uid()}`), {name: S.me.name, av: S.me.av, fr: S.me.fr || '', lv: myLv(), online: true, joinedAt: serverTimestamp()});
     S.busy = false; enterRoom(code); return true;
   } catch (e) { console.error(e); S.busy = false; if (!silent) render(); toast('Odaya katılılamadı'); return false; }
+}
+
+/* ================= rakip arıyor bildirimi ================= */
+const QM_SHOW_MS = 50000, QM_SNOOZE = 180000;
+function qmOn() { return ls.get('zuqio-qmn') !== '0'; }
+function watchQuick() {
+  if (S.qmUnsub) return;
+  S.qmUnsub = onValue(query(ref(db, 'rooms'), orderByChild('qm'), equalTo('open')), sn => {
+    const rooms = [];
+    sn.forEach(ch => { const R = ch.val(); if (R) rooms.push({code: ch.key, R}); });
+    S.qmRooms = rooms; qmRefresh();
+  }, err => { console.error(err); S.qmUnsub = null; });
+  if (!S.qmTimer) S.qmTimer = setInterval(qmRefresh, 4000);
+}
+function qmPick() {
+  if (!uid() || !qmOn() || S.code || S.R || now() < (S.qmSnooze || 0)) return null;
+  const t = now(); let best = null;
+  for (const {code, R} of (S.qmRooms || [])) {
+    if (R.status !== 'lobby' || !R.quick || R.host === uid()) continue;
+    const host = (R.players || {})[R.host];
+    if (!host || host.online === false || (R.createdAt || 0) < t - QM_SHOW_MS) continue;
+    if (Object.values(R.players || {}).filter(p => p.online !== false).length >= QUICK_MAX) continue;
+    if (!best || (R.createdAt || 0) > best.at) best = {code, name: String(host.name || 'Bir oyuncu'), at: R.createdAt || 0};
+  }
+  return best;
+}
+function qmHtml() {
+  const q = S.qmShow; if (!q || !NAV_SCREENS.includes(S.screen)) return '';
+  return `<div class="qmban" role="alert"><div class="qmt"><b>${esc(q.name)}</b> rakip arıyor</div><button class="qmgo" data-act="qmjoin">KATIL</button><button class="qmx" data-act="qmx" aria-label="Kapat">✕</button></div>`;
+}
+function qmRefresh() {
+  const q = qmPick(), old = S.qmShow;
+  if ((q && q.code) === (old && old.code)) return;
+  S.qmShow = q;
+  if (q && !S.qmSeen) { S.qmSeen = {}; }
+  if (q && S.qmSeen && !S.qmSeen[q.code]) { S.qmSeen[q.code] = 1; buzz(25); }
+  const g = document.querySelector('.gnav'); if (!g) return;
+  const el = g.querySelector('.qmban'); if (el) el.remove();
+  const h = qmHtml(); if (h) g.insertAdjacentHTML('afterbegin', h);
+}
+function qmJoin() {
+  const q = S.qmShow; if (!q) return;
+  S.qmShow = null; stopOpenRooms(); joinRoom(q.code);
 }
 
 async function quickPlay() {
@@ -2510,6 +2555,9 @@ app.addEventListener('click', e => {
   else if (a === 'equip') equipItem(el.dataset.id);
   else if (a === 'tmusic') { S.music = !S.music; ls.set('zuqio-music', S.music ? '1' : '0'); if (S.music) MUSIC.start(); else MUSIC.stop(); render(); }
   else if (a === 'tsound') { S.sound = !S.sound; ls.set('zuqio-sound', S.sound ? '1' : '0'); if (S.sound) SFX.play('correct'); render(); }
+  else if (a === 'qmjoin') qmJoin();
+  else if (a === 'qmx') { S.qmSnooze = now() + QM_SNOOZE; qmRefresh(); }
+  else if (a === 'tqmn') { ls.set('zuqio-qmn', qmOn() ? '0' : '1'); qmRefresh(); render(); }
   else if (a === 'thaptic') { S.haptic = !S.haptic; ls.set('zuqio-haptic', S.haptic ? '1' : '0'); if (S.haptic) buzz(40); render(); }
   else if (a === 'create') createRoom();
   else if (a === 'quick') { stopOpenRooms(); quickPlay(); }
