@@ -232,6 +232,35 @@
         }
       }
     },
+    "challenges": {
+      "$id": {
+        ".read": "auth != null && now < data.child('t').val() + 1209600000",
+        ".write": "auth != null && !data.exists() && newData.child('from').val() === auth.uid && !root.child('bans').child(auth.uid).exists()",
+        ".validate": "$id.matches(/^[a-z0-9]{6,16}$/) && newData.hasChildren(['from','fn','score','n','lbl','t']) && newData.child('from').isString() && newData.child('fn').isString() && newData.child('fn').val().length >= 1 && newData.child('fn').val().length <= 25 && newData.child('score').isNumber() && newData.child('score').val() >= 0 && newData.child('score').val() <= 60000 && newData.child('n').isNumber() && newData.child('n').val() >= 1 && newData.child('n').val() <= 20 && newData.child('lbl').isString() && newData.child('lbl').val().length <= 60 && newData.child('t').val() === now && (newData.child('ids').exists() ? (newData.child('ids').isString() && newData.child('ids').val().length <= 400) : newData.child('qs').exists())",
+        "qs": {
+          "$i": {
+            ".validate": "$i.matches(/^([0-9]|1[0-9])$/) && newData.hasChildren(['t','q']) && (newData.child('t').val() === 'mc' || newData.child('t').val() === 'num') && newData.child('q').isString() && newData.child('q').val().length <= 300",
+            "t": {".validate": "newData.isString()"},
+            "q": {".validate": "newData.isString()"},
+            "o": {"$k": {".validate": "$k.matches(/^[0-3]$/) && newData.isString() && newData.val().length <= 150"}},
+            "cat": {".validate": "newData.isString() && newData.val().length <= 40"},
+            "unit": {".validate": "newData.isString() && newData.val().length <= 30"},
+            "a": {".validate": "newData.isNumber()"},
+            "tolAbs": {".validate": "newData.isNumber()"},
+            "info": {".validate": "newData.isString() && newData.val().length <= 300"},
+            "$other": {".validate": false}
+          }
+        },
+        "from": {".validate": "newData.val() === auth.uid"},
+        "fn": {".validate": "newData.isString()"},
+        "score": {".validate": "newData.isNumber()"},
+        "n": {".validate": "newData.isNumber()"},
+        "lbl": {".validate": "newData.isString()"},
+        "t": {".validate": "newData.isNumber()"},
+        "ids": {".validate": "newData.isString()"},
+        "$other": {".validate": false}
+      }
+    },
     "announce": {
       ".read": "auth != null",
       ".write": "auth != null && root.child('admins').child(auth.uid).exists()",

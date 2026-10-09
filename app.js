@@ -75,6 +75,7 @@ const ICON = {
   gear:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   shop:'<svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0zM5 13v7h14v-7M10 20v-4h4v4"/></svg>',
   help:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.5-2.7 4M12 17.5h.01"/></svg>',
+  share:'<svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 13v6h14v-6"/></svg>',
   gift:'<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8S10.5 3.5 8 4.2 8.4 8 12 8zM12 8s1.5-4.5 4-3.8S15.6 8 12 8z"/></svg>',
   back:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>'
 };
@@ -185,7 +186,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 127';
+const APP_VERSION = '0.5 (test) · yapı 128';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -486,6 +487,103 @@ function lvCard() {
     <div class="lvbar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
     <p class="small muted" style="margin:0">Sonraki seviyeye ${b - xp} XP. Rakiplerle ve arkadaşlarınla oynadığın oyunlardan XP kazanırsın, her seviye ${LV_COIN} jeton verir.</p></div>`;
 }
+
+/* ================= meydan okuma ================= */
+const CHAL_URL = 'https://playzuqio.com/?m=', CHAL_DAILY = 5;
+let bankMap = null;
+const bankQ = id => {
+  if (!bankMap) { bankMap = new Map(); for (const q of QUESTIONS) bankMap.set(q.fk || qid(q), q); for (const p of PACKS) for (const q of p.qs) bankMap.set(q.fk || qid(q), q); }
+  return bankMap.get(id);
+};
+const chalDayCount = () => { try { const o = JSON.parse(ls.get('zuqio-chal') || '{}'); return o.d === dayIdx() ? (o.n || 0) : 0; } catch (e) { return 0; } };
+const chalDayAdd = () => ls.set('zuqio-chal', JSON.stringify({d: dayIdx(), n: chalDayCount() + 1}));
+const chalLabel = R => {
+  if (R.chal && S.chalData) return S.chalData.lbl;
+  if (R.quiz) return R.quizTitle || 'Kendi Zuqio’m';
+  const pk = roomPack(R); if (pk) return pk.name;
+  const c = R.cats ? R.cats.split('|') : []; return c.length && c.length <= 2 ? c.join(' ve ') : 'Karışık sorular';
+};
+// Bitmiş oyundaki soruları, tüm cevaplarıyla meydan okuma kaydına çevirir
+function chalQuestions(R) {
+  const out = [];
+  for (let i = 0; i < (R.questions || []).length; i++) {
+    const q = R.questions[i], rv = R.reveal && R.reveal[i]; if (!rv || rv.a == null) return null;
+    const it = q.t === 'mc'
+      ? {t: 'mc', q: q.q, o: [q.o[rv.a]].concat(q.o.filter((x, k) => k !== rv.a)), cat: q.cat || ''}
+      : {t: 'num', q: q.q, unit: q.unit || '', a: rv.a, cat: q.cat || ''};
+    if (q.tolAbs) it.tolAbs = q.tolAbs;
+    if (rv.info) it.info = rv.info;
+    out.push(it);
+  }
+  return out;
+}
+async function createChallenge() {
+  const R = S.R; if (!R || S.busy || R.study || !(R.questions || []).length) return;
+  if (chalDayCount() >= CHAL_DAILY) { toast('Bugünlük meydan okuma hakkın doldu'); return; }
+  S.busy = true; render();
+  try {
+    const ids = R.questions.map(q => q.id), data = {from: uid(), fn: S.me.name, score: (R.scores || {})[uid()] || 0, n: R.questions.length, lbl: String(chalLabel(R)).slice(0, 60), t: serverTimestamp()};
+    if (ids.every(i => i && bankQ(i))) data.ids = ids.join(',');
+    else { const qs = chalQuestions(R); if (!qs) throw new Error('chal-q'); data.qs = qs; }
+    const id = Math.random().toString(36).slice(2, 10);
+    await set(ref(db, 'challenges/' + id), data);
+    chalDayAdd();
+    const url = CHAL_URL + id, text = `${S.me.name} Zuqio’da ${data.lbl} konusunda ${fmt(data.score)} puan yaptı. Seni geçebilir misin?`;
+    S.busy = false; render();
+    try { if (navigator.share) { await navigator.share({title: 'Zuqio meydan okuması', text, url}); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(text + ' ' + url); toast('Bağlantı kopyalandı, arkadaşına gönderebilirsin'); }
+    catch (e) { prompt('Bu bağlantıyı arkadaşına gönder:', text + ' ' + url); }
+  } catch (e) { console.error(e); toast('Meydan okuma hazırlanamadı, tekrar dene'); }
+  S.busy = false; render();
+}
+const chalBtn = R => (R && !R.study && (R.questions || []).length && R.status === 'final') ? `<button class="btn outline" data-act="chalnew" ${S.busy ? 'disabled' : ''}>${ic('share')}Arkadaşına meydan oku</button>` : '';
+async function openChallenge(id) {
+  S.chal = {id, st: 'load'}; go('challenge');
+  try {
+    const v = (await get(ref(db, 'challenges/' + id))).val(); if (!v) throw new Error('gone');
+    const pool = v.ids ? v.ids.split(',').map(bankQ).filter(Boolean)
+      : Object.values(v.qs || {}).map(q => q.t === 'mc' ? {t: 'mc', q: q.q, o: Object.values(q.o || {}), cat: q.cat || '', d: 'o', info: q.info || ''}
+        : Object.assign({t: 'num', q: q.q, unit: q.unit || '', a: q.a, cat: q.cat || '', d: 'o', info: q.info || ''}, q.tolAbs ? {tolAbs: q.tolAbs} : {}));
+    if (pool.length < Math.min(3, v.n || 3)) throw new Error('gone');
+    S.chal = {id, st: 'ready', d: v, pool};
+  } catch (e) { S.chal = {id, st: 'gone'}; }
+  if (S.screen === 'challenge') render();
+}
+function startChallenge() {
+  const c = S.chal; if (!c || c.st !== 'ready' || S.busy) return;
+  if (S.code) leaveLocal();
+  S.chalData = c.d; S.chalPool = c.pool;
+  const code = 'L' + Date.now().toString(36);
+  const ps = {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', lv: myLv(), online: true, joinedAt: now()}};
+  lset('rooms/' + code, {host: uid(), status: 'lobby', count: c.pool.length, diff: 'mix', bot: true, chal: c.id, createdAt: now(), players: ps});
+  enterRoom(code);
+  const go1 = () => { if (S.code === code && S.R && S.R.status === 'lobby') startGame(); };
+  setTimeout(go1, 60); setTimeout(go1, 400);
+}
+const chalView = () => {
+  const c = S.chal || {st: 'gone'}, v = c.d;
+  const body = c.st === 'load' ? '<p class="muted" style="text-align:center">Meydan okuma yükleniyor…</p>'
+    : c.st === 'gone' ? '<div class="card stack" style="text-align:center"><b>Bu meydan okuma artık açılamıyor</b><p class="small muted" style="margin:0">Süresi dolmuş ya da silinmiş olabilir. Yine de Zuqio’yu oynayabilirsin.</p></div>'
+    : `<div class="card stack" style="align-items:center;text-align:center;gap:10px">
+        <span class="tag">${ic('trophy')}Meydan okuma</span>
+        <h2 style="margin:0">${esc(v.fn)} seni yarışmaya çağırıyor</h2>
+        <p class="muted" style="margin:0">${esc(v.lbl)} · ${v.n} soru</p>
+        <div style="font-size:2.4rem;font-weight:800;line-height:1.1">${fmt(v.score)}</div>
+        <p class="small muted" style="margin:0">Bu puanı geçebilir misin?</p></div>`;
+  return `<div class="screen">
+    <div class="top">${backBtn('data-go="home"')}</div>
+    <div class="grow" style="min-height:10px"></div>${body}<div class="grow"></div>
+    <div class="stack">${c.st === 'ready' ? `<button class="btn primary big" data-act="chalgo"><span class="ic">${ICON.play}</span><span class="lb">KABUL ET</span></button>` : ''}
+      <button class="btn ghost" data-go="home">${c.st === 'ready' ? 'Şimdi değil' : 'Ana menü'}</button></div></div>`;
+};
+const chalCard = R => {
+  const v = R.chal && S.chalData; if (!v) return '';
+  const mine = (R.scores || {})[uid()] || 0, win = mine > v.score, tie = mine === v.score;
+  return `<div class="card stack" style="gap:8px;margin-top:14px"><b>${ic('trophy')}Meydan okuma</b>
+    <div class="row between"><span>${esc(v.fn)}</span><b>${fmt(v.score)}</b></div>
+    <div class="row between"><span>Sen</span><b>${fmt(mine)}</b></div>
+    <p class="small" style="margin:0;color:var(--yellow)">${win ? 'Puanı geçtin!' : tie ? 'Berabere kaldınız.' : `${fmt(v.score - mine)} puan eksik kaldı.`}</p></div>`;
+};
 
 /* ================= hediye ================= */
 const GIFT_DAILY = 3;
@@ -1405,17 +1503,20 @@ V.final = () => {
   const pod = (p, place, h) => p ? `<div class="pod"><div class="row" style="justify-content:center">${avatar(p.av, '', p.fr)}</div><div class="nm">${esc(p.name)}</div><div class="sc${place === 1 ? ' first' : ''}">${fmt(sc[p.id] || 0)}</div><div class="blk" style="height:${h}px;background:${COLORS[(place - 1) % 4]}">${place}</div></div>` : '<div></div>';
   return `
   <div class="screen">
-    <h2 style="text-align:center;margin-top:10px">${myRank === 1 ? 'Kazandın!' : `${myRank}. oldun`}</h2>
-    <p class="muted small" style="text-align:center;margin-top:4px">${R.bot ? 'Antrenman oyunuydu, liderlik tablosuna sayılmaz.' : R.quiz ? 'Topluluk Zuqio’ları liderlik tablosuna sayılmaz.' : S.lbDone === R.gid ? 'Puanın günlük, haftalık ve aylık tablolara eklendi.' : (R.scores && R.scores[uid()] ? 'Puanın lider tablolarına ekleniyor…' : '')}</p>
+    <h2 style="text-align:center;margin-top:10px">${R.chal && S.chalData ? ((sc[uid()] || 0) > S.chalData.score ? 'Meydan okumayı kazandın!' : (sc[uid()] || 0) === S.chalData.score ? 'Berabere!' : 'Bu sefer olmadı') : myRank === 1 ? 'Kazandın!' : `${myRank}. oldun`}</h2>
+    <p class="muted small" style="text-align:center;margin-top:4px">${R.chal ? 'Meydan okuma oyunu liderlik tablosuna sayılmaz.' : R.bot ? 'Antrenman oyunuydu, liderlik tablosuna sayılmaz.' : R.quiz ? 'Topluluk Zuqio’ları liderlik tablosuna sayılmaz.' : S.lbDone === R.gid ? 'Puanın günlük, haftalık ve aylık tablolara eklendi.' : (R.scores && R.scores[uid()] ? 'Puanın lider tablolarına ekleniyor…' : '')}</p>
     ${xpLine(R)}
-    <div class="podium">${pod(s[1], 2, 70)}${pod(s[0], 1, 104)}${pod(s[2], 3, 50)}</div>
+    ${R.chal ? chalCard(R) : `<div class="podium">${pod(s[1], 2, 70)}${pod(s[0], 1, 104)}${pod(s[2], 3, 50)}</div>`}
     <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>${lvBadge(p)}<span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
     ${reactBar()}
     ${wrongBlock(R)}
-    ${giftBtn(R)}${giftSheet()}
+    ${chalBtn(R)}${giftBtn(R)}${giftSheet()}
     <div class="grow" style="min-height:20px"></div>
     <div class="stack">
-      ${R.bot
+      ${R.chal
+        ? `<button class="btn primary big" data-act="botagain"><span class="ic">${ICON.play}</span><span class="lb">TEKRAR DENE</span></button>
+           <button class="btn ghost" data-act="leave">Ana menü</button>`
+        : R.bot
         ? `<button class="btn primary big" data-act="botagain"><span class="ic">${ICON.play}</span><span class="lb">TEKRAR OYNA</span></button>
            <button class="btn outline" data-act="quickfrombot">Gerçek rakip ara</button>
            <button class="btn ghost" data-act="leave">Ana menü</button>`
@@ -1528,6 +1629,7 @@ onAuthStateChanged(auth, async u => {
 
 async function afterLogin() {
   watchMe();
+  if (S.pendingChal) { const m = S.pendingChal; S.pendingChal = null; ls.set('zuqio-room', ''); openChallenge(m); return; }
   const code = S.pendingCode || ls.get('zuqio-room');
   S.pendingCode = null;
   if (code) { const ok = await joinRoom(code, true); if (ok) return; }
@@ -1879,6 +1981,8 @@ async function startGame() {
       const qz = (S.myQuizzes || {})[R.quiz] || (await get(ref(db, 'quizzes/' + R.quiz))).val();
       if (!qz || !qz.qs) throw new Error('quiz-missing');
       built = buildGame(0, 'mix', null, shuffle(Object.values(qz.qs)).map(q => Object.assign({cat: qz.cat, d: 'o'}, q)));
+    } else if (R.chal && S.chalPool) {
+      built = buildGame(0, 'mix', null, S.chalPool.slice());
     } else if (roomPack(R)) {
       const pk = roomPack(R); built = buildGame(0, 'mix', null, shuffle(pk.qs.slice()).slice(0, Math.min(R.count || 10, pk.qs.length)));
     } else built = buildGame(R.count || 10, R.diff || 'mix', R.cats ? R.cats.split('|') : null);
@@ -2384,6 +2488,8 @@ app.addEventListener('click', e => {
   else if (a === 'qzsubmit') { if (confirm('Zuqio onaya gönderilsin mi? Onaylanan sorular herkesin oyunlarında çıkabilir.')) saveQz('pending'); }
   else if (a === 'qzwithdraw') { (async () => { try { await update(ref(db, 'quizzes/' + S.qz.id), {status: 'draft', t: serverTimestamp()}); S.qz.status = 'draft'; S.myQuizzes[S.qz.id].status = 'draft'; render(); } catch (e) { toast('Geri çekilemedi'); } })(); }
   else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
+  else if (a === 'chalnew') createChallenge();
+  else if (a === 'chalgo') startChallenge();
   else if (a === 'tdet') { S.showDet = !S.showDet; render(); }
   else if (a === 'giftopen') { if (giftDayCount() >= GIFT_DAILY) { toast('Bugünlük hediye hakkın doldu'); return; } S.giftUI = {step: 'player'}; render(); }
   else if (a === 'giftclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.giftUI = null; render(); }
@@ -2409,7 +2515,10 @@ app.addEventListener('keydown', e => {
   const act = map[e.target.id]; if (act) { const b = app.querySelector(`[data-act="${act}"]`); if (b && !b.disabled) b.click(); }
 });
 
+V.challenge = chalView;
 /* ================= başlangıç ================= */
+const qm = new URLSearchParams(location.search).get('m');
+if (qm && /^[a-z0-9]{6,16}$/.test(qm)) { S.pendingChal = qm; history.replaceState(null, '', location.pathname); }
 const qp = new URLSearchParams(location.search).get('oda');
 if (qp && /^\d{6}$/.test(qp)) { S.pendingCode = qp; history.replaceState(null, '', location.pathname); }
 render();
