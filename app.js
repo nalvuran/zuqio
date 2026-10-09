@@ -185,7 +185,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 122';
+const APP_VERSION = '0.5 (test) · yapı 123';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1134,7 +1134,7 @@ V.reveal = () => {
   return `
   <div class="screen">
     <div class="verdict ${cls}"><b>${title}</b><p>${sub}</p></div>
-    ${rv.info ? `<div class="card infocard"><b>${q.cat === 'İngilizce' ? 'Öğren' : 'Biliyor muydun?'}</b><p>${esc(rv.info)}</p></div>` : ''}
+    ${rv.info ? `<div class="card infocard"><b>${q.cat === 'İngilizce' ? 'Öğren' : q.cat === 'Ders notu' ? 'Açıklama' : 'Biliyor muydun?'}</b><p>${esc(rv.info)}</p></div>` : ''}
     <div class="row between" style="margin:20px 0 10px"><b>Sıralama</b><span class="small muted">Soru ${qi + 1} / ${R.questions.length}</span></div>
     <div class="stack" style="gap:8px">${rankList(R, qi)}</div>
     ${reactBar()}
@@ -1237,6 +1237,25 @@ V.board = () => {
   </div>`;
 };
 
+// Yanlış cevaplanan ya da boş bırakılan sorular (oda verisinden, her oyun türünde)
+function wrongList(R) {
+  const out = [], val = (q, v) => q.t === 'mc' ? q.o[v] : fmt(v) + (q.unit ? ' ' + q.unit : '');
+  (R.questions || []).forEach((q, qi) => {
+    const rv = R.reveal && R.reveal[qi]; if (!rv) return;
+    if ((rv.gains && rv.gains[uid()]) > 0) return;
+    const x = ansOf(R, qi)[uid()];
+    out.push({n: qi + 1, q: q.q, mine: x && x.v != null ? val(q, x.v) : '', right: val(q, rv.a), info: rv.info || ''});
+  });
+  return out;
+}
+function wrongBlock(R) {
+  const w = wrongList(R); if (!w.length) return '';
+  return `<button class="btn outline" data-act="tdet" aria-expanded="${!!S.showDet}">${ic('list')}Yanlışlarım (${w.length})${S.showDet ? ' ▲' : ' ▼'}</button>` + (S.showDet ? `<div class="stack" style="gap:8px">${w.map(x => `
+    <div class="card stack" style="gap:6px"><span class="small muted">${x.n}. soru</span><b>${esc(x.q)}</b>
+      <p class="small" style="color:#FF9DA0">Senin cevabın: ${x.mine ? esc(x.mine) : 'Cevap vermedin'}</p>
+      <p class="small" style="color:#8BE3A8">Doğru cevap: ${esc(x.right)}</p>
+      ${x.info ? `<p class="small muted">${esc(x.info)}</p>` : ''}</div>`).join('')}</div>` : '');
+}
 V.final = () => {
   const R = S.R, sc = R.scores || {};
   if (R.study) {
@@ -1248,6 +1267,7 @@ V.final = () => {
       <div style="font-size:3rem;font-weight:800;line-height:1.1">${ok} / ${total}</div>
       <p class="muted">soruyu doğru cevapladın</p>
     </div>
+    ${wrongBlock(R)}
     <div class="grow" style="min-height:20px"></div>
     <div class="stack">
       <button class="btn primary big" data-act="studyagain"><span class="ic">${ICON.play}</span><span class="lb">TEKRAR ÇALIŞ</span></button>
@@ -1265,6 +1285,7 @@ V.final = () => {
     <div class="podium">${pod(s[1], 2, 70)}${pod(s[0], 1, 104)}${pod(s[2], 3, 50)}</div>
     <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b><span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
     ${reactBar()}
+    ${wrongBlock(R)}
     <div class="grow" style="min-height:20px"></div>
     <div class="stack">
       ${R.bot
@@ -1473,7 +1494,7 @@ async function saveProfile() {
 /* ================= oda ================= */
 function enterRoom(code) {
   if (S.unsubRoom) S.unsubRoom();
-  S.qmSince = now(); S.qmOffered = false;
+  S.qmSince = now(); S.qmOffered = false; S.showDet = false;
   S.code = code; S.R = null; S.keys = null; S.lastKey = ''; S.q = null; S.lastN = null;
   if (code[0] !== 'L') ls.set('zuqio-room', code);
   markOnline();
@@ -1808,6 +1829,7 @@ function hostStep() {
 }
 
 async function playAgain() {
+  S.showDet = false;
   S.busy = true; render();
   try {
     await remove(ref(db, 'keys/' + S.code));
@@ -2028,7 +2050,7 @@ function checkQz(Z) {
 }
 async function saveQz(status) {
   readQz(); const Z = S.qz, err = checkQz(Z); if (err) { toast(err); return; }
-  const qs = Z.qs.map(q => q.t === 'mc' ? {t: 'mc', q: q.q.trim(), o: q.o.map(x => x.trim()), cat: q.cat}
+  const qs = Z.qs.map(q => q.t === 'mc' ? Object.assign({t: 'mc', q: q.q.trim(), o: q.o.map(x => x.trim()), cat: q.cat}, q.info ? {info: String(q.info).slice(0, 240)} : {})
     : {t: 'num', q: q.q.trim(), a: parseFloat(String(q.a).replace(',', '.')), unit: String(q.unit).trim(), cat: q.cat});
   const id = Z.id || ('z' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6));
   const data = {owner: uid(), name: S.me.name, title: Z.title.trim().slice(0, 40), cat: qs[0].cat, qs, status, t: serverTimestamp()};
@@ -2234,6 +2256,7 @@ app.addEventListener('click', e => {
   else if (a === 'qzsubmit') { if (confirm('Zuqio onaya gönderilsin mi? Onaylanan sorular herkesin oyunlarında çıkabilir.')) saveQz('pending'); }
   else if (a === 'qzwithdraw') { (async () => { try { await update(ref(db, 'quizzes/' + S.qz.id), {status: 'draft', t: serverTimestamp()}); S.qz.status = 'draft'; S.myQuizzes[S.qz.id].status = 'draft'; render(); } catch (e) { toast('Geri çekilemedi'); } })(); }
   else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
+  else if (a === 'tdet') { S.showDet = !S.showDet; render(); }
   else if (a === 'qzstudy') startStudy(el.dataset.id);
   else if (a === 'studyagain') { const id = S.R && S.R.quiz; leaveLocal(); if (id) startStudy(id); else go('home'); }
   else if (a === 'qzplay') { const q = S.myQuizzes[el.dataset.id]; createRoom({quiz: el.dataset.id, quizTitle: q.title, quizN: Object.keys(q.qs || {}).length, quizDur: q.dur || null}); }
