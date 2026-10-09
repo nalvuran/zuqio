@@ -189,7 +189,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 146';
+const APP_VERSION = '0.5 (test) · yapı 147';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -907,7 +907,7 @@ V.banned = () => `
     </div>
     <div class="grow"></div><button class="btn ghost" data-act="logout">Çıkış yap</button></div>`;
 
-V.loading = () => `<div class="screen"><div class="grow"></div>${LOGO()}<div class="grow"></div><p class="status">Yükleniyor…</p></div>`;
+V.loading = () => `<div class="screen home2"><div class="grow"></div>${LOGO()}<div class="grow"></div><p class="status">Yükleniyor…</p></div>`;
 
 V.login = () => `
   <div class="screen">
