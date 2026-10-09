@@ -65,6 +65,33 @@
         "lv": {
           ".validate": "newData.isNumber() && newData.val() % 1 === 0 && newData.val() >= 1 && newData.val() <= 100 && newData.val() >= (data.exists() ? data.val() : 1) && 30 * (newData.val() - 1) * (newData.val() - 1) + 20 * (newData.val() - 1) <= newData.parent().child('xp').val()"
         },
+        "st": {
+          "n": {".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() % 1 === 0 && newData.val() <= (data.exists() ? data.val() : 0) + 40"},
+          "ok": {".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() % 1 === 0 && newData.val() <= newData.parent().child('n').val()"},
+          "g": {".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= (data.exists() ? data.val() : 0) + 1"},
+          "bs": {".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100"},
+          "ms": {".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= (data.exists() ? data.val() : 0) + 1500000"},
+          "mn": {".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= (data.exists() ? data.val() : 0) + 40"},
+          "wr": {".validate": "newData.isString() && newData.val().length <= 600"},
+          "c": {
+            "$k": {
+              ".validate": "$k.matches(/^[a-z0-9]{1,16}$/)",
+              "n": {".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= (data.exists() ? data.val() : 0) + 40"},
+              "ok": {".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= newData.parent().child('n').val()"},
+              "t": {".validate": "newData.isString() && newData.val().length <= 30"},
+              "$other": {".validate": false}
+            }
+          },
+          "d": {
+            "$k": {
+              ".validate": "$k.matches(/^d[0-9]{5}$/)",
+              "n": {".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= (data.exists() ? data.val() : 0) + 40"},
+              "ok": {".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= newData.parent().child('n').val()"},
+              "$other": {".validate": false}
+            }
+          },
+          "$other": {".validate": false}
+        },
         "email": {
           ".validate": "newData.isString() && newData.val().length <= 120 && newData.val() === auth.token.email"
         },

@@ -75,6 +75,7 @@ const ICON = {
   gear:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
   shop:'<svg viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9M3 9h18v2a3 3 0 0 1-6 0 3 3 0 0 1-6 0 3 3 0 0 1-6 0zM5 13v7h14v-7M10 20v-4h4v4"/></svg>',
   help:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4.9c0 1.9-2.7 2.5-2.7 4M12 17.5h.01"/></svg>',
+  chart:'<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
   share:'<svg viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 13v6h14v-6"/></svg>',
   gift:'<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="4" rx="1"/><path d="M5 12v8h14v-8M12 8v12M12 8S10.5 3.5 8 4.2 8.4 8 12 8zM12 8s1.5-4.5 4-3.8S15.6 8 12 8z"/></svg>',
   back:'<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>'
@@ -186,7 +187,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 129';
+const APP_VERSION = '0.5 (test) · yapı 130';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -487,6 +488,77 @@ function lvCard() {
     <div class="lvbar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
     <p class="small muted" style="margin:0">Sonraki seviyeye ${b - xp} XP. Rakiplerle ve arkadaşlarınla oynadığın oyunlardan XP kazanırsın, her seviye ${LV_COIN} jeton verir.</p></div>`;
 }
+
+/* ================= istatistikler ================= */
+const catKey = c => String(c || 'diger').toLowerCase().replace(/ı/g, 'i').replace(/ş/g, 's').replace(/ğ/g, 'g').replace(/ü/g, 'u').replace(/ö/g, 'o').replace(/ç/g, 'c').replace(/[^a-z0-9]/g, '').slice(0, 16) || 'diger';
+const WR_MAX = 40;
+// Oyun sonunda kategori, doğru oranı, hız ve yanlış soru kaydını kullanıcının özel istatistiklerine ekler
+async function claimStats(R) {
+  const gid = R.gid, qs = R.questions || []; if (!gid || !qs.length || S.stDone === gid || S.stBusy === gid) return;
+  S.stBusy = gid;
+  try {
+    await freshWallet();
+    const st = (S.me && S.me.st) || {}, me = uid(), d = dayIdx();
+    let n = 0, ok = 0, ms = 0, mn = 0, run = 0, best = 0; const cat = {}, wrong = [], fixed = [];
+    qs.forEach((q, i) => {
+      const rv = R.reveal && R.reveal[i]; if (!rv) return;
+      const good = !!(rv.gains && rv.gains[me] > 0), k = catKey(q.cat);
+      n++; if (good) { ok++; run++; best = Math.max(best, run); } else run = 0;
+      const c = cat[k] || (cat[k] = {n: 0, ok: 0, t: String(q.cat || 'Diğer').slice(0, 30)}); c.n++; if (good) c.ok++;
+      const t = (S.ansMs || {})[gid + ':' + i]; if (!R.study && typeof t === 'number' && t < 120000) { ms += t; mn++; }
+      if (q.id && bankQ(q.id)) (good ? fixed : wrong).push(q.id);
+    });
+    if (!n) { S.stDone = gid; S.stBusy = null; return; }
+    const up = {['st/n']: (st.n || 0) + n, ['st/ok']: (st.ok || 0) + ok, ['st/g']: (st.g || 0) + 1, ['st/bs']: Math.max(st.bs || 0, best)};
+    if (mn) { up['st/ms'] = (st.ms || 0) + ms; up['st/mn'] = (st.mn || 0) + mn; }
+    for (const [k, c] of Object.entries(cat)) { const o = (st.c || {})[k] || {}; up[`st/c/${k}/n`] = (o.n || 0) + c.n; up[`st/c/${k}/ok`] = (o.ok || 0) + c.ok; up[`st/c/${k}/t`] = c.t; }
+    const od = (st.d || {})['d' + d] || {}; up[`st/d/d${d}/n`] = (od.n || 0) + n; up[`st/d/d${d}/ok`] = (od.ok || 0) + ok;
+    Object.keys(st.d || {}).forEach(k => { if (+k.slice(1) < d - 30) up['st/d/' + k] = null; });
+    const old = (st.wr || '').split(',').filter(Boolean).filter(x => !fixed.includes(x) && !wrong.includes(x));
+    up['st/wr'] = old.concat(wrong).slice(-WR_MAX).join(',') || null;
+    await update(ref(db, 'users/' + me), up);
+    const nm = Object.assign({}, S.me.st || {}); // yerel kopyayı güncelle
+    nm.n = up['st/n']; nm.ok = up['st/ok']; nm.g = up['st/g']; nm.bs = up['st/bs']; if (mn) { nm.ms = up['st/ms']; nm.mn = up['st/mn']; }
+    nm.c = Object.assign({}, nm.c); for (const k of Object.keys(cat)) nm.c[k] = {n: up[`st/c/${k}/n`], ok: up[`st/c/${k}/ok`], t: cat[k].t};
+    nm.d = Object.assign({}, nm.d, {['d' + d]: {n: up[`st/d/d${d}/n`], ok: up[`st/d/d${d}/ok`]}}); nm.wr = up['st/wr'] || '';
+    S.me = Object.assign({}, S.me, {st: nm});
+    S.stDone = gid;
+  } catch (e) { console.error(e); }
+  S.stBusy = null;
+}
+const wrongIds = () => ((S.me && S.me.st && S.me.st.wr) || '').split(',').filter(x => x && bankQ(x));
+function startWrongs() {
+  const pool = shuffle(wrongIds().map(bankQ)).slice(0, 10);
+  if (pool.length < 1 || S.busy) { toast('Tekrar edilecek yanlış soru yok'); return; }
+  if (S.code) leaveLocal();
+  S.chalPool = pool;
+  const code = 'L' + Date.now().toString(36);
+  const ps = {[uid()]: {name: S.me.name, av: S.me.av, fr: S.me.fr || '', lv: myLv(), online: true, joinedAt: now()}};
+  lset('rooms/' + code, {host: uid(), status: 'lobby', count: pool.length, diff: 'mix', bot: true, wr: true, createdAt: now(), players: ps});
+  enterRoom(code);
+  const go1 = () => { if (S.code === code && S.R && S.R.status === 'lobby') startGame(); };
+  setTimeout(go1, 60); setTimeout(go1, 400);
+}
+const statsView = () => {
+  const st = (S.me && S.me.st) || {}, n = st.n || 0, pct = n ? Math.round((st.ok || 0) / n * 100) : 0;
+  const avg = st.mn ? (st.ms / st.mn / 1000).toFixed(1).replace('.', ',') : null;
+  const cats = Object.entries(st.c || {}).map(([k, c]) => ({k, t: c.t || k, n: c.n || 0, ok: c.ok || 0, p: c.n ? Math.round((c.ok || 0) / c.n * 100) : 0})).sort((a, b) => b.n - a.n);
+  const hard = cats.length < 2 ? [] : cats.filter(c => c.n >= 5).sort((a, b) => a.p - b.p).slice(0, 3);
+  const d0 = dayIdx(), days = Array.from({length: 14}, (_, i) => { const o = (st.d || {})['d' + (d0 - 13 + i)] || {}; return {n: o.n || 0, ok: o.ok || 0}; });
+  const mx = Math.max(1, ...days.map(x => x.n)), wr = wrongIds().length;
+  const stat = (v, l) => `<div class="card stack stat" style="text-align:center;align-items:center;gap:2px"><b style="font-size:1.5rem">${v}</b><span class="small muted">${l}</span></div>`;
+  return `<div class="screen">
+    <div class="top">${backBtn('data-act="openprofile"')}</div>
+    <div class="stack" style="gap:14px"><h2>İstatistiklerim</h2>
+    ${n ? `<div class="statgrid">${stat(fmt(n), 'Cevaplanan soru')}${stat('%' + pct, 'Doğru oranı')}${stat(avg ? avg + ' sn' : '-', 'Ortalama cevap süresi')}${stat(fmt(st.g || 0), 'Oynanan oyun')}</div>
+    <div class="card stack" style="gap:8px"><b>Son 14 gün</b><div class="daybars" role="img" aria-label="Son 14 günde cevaplanan soru sayısı">${days.map(x => `<div class="db"><i style="height:${Math.round(x.n / mx * 100)}%"><u style="height:${x.n ? Math.round(x.ok / x.n * 100) : 0}%"></u></i></div>`).join('')}</div>
+      <p class="small muted" style="margin:0">Her çubuk bir gündür, sarı kısım doğru cevapların payıdır.</p></div>
+    ${hard.length ? `<div class="card stack" style="gap:8px"><b>En çok zorlandığın konular</b>${hard.map(c => `<div class="row between"><span>${esc(c.t)}</span><span class="small muted">%${c.p} · ${c.n} soru</span></div>`).join('')}</div>` : ''}
+    <div class="card stack" style="gap:10px"><b>Konulara göre başarın</b>${cats.map(c => `<div class="stack" style="gap:4px"><div class="row between"><span>${esc(c.t)}</span><span class="small muted">%${c.p} · ${c.n}</span></div><div class="lvbar"><i style="width:${c.p}%"></i></div></div>`).join('')}</div>
+    ${wr ? `<button class="btn primary big" data-act="wrstart"><span class="ic">${ICON.play}</span><span class="lb">YANLIŞLARIMI ÇÖZ · ${wr}</span></button>` : ''}`
+    : '<div class="card stack" style="text-align:center"><b>Henüz istatistik yok</b><p class="small muted" style="margin:0">Bir oyun oynadığında kategori başarın, hızın ve gelişimin burada görünür.</p></div>'}
+    <p class="small muted">Bu bilgiler sadece sana görünür. Bu sürümden sonra oynadığın oyunlar sayılır.</p></div></div>`;
+};
 
 /* ================= meydan okuma ================= */
 const CHAL_URL = 'https://playzuqio.com/?m=', CHAL_DAILY = 5;
@@ -851,6 +923,7 @@ V.profile = () => `
       <h2>${S.firstProfile ? 'Hoş geldin!' : 'Profil'}</h2>
       ${S.firstProfile ? '<p class="muted">Oyunda görünecek adını ve avatarını seç. Sonra istediğin zaman değiştirebilirsin.</p>' : ''}
       ${S.firstProfile ? '' : lvCard()}
+      ${S.firstProfile ? '' : `<button class="card setrow" data-go="stats" style="text-align:left"><div><b>${ic('chart')}İstatistiklerim</b></div><span aria-hidden="true">›</span></button>`}
       <div class="avatar avbig">${avSVG(S.pick)}</div>
       <label class="small muted" for="pnm">Oyunda görünecek adın</label>
       <input class="field" id="pnm" maxlength="25" autocomplete="nickname" value="${esc(S.draft)}">
@@ -1531,7 +1604,7 @@ V.final = () => {
   </div>`;
 };
 
-const NAV_SCREENS = ['home', 'friends', 'settings', 'shop', 'board', 'daily', 'quizzes', 'rooms', 'join', 'how', 'profile'];
+const NAV_SCREENS = ['home', 'friends', 'settings', 'shop', 'board', 'daily', 'quizzes', 'rooms', 'join', 'how', 'profile', 'stats'];
 function gnav() {
   if (!NAV_SCREENS.includes(S.screen) || S.R || (S.screen === 'profile' && S.firstProfile)) return '';
   const on = k => S.screen === k ? ' on' : '';
@@ -1773,7 +1846,7 @@ function onRoom(R) {
       SFX.play(g > 0 ? 'correct' : (ansOf(R, R.qi)[uid()] ? 'wrong' : 'timeup'));
     }
     if (R.status === 'final') {
-      claimBoard(R); claimXp(R);
+      claimBoard(R); claimXp(R); claimStats(R);
       const sc = R.scores || {}, mine = sc[uid()] || 0, top = Math.max(0, ...Object.values(sc));
       SFX.play(mine > 0 && mine >= top ? 'win' : 'end');
     }
@@ -1981,7 +2054,7 @@ async function startGame() {
       const qz = (S.myQuizzes || {})[R.quiz] || (await get(ref(db, 'quizzes/' + R.quiz))).val();
       if (!qz || !qz.qs) throw new Error('quiz-missing');
       built = buildGame(0, 'mix', null, shuffle(Object.values(qz.qs)).map(q => Object.assign({cat: qz.cat, d: 'o'}, q)));
-    } else if (R.chal && S.chalPool) {
+    } else if ((R.chal || R.wr) && S.chalPool) {
       built = buildGame(0, 'mix', null, S.chalPool.slice());
     } else if (roomPack(R)) {
       const pk = roomPack(R); built = buildGame(0, 'mix', null, shuffle(pk.qs.slice()).slice(0, Math.min(R.count || 10, pk.qs.length)));
@@ -2330,7 +2403,7 @@ async function answer(v) {
     } catch (e) { console.error(e); S.q.sent2 = null; render(); toast('İkinci cevap gönderilemedi'); }
     return;
   }
-  S.q.sent = v; buzz(30); SFX.play('tap'); render();
+  S.q.sent = v; (S.ansMs = S.ansMs || {})[R.gid + ':' + R.qi] = Math.max(0, now() - R.qStartAt); buzz(30); SFX.play('tap'); render();
   try { await set(ref(db, `rooms/${S.code}/answers/${R.qi}/${uid()}`), {v, t: serverTimestamp()}); }
   catch (e) { console.error(e); S.q.sent = null; render(); toast('Cevap gönderilemedi, süre dolmuş olabilir'); }
 }
@@ -2488,6 +2561,7 @@ app.addEventListener('click', e => {
   else if (a === 'qzsubmit') { if (confirm('Zuqio onaya gönderilsin mi? Onaylanan sorular herkesin oyunlarında çıkabilir.')) saveQz('pending'); }
   else if (a === 'qzwithdraw') { (async () => { try { await update(ref(db, 'quizzes/' + S.qz.id), {status: 'draft', t: serverTimestamp()}); S.qz.status = 'draft'; S.myQuizzes[S.qz.id].status = 'draft'; render(); } catch (e) { toast('Geri çekilemedi'); } })(); }
   else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
+  else if (a === 'wrstart') startWrongs();
   else if (a === 'chalnew') createChallenge();
   else if (a === 'chalgo') startChallenge();
   else if (a === 'tdet') { S.showDet = !S.showDet; render(); }
@@ -2516,6 +2590,7 @@ app.addEventListener('keydown', e => {
 });
 
 V.challenge = chalView;
+V.stats = statsView;
 /* ================= başlangıç ================= */
 const qm = new URLSearchParams(location.search).get('m');
 if (qm && /^[a-z0-9]{6,16}$/.test(qm)) { S.pendingChal = qm; history.replaceState(null, '', location.pathname); }
