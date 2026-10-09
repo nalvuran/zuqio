@@ -226,9 +226,9 @@ function vPrize() {
       <div class="small muted">${S.bookInfo === null ? 'Yükleniyor…' : S.bookInfo ? `Yüklü: ${esc(S.bookInfo.n)} · ${Math.round(S.bookInfo.size / 1024)} KB. Kazanan uygulamadan indirebilir.` : 'Henüz yüklenmedi. PDF yükle (en çok 8 MB); kazanan uygulamada “Kitabını indir” düğmesini görür.'}</div>
       <div class="row gap"><label class="btn primary" style="cursor:pointer">${S.bookBusy ? 'Yükleniyor…' : S.bookInfo ? 'Dosyayı değiştir' : 'PDF yükle'}<input type="file" id="bookfile" accept="application/pdf" hidden></label>
       ${S.bookInfo ? '<button class="btn danger" data-act="bookdel">Dosyayı sil</button>' : ''}</div></div>
-    ${rows == null ? '<p class="muted small">Yükleniyor…</p>' : !rows.length ? '<div class="card"><b>Bu ay henüz puan yok</b></div>' : `<div class="list">${rows.map((r, i) => `<div class="row item"><span class="n">${i + 1}</span>
-      <div class="grow"><b>${esc(r.n)}</b><div class="small muted">${esc((S.users[r.id] || {}).email || '')} · ${r.g} oyun</div></div><b>${fmt(r.s)}</b>
-      <button class="btn ghost" data-act="prwin" data-id="${r.id}">Kazanan yap</button><button class="btn ghost danger-t" data-act="prdel" data-id="${r.id}">Sil</button></div>`).join('')}</div>`}`;
+    ${rows == null ? '<p class="muted small">Yükleniyor…</p>' : !rows.length ? '<div class="card"><b>Bu ay henüz puan yok</b></div>' : `<div class="list">${rows.map((r, i) => `<div class="row item prrow"><span class="n">${i + 1}</span>
+      <div class="grow"><b>${esc(r.n)}</b><div class="small muted">${esc((S.users[r.id] || {}).email || '')} · ${r.g} oyun</div></div><b class="prs">${fmt(r.s)}</b>
+      <div class="row prbtn"><button class="btn ghost" data-act="prwin" data-id="${r.id}">Kazanan yap</button><button class="btn ghost danger-t" data-act="prdel" data-id="${r.id}">Sil</button></div></div>`).join('')}</div>`}`;
 }
 function vFixes() {
   const l = Object.entries(S.fix).map(([id, f]) => Object.assign({id}, f)).sort((x, y) => (y.at || 0) - (x.at || 0));
