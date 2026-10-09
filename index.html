@@ -392,49 +392,47 @@ textarea.field{min-height:64px; padding-top:12px; resize:vertical; font:inherit}
 .home-top .me-chip .mlv{display:block}
 .home-top .me-chip .mn{order:2; max-width:46vw; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center; font-size:.98rem; line-height:1.1; opacity:.92}
 
-/* ===== ana ekran yenilenen görünüm (deneme 2) ===== */
+/* ===== yeni tema: koyu lacivert cam (tüm ekranlar) ===== */
+:root{--bg:#171046; --surface:#221A62; --line:#352C86; --soft:#1D1558; --muted:#A9A3DA; --yellow:#E6B84A; --amber:#E6B84A}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#171046; --surface:#221A62; --line:#352C86; --soft:#1D1558; --muted:#A9A3DA}}
+:root[data-theme="dark"]{--bg:#171046; --surface:#221A62; --line:#352C86; --soft:#1D1558; --muted:#A9A3DA}
+html{background:#0E0930}
+body::before{background:radial-gradient(120% 70% at 50% 24%, #2A1D86 0%, var(--bg) 58%, #0E0930 100%)}
+.card,input.field,textarea.field,select.field{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.025)); border-color:rgba(150,140,235,.28); box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.btn{border-color:rgba(150,140,235,.3); background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03))}
+.btn.primary{background:linear-gradient(180deg,#E8C566,#C99A33 60%,#B8872A); border-color:#F0D58A; color:#3A2600; box-shadow:0 4px 0 #7A5A14, 0 10px 18px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.45)}
+.btn.purple{background:linear-gradient(180deg,#7C7BDA,#5A59BD 60%,#4A49A8); border-color:#A9A8EE; color:#F0F0FF; box-shadow:0 4px 0 #2B2A78, 0 10px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.3)}
+.btn.green{background:linear-gradient(180deg,#4FA487,#37806A 60%,#2B6A57); border-color:#8CD1B8; color:#E6FFF4; box-shadow:0 4px 0 #17493B, 0 10px 18px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.3)}
+.btn.outline{background:linear-gradient(180deg,#24395A,#182943 70%); border-color:rgba(130,160,220,.35); color:#DCE6FF; box-shadow:0 4px 0 #0C1730, 0 10px 18px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.12)}
+.btn.big .ic{background:rgba(10,8,40,.38); box-shadow:inset 0 1px 0 rgba(255,255,255,.15), inset 0 -1px 0 rgba(0,0,0,.2)}
+.btn.primary .ic{background:rgba(120,80,0,.25)}
+.btn:active:not(:disabled){transform:translateY(3px); box-shadow:inset 0 2px 6px rgba(0,0,0,.3)}
+.gearbtn,.coinchip,.coinbar{background:rgba(255,255,255,.08); box-shadow:inset 0 1px 0 rgba(255,255,255,.14)}
+.gnav{background:linear-gradient(180deg,rgba(44,34,120,.92),rgba(24,16,74,.97)); border-radius:24px 24px 0 0; border:1px solid rgba(150,140,235,.22); border-bottom:0; box-shadow:0 -10px 28px rgba(6,2,28,.5)}
+.bottomnav button{position:relative}
+.bottomnav button.on::before{content:''; position:absolute; top:-5px; left:14%; right:14%; height:3px; border-radius:0 0 3px 3px; background:var(--yellow); box-shadow:0 0 10px rgba(230,184,74,.7)}
+.bottomnav button.on{text-shadow:0 0 12px rgba(230,184,74,.45)}
+.bottomnav button.on svg{filter:drop-shadow(0 0 6px rgba(230,184,74,.45))}
+/* ana ekran */
 .home2{position:relative; isolation:isolate; overflow:hidden}
-.home2::before{content:''; position:absolute; inset:0; z-index:-2; pointer-events:none;
-  background:
-   linear-gradient(180deg,rgba(150,120,255,.0) 0,rgba(0,0,0,0) 100%),
-   conic-gradient(from 180deg at 50% -6%, transparent 0 30deg, rgba(150,130,255,.20) 38deg, transparent 52deg 128deg, rgba(150,130,255,.20) 142deg, transparent 150deg 360deg),
-   radial-gradient(60% 38% at 50% 34%, rgba(120,90,255,.38), transparent 70%)}
-.home2::after{content:''; position:absolute; left:0; right:0; bottom:0; height:46%; z-index:-1; pointer-events:none; background:linear-gradient(180deg,transparent,rgba(12,4,48,.55))}
-.hdeco{position:absolute; pointer-events:none; z-index:-1}
-.hdeco.tr{left:-26px; top:96px; width:96px; transform:rotate(-8deg); opacity:.95}
-.hdeco.bolt{right:20px; top:104px; width:48px; transform:rotate(14deg); filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
-.hdeco.sh{width:22px; height:22px}
-.hdeco.sh1{left:16%; top:30%; transform:rotate(-30deg)}
-.hdeco.sh2{right:18%; top:34%; transform:rotate(28deg)}
-.hdeco.pod{left:50%; bottom:340px; width:min(86vw,380px); transform:translateX(-50%); opacity:.9}
-.home2 .hero{position:relative}
-.home2 .logo4{grid-template-columns:repeat(2,70px); gap:0; filter:drop-shadow(0 12px 14px rgba(8,2,40,.55))}
-.home2 .logo4 img{width:84px; height:84px; margin:-5px; border-radius:0; filter:drop-shadow(0 3px 0 rgba(0,0,0,.18))}
-.home2 .logo4 img:nth-child(1){transform:rotate(-4deg)}
-.home2 .logo4 img:nth-child(2){transform:rotate(3deg)}
-.home2 .logo4 img:nth-child(3){transform:rotate(3deg)}
-.home2 .logo4 img:nth-child(4){transform:rotate(-3deg)}
-.home2 .wordmark{font-size:5rem; letter-spacing:-.01em; margin-top:2px; font-weight:900;
-  text-shadow:0 3px 0 #CDBDFF, 0 6px 0 #7B5AE0, 0 10px 0 #3A2296, 0 18px 22px rgba(0,0,0,.45)}
-.home2 .wordmark span{text-shadow:0 3px 0 #FFD34D, 0 6px 0 #E39A00, 0 10px 0 #3A2296, 0 18px 22px rgba(0,0,0,.45)}
-.home2 .slogan{margin-top:14px}
-.home2 .me-chip .avatar{box-shadow:0 0 0 2.5px rgba(255,255,255,.28), 0 0 0 5px rgba(255,194,26,.18)}
-.home2 .coinchip{gap:8px; padding:0 8px 0 16px; background:rgba(255,255,255,.1); box-shadow:inset 0 1px 0 rgba(255,255,255,.18)}
-.home2 .coinchip .coin{width:30px; height:30px; filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
-.home2 .gearbtn{background:rgba(255,255,255,.1)}
+.home2::before,.home2::after{content:''; position:absolute; left:50%; top:31%; transform:translate(-50%,-50%) rotate(45deg); border:1.5px solid rgba(150,140,235,.14); border-radius:24%; pointer-events:none; z-index:-1}
+.home2::before{width:112vw; max-width:520px; aspect-ratio:1}
+.home2::after{width:74vw; max-width:340px; aspect-ratio:1; border-color:rgba(150,140,235,.2); background:radial-gradient(closest-side, rgba(90,80,230,.22), transparent 75%)}
+.home2 .logo4{position:relative; grid-template-columns:repeat(2,64px); gap:8px; filter:none}
+.home2 .logo4::before{content:''; position:absolute; left:50%; top:50%; width:190px; height:190px; transform:translate(-50%,-50%); border-radius:50%; z-index:-1;
+  background:radial-gradient(closest-side, transparent 62%, rgba(150,170,255,.5) 71%, transparent 78%), radial-gradient(closest-side, rgba(110,100,255,.28), transparent 70%)}
+.home2 .logo4 img{width:64px; height:64px; padding:5px; border-radius:22%; background:linear-gradient(160deg,rgba(255,255,255,.2),rgba(255,255,255,.05)); box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.28), 0 8px 16px rgba(5,2,30,.45); filter:saturate(.7) brightness(.88)}
+.home2 .logo4 img:nth-child(odd){margin-top:0}
+.home2 .wordmark{font-size:4.1rem; font-weight:800; margin-top:10px; color:#E9ECFF;
+  text-shadow:0 2px 0 #B7BEF2, 0 4px 0 #5C63C4, 0 7px 0 #2A2D8A, 0 14px 18px rgba(0,0,0,.4)}
+.home2 .wordmark span{color:#E6B84A; text-shadow:0 2px 0 #F3D27F, 0 4px 0 #B8872A, 0 7px 0 #6B4B10, 0 14px 18px rgba(0,0,0,.4)}
+.home2 .slogan{font-size:1.05rem; color:#C9C6F2; margin-top:12px}
+.home2 .slogan .y{color:#E0A860} .home2 .slogan .g{color:#5FB894}
+.home2 .me-chip .avatar{box-shadow:0 0 0 2px rgba(230,184,74,.8), 0 0 0 5px rgba(230,184,74,.15)}
+.home2 .coinchip{gap:8px; padding:0 6px 0 16px}
+.home2 .coinchip .coin{width:36px; height:36px; filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
 .home2 .home-btns{gap:14px !important}
-.home2 .home-btns .btn.big{min-height:60px; border-width:1.5px; box-shadow:none; position:relative}
-.home2 .home-btns .btn.big .ic{width:44px; height:44px}
-.home2 .home-btns .btn.primary{background:linear-gradient(180deg,#FFD233,#FFBE1A); border-color:#FFD95C; color:#3A2200; box-shadow:0 4px 0 #B87900, 0 10px 18px rgba(0,0,0,.28)}
-.home2 .home-btns .btn.primary .ic{background:rgba(214,130,0,.35)}
-.home2 .home-btns .btn.purple{background:linear-gradient(180deg,#4A2CB5,#3B2096); border-color:#5B3FD0; color:#fff; box-shadow:0 4px 0 #1E0F5E, 0 10px 18px rgba(0,0,0,.25)}
-.home2 .home-btns .btn.purple .ic{background:rgba(20,8,70,.45)}
-.home2 .home-btns .btn.green,.home2 .home-btns .btn.outline{background:rgba(20,10,70,.55); border-color:rgba(130,110,230,.45); color:#fff; box-shadow:none}
-.home2 .home-btns .btn.green .ic,.home2 .home-btns .btn.outline .ic{background:transparent; color:#B7A8F5}
-.home2 .home-btns .btn:active:not(:disabled){transform:translateY(2px)}
-.gnav{background:transparent; border-top:0}
-.bottomnav button.on{text-shadow:0 0 12px rgba(255,194,26,.45)}
-.bottomnav button.on svg{filter:drop-shadow(0 0 6px rgba(255,194,26,.4))}
+.home2 .home-btns .btn.big{min-height:60px}
 </style>
 </head>
 <body>

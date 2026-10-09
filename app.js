@@ -50,6 +50,7 @@ const ICON = {
   key:'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 12h.01M11 12h.01M15 12h.01"/></svg>',
   list:'<svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',
   bolt:'<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
+  compass:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/></svg>',
   trophy:'<svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M8 21h8M9 17h6"/></svg>',
   half:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18"/></svg>',
   x2:'<svg viewBox="0 0 24 24"><path d="M5 7l6 10M11 7l-6 10M15 9a2 2 0 1 1 4 0c0 2-4 4-4 8h4"/></svg>',
@@ -335,7 +336,7 @@ onValue(ref(db, '.info/connected'), s => { if (s.val()) markOnline(); });
 function go(screen) { S.screen = screen; render(); app.scrollTop = 0; }
 
 /* ================= jeton, günlük ödül, mağaza ================= */
-const COIN = `<svg class="coin" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="cgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE27A"/><stop offset=".55" stop-color="#F4B71A"/><stop offset="1" stop-color="#C98A00"/></linearGradient><linearGradient id="cgB" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#E5A100"/><stop offset="1" stop-color="#FFD24D"/></linearGradient></defs><circle cx="12" cy="12" r="11" fill="url(#cgA)" stroke="#B87800" stroke-width=".9"/><circle cx="12" cy="12" r="8.3" fill="url(#cgB)" stroke="#FFF1B0" stroke-opacity=".7" stroke-width=".7"/><path d="M8.3 8.6h7.4L9 15.4h7.2" fill="none" stroke="#8A5A00" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+const COIN = `<svg class="coin" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="cgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F6DB8A"/><stop offset=".5" stop-color="#D9A93C"/><stop offset="1" stop-color="#9C6E16"/></linearGradient><linearGradient id="cgB" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#C58F26"/><stop offset="1" stop-color="#F3D27F"/></linearGradient></defs><circle cx="12" cy="12" r="11.2" fill="url(#cgA)" stroke="#7A5410" stroke-width=".7"/><path d="M12 2.6l6.6 2.7 2.8 6.7-2.8 6.7-6.6 2.7-6.6-2.7L2.6 12l2.8-6.7z" fill="url(#cgB)" stroke="#FBE9B0" stroke-opacity=".6" stroke-width=".6"/><path d="M12 2.6L5.4 5.3 2.6 12M12 2.6l6.6 2.7 2.8 6.7" fill="none" stroke="#FFF3C8" stroke-opacity=".45" stroke-width=".5"/><path d="M8.6 8.6h6.8L8.8 15.4h6.8" fill="none" stroke="#7A5410" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.6 8.2h6.8" fill="none" stroke="#FBE9B0" stroke-opacity=".5" stroke-width=".5"/></svg>`;
 const DAILY = [10, 10, 15, 15, 20, 25, 50];
 const QUESTION_REWARD = {right: 20, wrong: 5};
 const SHOP = [
@@ -941,16 +942,12 @@ V.profile = () => `
 
 V.home = () => `
   <div class="screen home2">
-    <svg class="hdeco tr" viewBox="0 0 100 110" aria-hidden="true"><defs><linearGradient id="trg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7A57EA"/><stop offset="1" stop-color="#4A2CB5"/></linearGradient></defs><path d="M26 10h48v34c0 16-11 28-24 28S26 60 26 44z" fill="url(#trg)"/><path d="M26 18H8c0 20 8 30 22 32M74 18h18c0 20-8 30-22 32" fill="none" stroke="#6A48DC" stroke-width="7" stroke-linecap="round"/><rect x="44" y="70" width="12" height="16" fill="#5A39CC"/><rect x="28" y="86" width="44" height="14" rx="5" fill="#4A2CB5"/><path d="M50 22l5 11 12 1-9 8 3 12-11-7-11 7 3-12-9-8 12-1z" fill="#9C84FF"/></svg>
-    <svg class="hdeco bolt" viewBox="0 0 48 70" aria-hidden="true"><defs><linearGradient id="blg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE066"/><stop offset="1" stop-color="#F2A100"/></linearGradient></defs><path d="M30 2L4 38h16L14 68l30-42H27z" fill="url(#blg)" stroke="#FFF1A8" stroke-width="2" stroke-linejoin="round"/></svg>
-    <svg class="hdeco sh sh1" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 18L10 2l4 10z" fill="#FFC21A"/></svg>
-    <svg class="hdeco sh sh2" viewBox="0 0 20 20" aria-hidden="true"><path d="M2 18L10 2l4 10z" fill="#E5333B"/></svg>
     ${giftPop() || winPop() || annBanner()}${a2Sheet()}
     <div class="top home-top"><button class="gearbtn" data-go="settings" aria-label="Ayarlar">${ICON.gear}</button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle"><span class="mn">${esc(S.me.name)}</span>${avatar(S.me.av, '', S.me.fr)}<span class="mlv">Seviye ${myLv()}</span></button><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton" style="justify-self:end"><b>${coins()}</b>${COIN}</button></div>
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px">${a2Link()}</div>
     <div class="stack home-btns" style="gap:14px">
-      <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic bigic">${ICON.user1}</span><span class="lb">RAKİP BUL</span></button>
+      <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic bigic">${ICON.compass}</span><span class="lb">RAKİP BUL</span></button>
       <button class="btn purple big" data-go="friends"><span class="ic bigic">${ICON.users}</span><span class="lb">ARKADAŞLARINLA OYNA</span></button>
       <button class="btn green big" data-act="myquizzes"><span class="ic bigic">${ICON.doc}</span><span class="lb">NOTLARINLA ÇALIŞ</span></button>
       <button class="btn outline big" data-act="bot" ${S.busy ? 'disabled' : ''}><span class="ic bigic">${ICON.bot}</span><span class="lb">BİLGİSAYARA KARŞI OYNA</span></button>
