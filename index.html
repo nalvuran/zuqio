@@ -506,6 +506,17 @@ body::before{background:radial-gradient(120% 70% at 50% 24%, #2A1D86 0%, var(--b
 .podium .pod:nth-child(1) .blk{background:linear-gradient(180deg,#E4E8F4,#8F98BC) !important; color:#22264A}
 .podium .pod:nth-child(3) .blk{background:linear-gradient(180deg,#E6B089,#A9622F) !important; color:#3A1D0A}
 .pod .blk{box-shadow:inset 0 1px 0 rgba(255,255,255,.5), 0 6px 14px rgba(0,0,0,.3)}
+/* rakip arama ekranı */
+.radar{position:relative; width:92px; height:92px; margin:6px 0 4px; display:grid; place-items:center}
+.radar span{position:relative; z-index:1; width:60px; height:60px; border-radius:50%; display:grid; place-items:center; color:#3A2600; background:linear-gradient(180deg,#F0D58A,#C99A33); box-shadow:0 4px 0 #7A5A14, inset 0 1px 0 rgba(255,255,255,.5)}
+.radar span svg{width:30px; height:30px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round}
+.radar i{position:absolute; inset:0; border-radius:50%; border:2px solid rgba(230,184,74,.6); animation:radar 2s ease-out infinite}
+.radar i:nth-child(2){animation-delay:1s}
+.radar.found i{animation:none; opacity:0}
+@keyframes radar{from{transform:scale(.6); opacity:.9}to{transform:scale(1.25); opacity:0}}
+@media (prefers-reduced-motion:reduce){.radar i{animation:none; opacity:.35}}
+.qmbar{height:10px; background:rgba(10,6,44,.6); box-shadow:inset 0 1px 3px rgba(0,0,0,.5)}
+.qmbar i{background:linear-gradient(90deg,#C99A33,#F0D58A)}
 /* rakip arıyor kutusu */
 .qmban{position:absolute; left:12px; right:12px; bottom:calc(100% + 10px); max-width:436px; margin:0 auto; display:flex; align-items:center; gap:8px; padding:8px 8px 8px 16px; border-radius:999px; background:linear-gradient(180deg,#352A9A,#241A74); border:1.5px solid #E6B84A; box-shadow:0 8px 22px rgba(0,0,0,.45); animation:qmin .25s ease-out}
 .qmban .qmt{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600}

@@ -189,7 +189,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 141';
+const APP_VERSION = '0.5 (test) · yapı 142';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1242,6 +1242,7 @@ V.quickLobby = () => {
   <div class="screen">
     <div class="top">${backBtn('data-act="leave"', 'Vazgeç')}<span class="tag">Rakip aranıyor</span></div>
     <div class="card stack" style="align-items:center;gap:8px;text-align:center">
+      <div class="radar ${ps.length < QUICK_MIN ? '' : 'found'}"><i></i><i></i><span>${ps.length < QUICK_MIN ? ICON.compass : ICON.users}</span></div>
       <h2 id="qmtitle">${ps.length < QUICK_MIN ? 'Rakip aranıyor…' : 'Rakipler bulundu!'}</h2>
       <p class="muted" id="qmsub">${ps.length < QUICK_MIN ? 'Biri katılınca oyun kısa süre içinde başlayacak. 10 saniye içinde rakip bulunamazsa bilgisayara karşı oynayabilirsin.' : `Oyun <b>${sec != null ? sec : '…'}</b> saniye içinde başlıyor`}</p>
       ${ps.length < QUICK_MIN && S.qmSince && now() - S.qmSince <= QUICK_SEARCH ? `<div class="qmbar"><i id="qmfill" style="width:${qmPct()}%"></i></div>` : ''}
