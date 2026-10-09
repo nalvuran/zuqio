@@ -189,7 +189,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 137';
+const APP_VERSION = '0.5 (test) · yapı 138';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1036,7 +1036,7 @@ V.shop = () => {
   <div class="screen">
     <div class="top">${backBtn('data-go="home"')}<span class="coinbar">${COIN}<b>${coins()}</b></span></div>
     <div class="stack" style="gap:14px">
-      <h2>Mağaza</h2>
+      <div class="phead"><span class="pico">${ICON.shop}</span><h2>Mağaza</h2></div>
       <div class="tabs four" role="tablist" style="grid-template-columns:repeat(3,1fr)">${Object.keys(tabs).map(k => `<button role="tab" class="${tab === k ? 'on' : ''}" aria-selected="${tab === k}" data-act="shoptab" data-t="${k}">${tabs[k]}</button>`).join('')}</div>
       ${body}
       <p class="small muted">Mağazadaki her şey sadece görünüş ve eğlence içindir; puana ve sıralamaya etkisi yoktur. Jetonları günlük ödül ve günün sorusuyla kazanırsın.</p>
@@ -1517,7 +1517,7 @@ V.board = () => {
   else if (data.err) body = '<p class="status">Tablo yüklenemedi. Biraz sonra tekrar dene.</p>';
   else if (!data.rows.length) body = '<div class="card" style="text-align:center"><b>Henüz kimse yok</b><p class="small muted" style="margin-top:6px">Bir oyun bitir, bu tablonun ilk adı sen ol!</p></div>';
   else body = `<div class="stack" style="gap:8px">${data.rows.map((r, i) => `
-      <div class="rank ${r.id === uid() ? 'me' : ''}"><span class="n">${i + 1}</span>${avatar(r.id === uid() ? S.me.av : r.av, '', r.id === uid() ? S.me.fr : r.fr)}<b>${esc(r.id === uid() ? S.me.name : r.n)}</b>
+      <div class="rank ${r.id === uid() ? 'me' : ''} ${i < 3 ? 'r' + (i + 1) : ''}"><span class="n">${i + 1}</span>${avatar(r.id === uid() ? S.me.av : r.av, '', r.id === uid() ? S.me.fr : r.fr)}<b>${esc(r.id === uid() ? S.me.name : r.n)}</b>
         <span class="pts">${fmt(r.s)}</span></div>`).join('')}
       ${data.mine && data.mine.out ? `<div class="rank me"><span class="n">–</span>${avatar(S.me.av, '', S.me.fr)}<b>${esc(S.me.name)}</b><span class="pts">${fmt(data.mine.s)}</span></div>` : ''}
     </div>`;
@@ -1531,7 +1531,7 @@ V.board = () => {
   return `
   <div class="screen">
     <div class="top">${backBtn('data-go="home"')}</div>
-    <h2 style="margin-bottom:12px">Liderlik tablosu</h2>
+    <div class="phead"><span class="pico">${ICON.trophy}</span><h2>Liderlik tablosu</h2></div>
     <div class="tabs" role="tablist" style="grid-template-columns:repeat(4,1fr)">${Object.keys(labels).map(k => `<button role="tab" class="${S.lbTab === k ? 'on' : ''}" aria-selected="${S.lbTab === k}" data-act="lbtab" data-t="${k}">${labels[k]}</button>`).join('')}</div>
     ${prize}${S.lbTab === 'p' ? '' : `<p class="small muted" style="margin-bottom:12px">${sub} Bilgisayara karşı antrenman oyunları sayılmaz.</p>`}
     ${body}

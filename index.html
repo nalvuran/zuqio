@@ -430,6 +430,31 @@ body::before{background:radial-gradient(120% 70% at 50% 24%, #2A1D86 0%, var(--b
 .home2 .coinchip .coin{width:36px; height:36px; filter:drop-shadow(0 2px 3px rgba(0,0,0,.4))}
 .home2 .home-btns{gap:14px !important}
 .home2 .home-btns .btn.big{min-height:60px}
+/* mağaza ve liderlik: yeni tema */
+.phead{display:flex; align-items:center; gap:12px}
+.screen > .phead{margin-bottom:14px}
+.phead h2{font-size:1.7rem}
+.pico{width:46px; height:46px; border-radius:16px; display:grid; place-items:center; color:var(--yellow); background:linear-gradient(160deg,rgba(255,255,255,.16),rgba(255,255,255,.04)); box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.2), 0 6px 14px rgba(5,2,30,.4)}
+.pico svg{width:26px; height:26px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round}
+.tabs{background:rgba(10,6,44,.55); border:1px solid rgba(150,140,235,.22); box-shadow:inset 0 2px 6px rgba(0,0,0,.35); border-radius:18px; padding:5px}
+.tabs button{border-radius:14px; min-height:44px}
+.tabs button.on{background:linear-gradient(180deg,#E8C566,#C99A33); color:#3A2600; box-shadow:0 3px 0 #7A5A14, inset 0 1px 0 rgba(255,255,255,.45)}
+.rank{border-radius:18px; padding:10px 14px; background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03)); border:1px solid rgba(150,140,235,.26); box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.rank .n{width:30px; height:30px; border-radius:50%; display:grid; place-items:center; background:rgba(10,6,44,.55); font-size:.9rem; color:var(--muted)}
+.rank.r1 .n{background:linear-gradient(160deg,#F6DB8A,#C99A33); color:#3A2600}
+.rank.r2 .n{background:linear-gradient(160deg,#E4E8F4,#9AA3C2); color:#22264A}
+.rank.r3 .n{background:linear-gradient(160deg,#E6B089,#B0693A); color:#3A1D0A}
+.rank.r1{border-color:rgba(230,184,74,.55)}
+.rank.me{border:1.5px solid var(--yellow); background:linear-gradient(180deg,rgba(230,184,74,.18),rgba(230,184,74,.06)); box-shadow:0 0 16px rgba(230,184,74,.22)}
+.shopgrid{gap:14px}
+.shopitem{border-radius:22px; padding:16px 8px 14px; background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(255,255,255,.03)); border:1px solid rgba(150,140,235,.28); box-shadow:inset 0 1px 0 rgba(255,255,255,.1), 0 8px 18px rgba(5,2,30,.3)}
+.shopitem .avatar{box-shadow:0 0 0 3px rgba(150,140,235,.22), 0 0 22px rgba(120,100,255,.35)}
+.shopitem .price{padding:5px 14px; border-radius:999px; background:rgba(10,6,44,.6); box-shadow:inset 0 1px 3px rgba(0,0,0,.4); font-size:1.05rem}
+.shopitem.own .price{color:#C9C6F2}
+.shopitem.cur{border:1.5px solid var(--yellow); box-shadow:0 0 18px rgba(230,184,74,.3)}
+.shopitem.cur .price{color:var(--yellow)}
+.shopitem .price .coin{width:22px; height:22px}
+
 /* rakip arıyor kutusu */
 .qmban{position:absolute; left:12px; right:12px; bottom:calc(100% + 10px); max-width:436px; margin:0 auto; display:flex; align-items:center; gap:8px; padding:8px 8px 8px 16px; border-radius:999px; background:linear-gradient(180deg,#352A9A,#241A74); border:1.5px solid #E6B84A; box-shadow:0 8px 22px rgba(0,0,0,.45); animation:qmin .25s ease-out}
 .qmban .qmt{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600}
