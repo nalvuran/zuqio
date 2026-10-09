@@ -189,7 +189,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 132';
+const APP_VERSION = '0.5 (test) · yapı 133';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -337,7 +337,7 @@ onValue(ref(db, '.info/connected'), s => { if (s.val()) markOnline(); });
 function go(screen) { S.screen = screen; render(); app.scrollTop = 0; }
 
 /* ================= jeton, günlük ödül, mağaza ================= */
-const COIN = `<svg class="coin" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="cgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F6DB8A"/><stop offset=".5" stop-color="#D9A93C"/><stop offset="1" stop-color="#9C6E16"/></linearGradient><linearGradient id="cgB" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#C58F26"/><stop offset="1" stop-color="#F3D27F"/></linearGradient></defs><circle cx="12" cy="12" r="11.2" fill="url(#cgA)" stroke="#7A5410" stroke-width=".7"/><path d="M12 2.6l6.6 2.7 2.8 6.7-2.8 6.7-6.6 2.7-6.6-2.7L2.6 12l2.8-6.7z" fill="url(#cgB)" stroke="#FBE9B0" stroke-opacity=".6" stroke-width=".6"/><path d="M12 2.6L5.4 5.3 2.6 12M12 2.6l6.6 2.7 2.8 6.7" fill="none" stroke="#FFF3C8" stroke-opacity=".45" stroke-width=".5"/><path d="M8.6 8.6h6.8L8.8 15.4h6.8" fill="none" stroke="#7A5410" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.6 8.2h6.8" fill="none" stroke="#FBE9B0" stroke-opacity=".5" stroke-width=".5"/></svg>`;
+const COIN = `<svg class="coin" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="cgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE98A"/><stop offset=".5" stop-color="#FFC21A"/><stop offset="1" stop-color="#D98C00"/></linearGradient><linearGradient id="cgB" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#F2A900"/><stop offset="1" stop-color="#FFD84D"/></linearGradient><linearGradient id="cgC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><circle cx="12" cy="13" r="10.5" fill="#B36B00"/><circle cx="12" cy="12" r="10.5" fill="url(#cgA)" stroke="#E39A00" stroke-width="1.2"/><circle cx="12" cy="12" r="6.9" fill="url(#cgB)" stroke="#C97F00" stroke-width="1.2"/><circle cx="12" cy="12.5" r="6.9" fill="none" stroke="#FFF0A6" stroke-opacity=".8" stroke-width=".7" clip-path="inset(50% 0 0 0)"/><path d="M12 8.4l1.1 2.4 2.6.3-1.9 1.8.5 2.6-2.3-1.3-2.3 1.3.5-2.6-1.9-1.8 2.6-.3z" fill="#E39A00" stroke="#B36B00" stroke-width=".5" stroke-linejoin="round"/><path d="M12 8.4l1.1 2.4 2.6.3-1.9 1.8.5 2.6-2.3-1.3-2.3 1.3.5-2.6-1.9-1.8 2.6-.3z" fill="none" stroke="#FFEFA0" stroke-opacity=".7" stroke-width=".4" transform="translate(0 .5)"/><path d="M4.2 8.6A9 9 0 0 1 12 3.2c2.6 0 4.7 1 6.2 2.6-3.6-1.4-9.6-.4-14 2.8z" fill="url(#cgC)" opacity=".8"/></svg>`;
 const DAILY = [10, 10, 15, 15, 20, 25, 50];
 const QUESTION_REWARD = {right: 20, wrong: 5};
 const SHOP = [
