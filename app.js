@@ -190,7 +190,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 164';
+const APP_VERSION = '0.5 (test) · yapı 165';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -543,8 +543,25 @@ function startWrongs() {
   const go1 = () => { if (S.code === code && S.R && S.R.status === 'lobby') startGame(); };
   setTimeout(go1, 60); setTimeout(go1, 400);
 }
+// Kullanıcı istatistiklerini sıfırlayınca gerçek kayıt (st) olduğu gibi kalır; o anki görüntü sz'ye kaydedilir ve ekranda fark gösterilir
+function statsEff() {
+  const st = (S.me && S.me.st) || {}, z = (S.me && S.me.sz) || null; if (!z) return st;
+  const m = (a, b) => Math.max(0, (a || 0) - (b || 0)), e = {n: m(st.n, z.n), ok: m(st.ok, z.ok), g: m(st.g, z.g), ms: m(st.ms, z.ms), mn: m(st.mn, z.mn), c: {}, d: {}};
+  for (const [k, c] of Object.entries(st.c || {})) { const o = (z.c || {})[k] || {}, n = m(c.n, o.n); if (n) e.c[k] = {t: c.t, n, ok: Math.min(n, m(c.ok, o.ok))}; }
+  for (const [k, c] of Object.entries(st.d || {})) { const o = (z.d || {})[k] || {}, n = m(c.n, o.n); if (n) e.d[k] = {n, ok: Math.min(n, m(c.ok, o.ok))}; }
+  return e;
+}
+async function resetStats() {
+  if (!confirm('İstatistiklerin sıfırlansın mı? Bu işlem geri alınamaz.')) return;
+  const st = (S.me && S.me.st) || {}, z = {n: st.n || 0, ok: st.ok || 0, g: st.g || 0, ms: st.ms || 0, mn: st.mn || 0, at: now(), c: {}, d: {}};
+  for (const [k, c] of Object.entries(st.c || {})) z.c[k] = {n: c.n || 0, ok: c.ok || 0};
+  for (const [k, c] of Object.entries(st.d || {})) z.d[k] = {n: c.n || 0, ok: c.ok || 0};
+  try { await set(ref(db, 'users/' + uid() + '/sz'), z); S.me = Object.assign({}, S.me, {sz: z}); toast('İstatistiklerin sıfırlandı'); }
+  catch (e) { console.error(e); toast('Sıfırlanamadı, tekrar dene'); }
+  render();
+}
 const statsView = () => {
-  const st = (S.me && S.me.st) || {}, n = st.n || 0, pct = n ? Math.round((st.ok || 0) / n * 100) : 0;
+  const st = statsEff(), n = st.n || 0, pct = n ? Math.round((st.ok || 0) / n * 100) : 0;
   const avg = st.mn ? (st.ms / st.mn / 1000).toFixed(1).replace('.', ',') : null;
   const cats = Object.entries(st.c || {}).map(([k, c]) => ({k, t: c.t || k, n: c.n || 0, ok: c.ok || 0, p: c.n ? Math.round((c.ok || 0) / c.n * 100) : 0})).sort((a, b) => b.n - a.n);
   const hard = cats.length < 2 ? [] : cats.filter(c => c.n >= 5).sort((a, b) => a.p - b.p).slice(0, 3);
@@ -560,7 +577,8 @@ const statsView = () => {
     ${hard.length ? `<div class="card stack" style="gap:8px"><b>En çok zorlandığın konular</b>${hard.map(c => `<div class="row between"><span>${esc(c.t)}</span><span class="small muted">%${c.p} · ${c.n} soru</span></div>`).join('')}</div>` : ''}
     <div class="card stack" style="gap:10px"><b>Konulara göre başarın</b>${cats.map(c => `<div class="stack" style="gap:4px"><div class="row between"><span>${esc(c.t)}</span><span class="small muted">%${c.p} · ${c.n}</span></div><div class="lvbar"><i style="width:${c.p}%"></i></div></div>`).join('')}</div>
     ${wr ? `<button class="btn primary big" data-act="wrstart"><span class="ic">${ICON.play}</span><span class="lb">YANLIŞLARIMI ÇÖZ · ${wr}</span></button>` : ''}`
-    : '<div class="card stack" style="text-align:center"><b>Henüz istatistik yok</b><p class="small muted" style="margin:0">Bir oyun oynadığında kategori başarın, hızın ve gelişimin burada görünür.</p></div>'}
+    : `<div class="card stack" style="text-align:center"><b>Henüz istatistik yok</b><p class="small muted" style="margin:0">Bir oyun oynadığında kategori başarın, hızın ve gelişimin burada görünür.</p></div>${wr ? `<button class="btn primary big" data-act="wrstart"><span class="ic">${ICON.play}</span><span class="lb">YANLIŞLARIMI ÇÖZ · ${wr}</span></button>` : ''}`}
+    ${n ? '<button class="linkbtn" data-act="statsreset">İstatistiklerimi sıfırla</button>' : ''}
     <p class="small muted">Bu bilgiler sadece sana görünür. Bu sürümden sonra oynadığın oyunlar sayılır.</p></div></div>`;
 };
 
@@ -2714,6 +2732,7 @@ app.addEventListener('click', e => {
   else if (a === 'qzwithdraw') { (async () => { try { await update(ref(db, 'quizzes/' + S.qz.id), {status: 'draft', t: serverTimestamp()}); S.qz.status = 'draft'; S.myQuizzes[S.qz.id].status = 'draft'; render(); } catch (e) { toast('Geri çekilemedi'); } })(); }
   else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
   else if (a === 'wrstart') startWrongs();
+  else if (a === 'statsreset') resetStats();
   else if (a === 'why') { if (S.R) askWhy(el.dataset.k, whyData(S.R, +el.dataset.q)); }
   else if (a === 'chalnew') createChallenge();
   else if (a === 'chalgo') startChallenge();

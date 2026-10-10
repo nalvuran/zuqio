@@ -92,6 +92,31 @@
           },
           "$other": {".validate": false}
         },
+        "sz": {
+          "n": {".validate": "newData.isNumber() && newData.val() >= 0"},
+          "ok": {".validate": "newData.isNumber() && newData.val() >= 0"},
+          "g": {".validate": "newData.isNumber() && newData.val() >= 0"},
+          "ms": {".validate": "newData.isNumber() && newData.val() >= 0"},
+          "mn": {".validate": "newData.isNumber() && newData.val() >= 0"},
+          "at": {".validate": "newData.isNumber()"},
+          "c": {
+            "$k": {
+              ".validate": "$k.matches(/^[a-z0-9]{1,16}$/)",
+              "n": {".validate": "newData.isNumber() && newData.val() >= 0"},
+              "ok": {".validate": "newData.isNumber() && newData.val() >= 0"},
+              "$other": {".validate": false}
+            }
+          },
+          "d": {
+            "$k": {
+              ".validate": "$k.matches(/^d[0-9]{5}$/)",
+              "n": {".validate": "newData.isNumber() && newData.val() >= 0"},
+              "ok": {".validate": "newData.isNumber() && newData.val() >= 0"},
+              "$other": {".validate": false}
+            }
+          },
+          "$other": {".validate": false}
+        },
         "email": {
           ".validate": "newData.isString() && newData.val().length <= 120 && newData.val() === auth.token.email"
         },
