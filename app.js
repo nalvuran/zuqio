@@ -190,7 +190,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 165';
+const APP_VERSION = '0.5 (test) · yapı 166';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1474,7 +1474,7 @@ function rankList(R, qi) {
 }
 
 /* ================= neden yanıldım? (yapay zeka) ================= */
-const WHY_DAILY = 10;
+const WHY_DAILY = 10, WHY_PRICE = 2; // günlük ücretsiz hak, bitince her açıklama 2 kurabiye
 function whyCount() { try { const o = JSON.parse(localStorage.getItem('zuqio-why') || '{}'); return o.d === dayIdx() ? (o.n || 0) : 0; } catch (e) { return 0; } }
 function whyBump() { try { localStorage.setItem('zuqio-why', JSON.stringify({d: dayIdx(), n: whyCount() + 1})); } catch (e) {} }
 function whyBox(key, d) {
@@ -1482,17 +1482,27 @@ function whyBox(key, d) {
   const w = (S.why || {})[key];
   if (w && w.text) return `<div class="card infocard whybox"><b>Neden yanıldım?</b><p>${esc(w.text)}</p></div>`;
   if (w && w.busy) return `<button class="btn outline" disabled>${ic('think')}Düşünüyorum…</button>`;
-  return `<button class="btn outline" data-act="why" data-k="${esc(key)}" data-q="${d.qi}">${ic('think')}Neden yanıldım? <span class="small muted" style="font-weight:600">(${Math.max(0, WHY_DAILY - whyCount())} hak)</span></button>` +
+  return `<button class="btn outline" data-act="why" data-k="${esc(key)}" data-q="${d.qi}">${ic('think')}Neden yanıldım? ${whyCount() >= WHY_DAILY ? `<span class="small muted" style="font-weight:700;display:inline-flex;align-items:center;gap:3px">· ${COIN}${WHY_PRICE}</span>` : `<span class="small muted" style="font-weight:600">(${WHY_DAILY - whyCount()} hak)</span>`}</button>` +
     (w && w.err ? `<p class="small" style="color:#FF9DA0;text-align:center">${esc(w.err)}</p>` : '');
 }
 async function askWhy(key, d) {
   S.why = S.why || {};
-  if (whyCount() >= WHY_DAILY) { S.why[key] = {err: 'Bugünkü hakkın doldu. Yarın tekrar dene.'}; render(); return; }
+  const paid = whyCount() >= WHY_DAILY;
+  if (paid) {
+    if (coins() < WHY_PRICE) { toast(`Yeterli kurabiyen yok (${WHY_PRICE} gerekli)`); return; }
+    if (!confirm(`Bugünkü ücretsiz hakların bitti. Bu açıklama için ${WHY_PRICE} kurabiye harcanacak. Devam edelim mi?`)) return;
+  }
   S.why[key] = {busy: true}; render();
   try {
     const {explainWrong} = await import('./ai.js');
     const text = await Promise.race([explainWrong(d), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))]);
-    whyBump(); S.why[key] = {text};
+    if (paid) {
+      const w = await freshWallet();
+      if ((w.coins || 0) < WHY_PRICE) { S.why[key] = {err: `Yeterli kurabiyen yok (${WHY_PRICE} gerekli)`}; render(); return; }
+      await update(ref(db, 'users/' + uid()), {'wallet/coins': w.coins - WHY_PRICE});
+      await freshWallet(); SFX.play('coin');
+    } else whyBump();
+    S.why[key] = {text};
   } catch (e) {
     console.error(e);
     const m = String((e && e.message) || '') + String((e && e.code) || '');
