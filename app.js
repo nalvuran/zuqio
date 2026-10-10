@@ -191,7 +191,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 173';
+const APP_VERSION = '0.5 (test) · yapı 174';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -2986,13 +2986,17 @@ V.challenge = chalView;
 V.stats = statsView;
 const notifGifts = () => Object.entries(S.gIn || {}).filter(([id, g]) => g.st === 'p' && shopItem(g.item));
 const notifCookies = () => Object.entries(S.cIn || {}).filter(([id, g]) => g.st === 'p');
-const notifCount = () => frIn().length + notifCookies().length + notifGifts().length;
+const notifDaily = () => { const d = dailyState(); return {claim: !d.claimed, q: !d.qDone}; };
+const notifCount = () => frIn().length + notifCookies().length + notifGifts().length + (notifDaily().claim ? 1 : 0) + (notifDaily().q ? 1 : 0);
 V.notifs = () => {
   const fr = frIn(), ck = notifCookies(), gf = notifGifts();
   const row = (ico, text, btns) => `<div class="card nrow"><span class="nico">${ico}</span><p>${text}</p><span class="fbtns">${btns}</span></div>`;
   const list = fr.map(f => row(avatar(f.av, '', f.fr), `<b>${esc(f.name || 'Bir oyuncu')}</b> seni arkadaş olarak eklemek istiyor`, `<button class="fbtn p" data-act="fraccept" data-id="${esc(f.pid)}">Kabul</button><button class="fbtn" data-act="frno" data-id="${esc(f.pid)}">Reddet</button>`))
     .concat(ck.map(([id, g]) => row(COIN, `<b>${esc(g.fn)}</b> sana ${g.amt} kurabiye gönderdi`, `<button class="fbtn p" data-act="ckyes" data-id="${esc(id)}">Kabul</button><button class="fbtn" data-act="ckno" data-id="${esc(id)}">Reddet</button>`)))
     .concat(gf.map(([id, g]) => { const it = shopItem(g.item); return row(giftPreview(g.item), `<b>${esc(g.fn)}</b> sana <b>${esc(it.name)}</b> hediye etti`, `<button class="fbtn p" data-act="giftyes" data-id="${esc(id)}">Kabul</button><button class="fbtn" data-act="giftno" data-id="${esc(id)}">Reddet</button>`); }));
+  const dl = notifDaily();
+  if (dl.claim) list.push(row(`<span class="ico" style="margin:0;width:32px;height:32px;color:var(--yellow)">${ICON.giftnav}</span>`, 'Günlük kurabiyeni almayı unutma', '<button class="fbtn p" data-go="daily">Al</button>'));
+  if (dl.q) list.push(row(`<span class="ico" style="margin:0;width:32px;height:32px;color:var(--yellow)">${ICON.help}</span>`, 'Günün sorusunu yanıtlamayı unutma', '<button class="fbtn p" data-go="daily">Yanıtla</button>'));
   return `
   <div class="screen">
     <div class="top">${backBtn('data-go="home"')}</div>
