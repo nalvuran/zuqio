@@ -191,7 +191,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 177';
+const APP_VERSION = '0.5 (test) · yapı 178';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -724,6 +724,7 @@ async function sendGift(to, toName, item) {
     await update(ref(db), {['gifts/' + id]: {from: uid(), to, item, price: it.price, st: 'p', fn: S.me.name, tn: toName, t: serverTimestamp()},
       ['users/' + uid() + '/wallet/coins']: (w.coins || 0) - it.price});
     giftDayAdd(); await freshWallet(); S.giftUI = null; SFX.play('coin'); toast(`Hediye ${toName} için gönderildi`);
+    nlogLog('h:gs:' + id + ':' + now(), `${toName} adlı oyuncuya ${it.name} hediye gönderdin`, 'gift');
   } catch (e) { console.error(e); toast('Gönderilemedi. Bu eşya onda zaten olabilir ya da bekleyen bir hediye vardır'); }
   S.busy = false; render();
 }
@@ -735,7 +736,8 @@ async function answerGift(id, yes) {
     if (yes) {
       await update(ref(db), {['users/' + uid() + '/owned/' + g.item]: true, ['gifts/' + id + '/st']: 'a'});
       await freshWallet(); SFX.play('coin'); const it = shopItem(g.item); toast(`${it ? it.name : 'Hediye'} artık senin!`);
-    } else { await update(ref(db, 'gifts/' + id), {st: 'x'}); toast('Hediye geri çevrildi'); }
+      nlogLog('h:gr:' + id + ':' + now(), `${g.fn} sana ${it ? it.name : 'bir hediye'} hediye etti, kabul ettin`, 'gift');
+    } else { await update(ref(db, 'gifts/' + id), {st: 'x'}); toast('Hediye geri çevrildi'); nlogLog('h:gn:' + id + ':' + now(), `${g.fn} adlı oyuncunun hediyesini geri çevirdin`, 'gift'); }
   } catch (e) { console.error(e); toast('İşlem yapılamadı, tekrar dene'); }
   S.busy = false; render();
 }
@@ -777,11 +779,20 @@ function nlogAdd(k, x, ico) {
 }
 function nlogDel(k) {
   const o = nlogAll()[k]; if (!o) return;
-  const e = {t: o.t || now(), d: 1};
+  const e = {t: o.t || now(), d: 1}; if (o.x) { e.x = o.x; e.ico = o.ico || 'bell'; }
   S.me = Object.assign({}, S.me, {nlog: Object.assign({}, nlogAll(), {[k]: e})});
   set(ref(db, 'users/' + uid() + '/nlog/' + k), e).catch(() => {});
   render();
 }
+// kendi yaptığım işlemler doğrudan geçmişe yazılır (okunmuş sayılır)
+function nlogLog(k, x, ico) {
+  k = String(k).replace(/[^A-Za-z0-9_:-]/g, '_').slice(0, 120); if (!k || !S.me) return;
+  const e = {x: String(x).slice(0, 160), ico: ico || 'bell', t: now(), d: 1};
+  S.me = Object.assign({}, S.me, {nlog: Object.assign({}, nlogAll(), {[k]: e})});
+  update(ref(db, 'users/' + uid() + '/nlog/' + k), e).catch(() => {});
+}
+const nlogHist = () => Object.entries(nlogAll()).filter(([k, e]) => e && e.d && e.x).map(([k, e]) => ({k, x: e.x, ico: e.ico || 'bell', t: e.t || 0})).sort((a, b) => b.t - a.t).slice(0, 30);
+const agoDay = t => { const d = Math.floor((now() + 10800000) / 86400000) - Math.floor((t + 10800000) / 86400000); return d <= 0 ? 'bugün' : d === 1 ? 'dün' : d + ' gün önce'; };
 // eski kayıtları temizle (30 günden eski) ve bu cihazdaki eski yerel geçmişi hesaba taşı
 function nlogMigrate() {
   try {
@@ -791,6 +802,8 @@ function nlogMigrate() {
   } catch (e) {}
   const old = Object.entries(nlogAll()).filter(([k, e]) => e && (e.t || 0) < now() - 30 * 86400000 && k !== '_init');
   old.forEach(([k]) => remove(ref(db, 'users/' + uid() + '/nlog/' + k)).catch(() => {}));
+  const hist = Object.entries(nlogAll()).filter(([k, e]) => e && e.d && e.x).sort((a, b) => (b[1].t || 0) - (a[1].t || 0));
+  hist.slice(30).forEach(([k]) => remove(ref(db, 'users/' + uid() + '/nlog/' + k)).catch(() => {}));
 }
 function frNotices(out) {
   if (!(S.frGot && S.frGot.a && S.frGot.b) || !S.me) return;
@@ -891,13 +904,13 @@ async function friendRequest(to, name, av, fr, quiet) {
   const isA = me < to, rec = {a: isA ? me : to, b: isA ? to : me, by: me, st: 'p', t: serverTimestamp()};
   rec[isA ? 'na' : 'nb'] = String(S.me.name || '').slice(0, 25); rec[isA ? 'aa' : 'ab'] = S.me.av | 0; rec[isA ? 'fa' : 'fb'] = String(S.me.fr || '').slice(0, 12);
   if (name) { rec[isA ? 'nb' : 'na'] = String(name).slice(0, 25); rec[isA ? 'ab' : 'aa'] = av | 0; rec[isA ? 'fb' : 'fa'] = String(fr || '').slice(0, 12); }
-  try { await set(ref(db, 'fships/' + pidOf(me, to)), rec); frDayAdd(); if (!quiet) toast('Arkadaşlık isteği gönderildi'); return true; }
+  try { await set(ref(db, 'fships/' + pidOf(me, to)), rec); frDayAdd(); if (!quiet) toast('Arkadaşlık isteği gönderildi'); nlogLog('h:fr:' + pidOf(me, to) + ':' + now(), (name ? `${name} adlı oyuncuya arkadaşlık isteği gönderdin` : 'Bir oyuncuya arkadaşlık isteği gönderdin'), 'users'); return true; }
   catch (e) { console.error(e); if (!quiet) toast('İstek gönderilemedi'); return false; }
 }
 async function friendAccept(pid) {
   const f = frOf(pid); if (!f || S.busy) return;
   S.busy = true;
-  try { await update(ref(db, 'fships/' + pid), Object.assign({st: 'ok'}, myFrFields(f))); SFX.play('coin'); toast(`${f.name || 'Oyuncu'} artık arkadaşın`); }
+  try { await update(ref(db, 'fships/' + pid), Object.assign({st: 'ok'}, myFrFields(f))); SFX.play('coin'); toast(`${f.name || 'Oyuncu'} artık arkadaşın`); nlogLog('h:fa:' + pid + ':' + now(), `${f.name || 'Bir oyuncu'} ile arkadaş oldun`, 'users'); }
   catch (e) { console.error(e); toast('İşlem yapılamadı, tekrar dene'); }
   S.busy = false; render();
 }
@@ -906,7 +919,11 @@ async function friendDrop(pid, how) {
   if (how === 'del' && !confirm(`${f.name || 'Bu oyuncu'} arkadaşlıktan çıkarılsın mı?`)) return;
   if (how === 'block' && !confirm(`${f.name || 'Bu oyuncu'} engellensin mi? Sana tekrar istek gönderemez.`)) return;
   S.busy = true;
-  try { if (how === 'block') await update(ref(db, 'fships/' + pid), {st: 'b'}); else await remove(ref(db, 'fships/' + pid)); }
+  try {
+    if (how === 'block') await update(ref(db, 'fships/' + pid), {st: 'b'}); else await remove(ref(db, 'fships/' + pid));
+    const nm = f.name || 'Bir oyuncu', msg = how === 'block' ? `${nm} adlı oyuncuyu engelledin` : how === 'del' ? `${nm} ile arkadaşlıktan çıktın` : f.st === 'b' ? `${nm} için engeli kaldırdın` : f.by === uid() ? `${nm} için gönderdiğin isteği geri çektin` : `${nm} adlı oyuncunun arkadaşlık isteğini reddettin`;
+    nlogLog('h:fd:' + pid + ':' + now(), msg, how === 'block' ? 'help' : 'users');
+  }
   catch (e) { console.error(e); toast('İşlem yapılamadı, tekrar dene'); }
   S.busy = false; render();
 }
@@ -977,6 +994,7 @@ async function sendCookies(to, toName, amt) {
     await update(ref(db), {['cgifts/' + to + '_' + uid()]: {from: uid(), to, amt, st: 'p', fn: S.me.name, tn: String(toName || '').slice(0, 25), t: serverTimestamp()},
       ['users/' + uid() + '/wallet/coins']: (w.coins || 0) - amt, ['users/' + uid() + '/cg']: {d: dayIdx(), n: used + amt}});
     await freshWallet(); S.ckUI = null; SFX.play('coin'); toast(`${amt} kurabiye ${toName || 'arkadaşın'} için gönderildi`);
+    nlogLog('h:cs:' + to + ':' + now(), (toName ? `${toName} adlı arkadaşına ${amt} kurabiye gönderdin` : `Arkadaşına ${amt} kurabiye gönderdin`), 'coin');
   } catch (e) { console.error(e); toast('Gönderilemedi. Bekleyen bir kurabiye hediyen olabilir'); }
   S.busy = false; render();
 }
@@ -988,7 +1006,8 @@ async function answerCookies(id, yes) {
       const w = await freshWallet();
       await update(ref(db), {['cgifts/' + id + '/st']: 'a', ['users/' + uid() + '/wallet/coins']: (w.coins || 0) + g.amt, ['users/' + uid() + '/wallet/cf']: id});
       await freshWallet(); SFX.play('coin'); toast(`+${g.amt} kurabiye kazandın!`);
-    } else { await update(ref(db, 'cgifts/' + id), {st: 'x'}); toast('Kurabiye geri çevrildi'); }
+      nlogLog('h:cr:' + id + ':' + now(), `${g.fn} adlı arkadaşından ${g.amt} kurabiye aldın`, 'coin');
+    } else { await update(ref(db, 'cgifts/' + id), {st: 'x'}); toast('Kurabiye geri çevrildi'); nlogLog('h:cn:' + id + ':' + now(), `${g.fn} adlı arkadaşının ${g.amt} kurabiyesini geri çevirdin`, 'coin'); }
   } catch (e) { console.error(e); toast('İşlem yapılamadı, tekrar dene'); }
   S.busy = false; render();
 }
@@ -3067,7 +3086,7 @@ V.notifs = () => {
   const list = fr.map(f => row(avatar(f.av, '', f.fr), `<b>${esc(f.name || 'Bir oyuncu')}</b> seni arkadaş olarak eklemek istiyor`, `<button class="fbtn p" data-act="fraccept" data-id="${esc(f.pid)}">Kabul</button><button class="fbtn" data-act="frno" data-id="${esc(f.pid)}">Reddet</button>`))
     .concat(ck.map(([id, g]) => row(COIN, `<b>${esc(g.fn)}</b> sana ${g.amt} kurabiye gönderdi`, `<button class="fbtn p" data-act="ckyes" data-id="${esc(id)}">Kabul</button><button class="fbtn" data-act="ckno" data-id="${esc(id)}">Reddet</button>`)))
     .concat(gf.map(([id, g]) => { const it = shopItem(g.item); return row(giftPreview(g.item), `<b>${esc(g.fn)}</b> sana <b>${esc(it.name)}</b> hediye etti`, `<button class="fbtn p" data-act="giftyes" data-id="${esc(id)}">Kabul</button><button class="fbtn" data-act="giftno" data-id="${esc(id)}">Reddet</button>`); }));
-  const dl = notifDaily(), st = notifStreak(), win = notifWin(), yel = 'margin:0;width:32px;height:32px;color:var(--yellow)';
+  const hist = nlogHist(), dl = notifDaily(), st = notifStreak(), win = notifWin(), yel = 'margin:0;width:32px;height:32px;color:var(--yellow)';
   const nic = k => k === 'coin' ? COIN : `<span class="ico" style="${yel}">${ICON[k] || ICON.bell}</span>`;
   if (win) list.push(row(`<span class="ico" style="${yel}">${ICON.trophy}</span>`, `<b>${esc(monthLabel(win.key))}</b> ayının kitap ödülünü kazandın!`, `<button class="fbtn p" data-act="bookdl">İndir</button><button class="fbtn" data-act="winbhide">Tamam</button>`));
   nlogGet().slice().reverse().forEach(e => list.push(row(nic(e.ico), esc(e.x), `<button class="fbtn" data-act="nclear" data-k="${esc(e.k)}">Tamam</button>`)));
@@ -3078,6 +3097,7 @@ V.notifs = () => {
     <div class="top">${backBtn('data-go="home"')}</div>
     <div class="phead"><span class="pico">${ICON.bell}</span><h2>Bildirimler</h2></div>
     <div class="stack" style="gap:10px">${list.length ? list.join('') : '<div class="card"><p class="small muted" style="margin:0;text-align:center">Yeni bildirimin yok.</p></div>'}</div>
+    ${hist.length ? `<div class="stack" style="gap:8px;margin-top:22px"><b class="muted">Geçmiş</b>${hist.map(e => `<div class="card nrow old"><span class="nico">${nic(e.ico)}</span><p>${esc(e.x)}</p><span class="small muted nago">${agoDay(e.t)}</span></div>`).join('')}</div>` : ''}
   </div>`;
 };
 V.frlist = () => {
