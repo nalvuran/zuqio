@@ -190,7 +190,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 169';
+const APP_VERSION = '0.5 (test) · yapı 170';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -2659,7 +2659,7 @@ V.qzedit = () => {
       <div class="chips">${[15, 30, 45, 0].map(n => `<button class="${Z.dur === n ? 'on' : ''}" data-act="qzdur" data-n="${n}" ${locked ? 'disabled' : ''}>${n ? n + ' sn' : 'Süresiz'}</button>`).join('')}</div>
       ${Z.dur === 0 ? '<p class="small muted">Süresiz seçersen oda açılmaz; tek başına, acele etmeden çalışırsın.</p>' : ''}
       ${Z.src === 'pdf' && !Z.showQs ? `<div class="card stack" style="gap:8px"><b>${ic('target')}${Z.qs.length} soru hazır</b>
-        <p class="small muted">Sorular özetteki bilgilerden hazırlandı ve oyunda sürpriz olarak gelecek. Özeti oku; doğruysa onayla. Yapay zekâ hata yapabilir, oyunda yanlış bir soru görürsen “Soruyu bildir” düğmesini kullanabilirsin.</p></div>` : `${Z.qs.map((q, i) => `
+        <p class="small muted">Sorular özetteki bilgilerden hazırlandı ve oyunda sürpriz olarak gelecek. Özeti oku; doğruysa onayla. Oyunda yanlış bir soru görürsen “Soruyu bildir” düğmesini kullanabilirsin.</p></div>` : `${Z.qs.map((q, i) => `
         <div class="card stack qzq" style="gap:8px" data-i="${i}">
           <div class="row between"><b>${i + 1}. soru · ${q.t === 'num' ? 'Tahmin' : 'Çoktan seçmeli'}</b>${locked || Z.qs.length < 2 ? '' : `<button class="btn ghost" data-act="qzdel" data-i="${i}" aria-label="Soruyu sil">Sil</button>`}</div>
           <select class="field" data-f="cat" aria-label="Kategori" ${locked ? 'disabled' : ''}>${(NON_EN.includes(q.cat) || !q.cat ? NON_EN : [...NON_EN, q.cat]).map(c => `<option ${q.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
