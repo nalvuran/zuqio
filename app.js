@@ -48,6 +48,7 @@ const onDisconnect = r => r && r.__local ? {set: () => Promise.resolve(), cancel
 const ICON = {
   plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   key:'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 12h.01M11 12h.01M15 12h.01"/></svg>',
+  bell:'<svg viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>',
   think:'<svg viewBox="0 0 24 24"><path d="M8 21v-4.2A7 7 0 1 1 18.6 11l1.6 2.7-1.7.6V17a2 2 0 0 1-2 2h-2.5v2"/><path d="M10.6 9.3a1.6 1.6 0 1 1 2.4 1.4c-.5.3-.9.6-.9 1.2M11.9 14.2h.01"/></svg>',
   list:'<svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',
   bolt:'<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
@@ -190,7 +191,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 172';
+const APP_VERSION = '0.5 (test) · yapı 173';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -690,7 +691,7 @@ const giftDone = new Set();
 function watchGifts() {
   if (giftSubs.length) return;
   const me = uid();
-  giftSubs.push(onValue(query(ref(db, 'gifts'), orderByChild('to'), equalTo(me)), sn => { S.gIn = sn.val() || {}; if (S.screen === 'home') render(); }, () => {}));
+  giftSubs.push(onValue(query(ref(db, 'gifts'), orderByChild('to'), equalTo(me)), sn => { S.gIn = sn.val() || {}; if (S.screen === 'home' || S.screen === 'notifs') render(); }, () => {}));
   giftSubs.push(onValue(query(ref(db, 'gifts'), orderByChild('from'), equalTo(me)), sn => { S.gOut = sn.val() || {}; settleGifts(); }, () => {}));
 }
 function stopGifts() { giftSubs.forEach(f => { try { f(); } catch (e) {} }); giftSubs = []; S.gIn = {}; S.gOut = {}; giftDone.clear(); }
@@ -798,7 +799,7 @@ function frBuild() {
     S.frSig[f.pid] = sig;
     update(ref(db, 'fships/' + f.pid), f.mineA ? {na: n, aa: a, fa: fr} : {nb: n, ab: a, fb: fr}).catch(() => {});
   });
-  if (['home', 'friends', 'frlist'].includes(S.screen)) render();
+  if (['home', 'friends', 'frlist', 'notifs'].includes(S.screen)) render();
 }
 const frFriends = () => (S.frs || []).filter(f => f.st === 'ok').sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
 const frIn = () => (S.frs || []).filter(f => f.st === 'p' && f.by !== uid());
@@ -875,7 +876,7 @@ const ckDone = new Set();
 function watchCookies() {
   if (ckSubs.length) return;
   const me = uid();
-  ckSubs.push(onValue(query(ref(db, 'cgifts'), orderByChild('to'), equalTo(me)), sn => { S.cIn = sn.val() || {}; if (S.screen === 'home') render(); }, () => {}));
+  ckSubs.push(onValue(query(ref(db, 'cgifts'), orderByChild('to'), equalTo(me)), sn => { S.cIn = sn.val() || {}; if (S.screen === 'home' || S.screen === 'notifs') render(); }, () => {}));
   ckSubs.push(onValue(query(ref(db, 'cgifts'), orderByChild('from'), equalTo(me)), sn => { S.cOut = sn.val() || {}; settleCookies(); }, () => {}));
 }
 function stopCookies() { ckSubs.forEach(f => { try { f(); } catch (e) {} }); ckSubs = []; S.cIn = {}; S.cOut = {}; ckDone.clear(); }
@@ -1180,7 +1181,7 @@ V.profile = () => `
 V.home = () => `
   <div class="screen home2">
     ${ckPop() || frPop() || giftPop() || winPop() || annBanner()}${a2Sheet()}
-    <div class="top home-top"><button class="gearbtn" data-go="settings" aria-label="Ayarlar">${ICON.gear}</button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle"><span class="mn">${esc(S.me.name)}</span>${avatar(S.me.av, '', S.me.fr)}<span class="mlv">Seviye ${myLv()}</span></button><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} kurabiye" style="justify-self:end"><b>${coins()}</b>${COIN}</button></div>
+    <div class="top home-top"><span class="topl"><button class="gearbtn" data-go="settings" aria-label="Ayarlar">${ICON.gear}</button><button class="gearbtn bellbtn" data-go="notifs" aria-label="${notifCount() ? 'Yeni bildirimlerin var' : 'Bildirimler'}">${ICON.bell}${notifCount() ? '<i class="reddot"></i>' : ''}</button></span><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle"><span class="mn">${esc(S.me.name)}</span>${avatar(S.me.av, '', S.me.fr)}<span class="mlv">Seviye ${myLv()}</span></button><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} kurabiye" style="justify-self:end"><b>${coins()}</b>${COIN}</button></div>
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px">${a2Link()}</div>
     <div class="stack home-btns" style="gap:14px">
@@ -1918,7 +1919,7 @@ V.final = () => {
   </div>`;
 };
 
-const NAV_SCREENS = ['home', 'friends', 'frlist', 'settings', 'shop', 'board', 'daily', 'quizzes', 'rooms', 'join', 'how', 'profile', 'stats'];
+const NAV_SCREENS = ['home', 'friends', 'frlist', 'notifs', 'settings', 'shop', 'board', 'daily', 'quizzes', 'rooms', 'join', 'how', 'profile', 'stats'];
 function gnav() {
   if (!NAV_SCREENS.includes(S.screen) || S.R || (S.screen === 'profile' && S.firstProfile)) return '';
   const on = k => S.screen === k ? ' on' : '';
@@ -2983,6 +2984,22 @@ app.addEventListener('keydown', e => {
 
 V.challenge = chalView;
 V.stats = statsView;
+const notifGifts = () => Object.entries(S.gIn || {}).filter(([id, g]) => g.st === 'p' && shopItem(g.item));
+const notifCookies = () => Object.entries(S.cIn || {}).filter(([id, g]) => g.st === 'p');
+const notifCount = () => frIn().length + notifCookies().length + notifGifts().length;
+V.notifs = () => {
+  const fr = frIn(), ck = notifCookies(), gf = notifGifts();
+  const row = (ico, text, btns) => `<div class="card nrow"><span class="nico">${ico}</span><p>${text}</p><span class="fbtns">${btns}</span></div>`;
+  const list = fr.map(f => row(avatar(f.av, '', f.fr), `<b>${esc(f.name || 'Bir oyuncu')}</b> seni arkadaş olarak eklemek istiyor`, `<button class="fbtn p" data-act="fraccept" data-id="${esc(f.pid)}">Kabul</button><button class="fbtn" data-act="frno" data-id="${esc(f.pid)}">Reddet</button>`))
+    .concat(ck.map(([id, g]) => row(COIN, `<b>${esc(g.fn)}</b> sana ${g.amt} kurabiye gönderdi`, `<button class="fbtn p" data-act="ckyes" data-id="${esc(id)}">Kabul</button><button class="fbtn" data-act="ckno" data-id="${esc(id)}">Reddet</button>`)))
+    .concat(gf.map(([id, g]) => { const it = shopItem(g.item); return row(giftPreview(g.item), `<b>${esc(g.fn)}</b> sana <b>${esc(it.name)}</b> hediye etti`, `<button class="fbtn p" data-act="giftyes" data-id="${esc(id)}">Kabul</button><button class="fbtn" data-act="giftno" data-id="${esc(id)}">Reddet</button>`); }));
+  return `
+  <div class="screen">
+    <div class="top">${backBtn('data-go="home"')}</div>
+    <div class="phead"><span class="pico">${ICON.bell}</span><h2>Bildirimler</h2></div>
+    <div class="stack" style="gap:10px">${list.length ? list.join('') : '<div class="card"><p class="small muted" style="margin:0;text-align:center">Yeni bildirimin yok.</p></div>'}</div>
+  </div>`;
+};
 V.frlist = () => {
   const inc = frIn(), fl = frFriends(), out = frOut(), blk = frBlocked();
   const row = (f, btns) => `<div class="rank">${onlAv(f.other, f.av, f.fr)}<b class="frn">${esc(f.name || 'Oyuncu')}</b><span class="fbtns">${btns}</span></div>`;
