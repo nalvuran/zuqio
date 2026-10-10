@@ -190,7 +190,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 168';
+const APP_VERSION = '0.5 (test) · yapı 169';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1151,7 +1151,7 @@ V.profile = () => `
       <h2>${S.firstProfile ? 'Hoş geldin!' : 'Profil'}</h2>
       ${S.firstProfile ? '<p class="muted">Oyunda görünecek adını ve avatarını seç. Sonra istediğin zaman değiştirebilirsin.</p>' : ''}
       ${S.firstProfile ? '' : lvCard()}
-      ${S.firstProfile ? '' : `<button class="card setrow" data-go="stats" style="text-align:left"><div><b>${ic('chart')}İstatistiklerim</b></div><span aria-hidden="true">›</span></button>`}
+      ${S.firstProfile ? '' : `<button class="card setrow" data-go="stats" style="text-align:left"><div><b>${ic('chart')}İstatistiklerim</b></div></button>`}
       <div class="avatar avbig">${avSVG(S.pick)}</div>
       <label class="small muted" for="pnm">Oyunda görünecek adın</label>
       <input class="field" id="pnm" maxlength="25" autocomplete="nickname" value="${esc(S.draft)}">
@@ -1871,7 +1871,7 @@ V.final = () => {
     <div class="grow" style="min-height:20px"></div>
     <div class="stack">
       ${left ? `<button class="btn primary big" data-act="wrongsagain"><span class="ic">${ICON.play}</span><span class="lb">KALAN YANLIŞLARIMI ÇÖZ</span></button>` : ''}
-      <button class="btn ${left ? 'ghost' : 'primary big'}" data-act="leave">Ana menü</button>
+      <button class="btn ${left ? 'ghost' : 'primary'}" data-act="leave" ${left ? '' : 'style="width:50%;align-self:center;justify-content:center;text-align:center"'}>Ana menü</button>
     </div>
   </div>`;
   }
