@@ -191,7 +191,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 180';
+const APP_VERSION = '0.5 (test) · yapı 181';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -2825,8 +2825,8 @@ V.qzedit = () => {
           : q.o.map((o, k) => `<input class="field qzo ${k === 0 ? 'right' : ''}" data-f="o${k}" maxlength="60" placeholder="${k === 0 ? 'Doğru cevap' : 'Yanlış şık ' + k}" value="${esc(o)}" ${locked ? 'disabled' : ''}>`).join('')}
         </div>`).join('')}
       ${locked || Z.qs.length >= QZ_MAX ? '' : `<div class="row" style="gap:8px">
-        <button class="btn outline" style="flex:1" data-act="qzadd" data-t="mc">+ Soru ekle</button>
-        <button class="btn outline" style="flex:1" data-act="qzadd" data-t="num">+ Tahmin sorusu</button></div>`}`}
+        <button class="btn outline" style="flex:1;font-size:.92rem;padding-inline:8px;line-height:1.2" data-act="qzadd" data-t="mc">+ Seçenekli soru ekle</button>
+        <button class="btn outline" style="flex:1;font-size:.92rem;padding-inline:8px;line-height:1.2" data-act="qzadd" data-t="num">+ Tahmin sorusu ekle</button></div>`}`}
       ${Z.src === 'pdf' && !Z.showQs ? '' : `<p class="small muted">İlk şık her zaman doğru cevaptır; oyunda şıklar karıştırılır. Tek soruyla başlayabilir, “+” ile istediğin kadar (en fazla ${QZ_MAX}) ekleyebilirsin. Her sorunun kategorisini ayrı seçebilirsin.</p>`}
     </div>
     <div class="grow" style="min-height:16px"></div>
