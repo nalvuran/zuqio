@@ -190,7 +190,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 171';
+const APP_VERSION = '0.5 (test) · yapı 172';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -845,6 +845,16 @@ async function shareFriend() {
   if (navigator.share) { try { await navigator.share({title: 'Zuqio', text, url}); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
   try { await navigator.clipboard.writeText(url); toast('Bağlantı kopyalandı'); } catch (e) { prompt('Bağlantıyı kopyala:', url); }
 }
+function frPop() {
+  S.frLater = S.frLater || {};
+  const f = frIn().find(x => !S.frLater[x.pid]); if (!f) return '';
+  return `<div class="annmodal" data-act="frlater" data-id="${esc(f.pid)}"><div class="giftcard" role="dialog" aria-label="Arkadaşlık isteği" data-stop="1">
+    <button class="annx" data-act="frlater" data-id="${esc(f.pid)}" aria-label="Sonra bak">✕</button>
+    <div class="giftprev">${avatar(f.av, '', f.fr)}</div>
+    <p><b>${esc(f.name || 'Bir oyuncu')}</b> seni arkadaş olarak eklemek istiyor</p>
+    <div class="stack" style="gap:8px;width:100%"><button class="btn primary big" data-act="fraccept" data-id="${esc(f.pid)}" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.users}</span><span class="lb">KABUL ET</span></button>
+    <button class="btn ghost" data-act="frno" data-id="${esc(f.pid)}" ${S.busy ? 'disabled' : ''}>Reddet</button></div></div></div>`;
+}
 const frBtn = R => (R && !R.bot && !R.study && !R.wr && players(R).some(p => p.id !== uid() && !String(p.id).startsWith('bot'))) ? `<button class="btn outline" data-act="fradd">${ic('users')}Arkadaş ekle</button>` : '';
 function frAddSheet() {
   const R = S.R; if (!S.frUI || !R) return '';
@@ -1169,13 +1179,13 @@ V.profile = () => `
 
 V.home = () => `
   <div class="screen home2">
-    ${ckPop() || giftPop() || winPop() || annBanner()}${a2Sheet()}
+    ${ckPop() || frPop() || giftPop() || winPop() || annBanner()}${a2Sheet()}
     <div class="top home-top"><button class="gearbtn" data-go="settings" aria-label="Ayarlar">${ICON.gear}</button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle"><span class="mn">${esc(S.me.name)}</span>${avatar(S.me.av, '', S.me.fr)}<span class="mlv">Seviye ${myLv()}</span></button><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} kurabiye" style="justify-self:end"><b>${coins()}</b>${COIN}</button></div>
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px">${a2Link()}</div>
     <div class="stack home-btns" style="gap:14px">
       <button class="btn primary big" data-act="quick" ${S.busy ? 'disabled' : ''}><span class="ic bigic">${ICON.user1}</span><span class="lb">RAKİP BUL</span></button>
-      <button class="btn purple big" data-go="friends"><span class="ic bigic">${ICON.users}</span><span class="lb">ARKADAŞLARINLA OYNA</span></button>
+      <button class="btn purple big frbtn" data-go="friends"><span class="ic bigic">${ICON.users}</span><span class="lb">ARKADAŞLARINLA OYNA</span>${frIn().length ? `<i class="reddot" aria-label="Yeni arkadaşlık isteği"></i>` : ''}</button>
       <button class="btn green big" data-act="myquizzes"><span class="ic bigic">${ICON.doc}</span><span class="lb">NOTLARINLA ÇALIŞ</span></button>
       <button class="btn outline big" data-act="bot" ${S.busy ? 'disabled' : ''}><span class="ic bigic">${ICON.bot}</span><span class="lb">BİLGİSAYARA KARŞI OYNA</span></button>
     </div>
@@ -2927,6 +2937,7 @@ app.addEventListener('click', e => {
   else if (a === 'statsreset') resetStats();
   else if (a === 'openfrlist') { go('frlist'); refreshOnl(); }
   else if (a === 'frshare') shareFriend();
+  else if (a === 'frlater') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.frLater = S.frLater || {}; S.frLater[el.dataset.id] = true; render(); }
   else if (a === 'fradd') { S.frUI = true; render(); }
   else if (a === 'frclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.frUI = false; render(); }
   else if (a === 'frsend') { const p = players(S.R).find(x => x.id === el.dataset.id); if (p) friendRequest(p.id, p.name, p.av, p.fr).then(() => render()); }
