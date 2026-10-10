@@ -191,7 +191,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 176';
+const APP_VERSION = '0.5 (test) · yapı 177';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -765,21 +765,48 @@ function giftSheet() {
 }
 
 /* ================= bildirim günlüğü (bu cihazda) ================= */
-const nlogGet = () => { try { return JSON.parse(ls.get('zuqio-nlog') || '[]'); } catch (e) { return []; } };
-const nlogSeen = () => { try { return JSON.parse(ls.get('zuqio-nseen') || '[]'); } catch (e) { return []; } };
+// Bildirim geçmişi hesapta saklanır (users/<uid>/nlog), böylece tüm cihazlarda aynıdır. d:1 kaydı kapatılmış bildirimin izidir.
+const nlogAll = () => (S.me && S.me.nlog) || {};
+const nlogGet = () => Object.entries(nlogAll()).filter(([k, e]) => e && !e.d && e.x).map(([k, e]) => ({k, x: e.x, ico: e.ico || 'bell', t: e.t || 0})).sort((a, b) => a.t - b.t).slice(-20);
 function nlogAdd(k, x, ico) {
-  const seen = nlogSeen(); if (seen.includes(k)) return;
-  seen.push(k); ls.set('zuqio-nseen', JSON.stringify(seen.slice(-200)));
-  const l = nlogGet(); l.push({k, x, ico: ico || 'bell', t: Date.now()}); ls.set('zuqio-nlog', JSON.stringify(l.slice(-20)));
+  k = String(k).replace(/[^A-Za-z0-9_:-]/g, '_').slice(0, 120); if (!k || !S.me || nlogAll()[k]) return;
+  const e = {x: String(x).slice(0, 160), ico: ico || 'bell', t: now()};
+  S.me = Object.assign({}, S.me, {nlog: Object.assign({}, nlogAll(), {[k]: e})});
+  update(ref(db, 'users/' + uid() + '/nlog/' + k), e).catch(() => {});
   if (['home', 'notifs'].includes(S.screen)) render();
 }
-function nlogDel(k) { ls.set('zuqio-nlog', JSON.stringify(nlogGet().filter(e => e.k !== k))); render(); }
-const nfrSet = () => { try { return JSON.parse(ls.get('zuqio-nfr') || '[]'); } catch (e) { return []; } };
+function nlogDel(k) {
+  const o = nlogAll()[k]; if (!o) return;
+  const e = {t: o.t || now(), d: 1};
+  S.me = Object.assign({}, S.me, {nlog: Object.assign({}, nlogAll(), {[k]: e})});
+  set(ref(db, 'users/' + uid() + '/nlog/' + k), e).catch(() => {});
+  render();
+}
+// eski kayıtları temizle (30 günden eski) ve bu cihazdaki eski yerel geçmişi hesaba taşı
+function nlogMigrate() {
+  try {
+    const legacy = JSON.parse(ls.get('zuqio-nlog') || '[]');
+    legacy.forEach(e => { if (e && e.k && e.x) nlogAdd(e.k, e.x, e.ico); });
+    ls.del('zuqio-nlog');
+  } catch (e) {}
+  const old = Object.entries(nlogAll()).filter(([k, e]) => e && (e.t || 0) < now() - 30 * 86400000 && k !== '_init');
+  old.forEach(([k]) => remove(ref(db, 'users/' + uid() + '/nlog/' + k)).catch(() => {}));
+}
 function frNotices(out) {
-  if (!(S.frGot && S.frGot.a && S.frGot.b)) return;
-  const set0 = nfrSet(), init = ls.get('zuqio-nfr-init') === '1', add = [];
-  out.forEach(f => { if (f.st === 'ok' && f.by === uid() && !set0.includes(f.pid)) { add.push(f.pid); if (init) nlogAdd('fr:' + f.pid, `${f.name || 'Bir oyuncu'} arkadaşlık isteğini kabul etti`, 'users'); } });
-  if (add.length || !init) { ls.set('zuqio-nfr', JSON.stringify(set0.concat(add).slice(-200))); ls.set('zuqio-nfr-init', '1'); }
+  if (!(S.frGot && S.frGot.a && S.frGot.b) || !S.me) return;
+  const mine = out.filter(f => f.st === 'ok' && f.by === uid()), all = nlogAll(), init = !!all._init;
+  if (!init) {
+    // ilk kez: var olan arkadaşlıkları bildirimsiz işaretle (bu cihazda eski yerel kayıt varsa onu da kullan)
+    const legacy = ls.get('zuqio-nfr-init') === '1' ? (() => { try { return JSON.parse(ls.get('zuqio-nfr') || '[]'); } catch (e) { return []; } })() : null;
+    const up = {_init: {t: now(), d: 1}}, loc = {_init: up._init};
+    mine.forEach(f => { if (!legacy || legacy.includes(f.pid)) { up['fr:' + f.pid] = {t: now(), d: 1}; loc['fr:' + f.pid] = up['fr:' + f.pid]; } });
+    S.me = Object.assign({}, S.me, {nlog: Object.assign({}, all, loc)});
+    update(ref(db, 'users/' + uid() + '/nlog'), up).catch(() => {});
+    ls.del('zuqio-nfr'); ls.del('zuqio-nfr-init');
+    mine.forEach(f => { if (legacy && !legacy.includes(f.pid)) nlogAdd('fr:' + f.pid, `${f.name || 'Bir oyuncu'} arkadaşlık isteğini kabul etti`, 'users'); });
+    return;
+  }
+  mine.forEach(f => nlogAdd('fr:' + f.pid, `${f.name || 'Bir oyuncu'} arkadaşlık isteğini kabul etti`, 'users'));
 }
 // meydan okumalarımın sonuçları
 const MYCH_MAX = 10;
@@ -1074,7 +1101,7 @@ function watchMe() {
     S.me = v;
     const sig = JSON.stringify(Object.assign({}, v, {act: 0, seen: 0})); // süre sayacı yazıları ekranı yenilemesin
     if (sig === S.meSig) return; S.meSig = sig;
-    if (['home', 'daily', 'shop', 'settings'].includes(S.screen) && !S.busy) render();
+    if (['home', 'daily', 'shop', 'settings', 'notifs'].includes(S.screen) && !S.busy) render();
   });
 }
 
@@ -2058,7 +2085,7 @@ onAuthStateChanged(auth, async u => {
 });
 
 async function afterLogin() {
-  watchMe(); watchQuick(); loadHidden().then(presTick); setTimeout(checkChalResults, 2500);
+  watchMe(); watchQuick(); loadHidden().then(presTick); setTimeout(() => { nlogMigrate(); if (S.frRaw) frBuild(); }, 1500); setTimeout(checkChalResults, 2500);
   if (S.pendingFriend) {
     const f = S.pendingFriend; S.pendingFriend = null;
     await Promise.race([S.frP, new Promise(r => setTimeout(r, 3500))]);

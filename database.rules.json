@@ -198,6 +198,26 @@
           "$d": {
             ".validate": "$d.matches(/^d[0-9]{1,6}$/) && newData.isNumber() && newData.val() >= 0 && newData.val() <= 1440"
           }
+        },
+        "nlog": {
+          "$k": {
+            ".validate": "$k.matches(/^[A-Za-z0-9_:-]{1,120}$/) && newData.hasChildren(['t']) && newData.child('t').isNumber() && (!newData.child('x').exists() || (newData.child('x').isString() && newData.child('x').val().length <= 160)) && (!newData.child('ico').exists() || (newData.child('ico').isString() && newData.child('ico').val().length <= 12)) && (!newData.child('d').exists() || newData.child('d').val() === 1)",
+            "x": {
+              ".validate": "newData.isString()"
+            },
+            "ico": {
+              ".validate": "newData.isString()"
+            },
+            "t": {
+              ".validate": "newData.isNumber()"
+            },
+            "d": {
+              ".validate": "newData.isNumber()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
         }
       },
       ".read": "auth != null && root.child('admins').child(auth.uid).exists()"
