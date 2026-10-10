@@ -191,7 +191,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 174';
+const APP_VERSION = '0.5 (test) · yapı 175';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -622,7 +622,7 @@ async function createChallenge() {
     else { const qs = chalQuestions(R); if (!qs) throw new Error('chal-q'); data.qs = qs; }
     const id = Math.random().toString(36).slice(2, 10);
     await set(ref(db, 'challenges/' + id), data);
-    chalDayAdd();
+    chalDayAdd(); mychAdd(id, data.score, data.lbl);
     const url = CHAL_URL + id, text = `${S.me.name} Zuqio’da ${data.lbl} konusunda ${fmt(data.score)} puan yaptı. Onu geçebilir misin?`;
     S.busy = false; render();
     try { if (navigator.share) { await navigator.share({title: 'Zuqio meydan okuması', text, url}); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
@@ -706,7 +706,8 @@ async function settleGifts() {
         const w = await freshWallet();
         await update(ref(db), {['gifts/' + id]: null, ['users/' + uid() + '/wallet/coins']: (w.coins || 0) + g.price, ['users/' + uid() + '/wallet/rf']: id});
         await freshWallet(); toast(`${who} hediyeni kabul etmedi, kurabiyelerin iade edildi`);
-      } else { await remove(ref(db, 'gifts/' + id)); toast(`${who} hediyeni kabul etti`); }
+        nlogAdd(`gf:${id}:${g.t}`, `${who} hediyeni kabul etmedi, kurabiyelerin iade edildi`, 'gift');
+      } else { await remove(ref(db, 'gifts/' + id)); toast(`${who} hediyeni kabul etti`); nlogAdd(`gf:${id}:${g.t}`, `${who} hediyeni kabul etti`, 'gift'); }
     } catch (e) { console.error(e); giftDone.delete(id); }
     render();
   }
@@ -733,7 +734,6 @@ async function answerGift(id, yes) {
   try {
     if (yes) {
       await update(ref(db), {['users/' + uid() + '/owned/' + g.item]: true, ['gifts/' + id + '/st']: 'a'});
-      remove(ref(db, 'gifts/' + id)).catch(() => {});
       await freshWallet(); SFX.play('coin'); const it = shopItem(g.item); toast(`${it ? it.name : 'Hediye'} artık senin!`);
     } else { await update(ref(db, 'gifts/' + id), {st: 'x'}); toast('Hediye geri çevrildi'); }
   } catch (e) { console.error(e); toast('İşlem yapılamadı, tekrar dene'); }
@@ -764,6 +764,47 @@ function giftSheet() {
     <div class="row between" style="margin-bottom:10px">${u.step === 'item' ? '<button class="btn ghost" data-act="giftback">‹ Geri</button>' : '<span></span>'}<span class="coinbar"><b>${coins()}</b>${COIN}</span><button class="annx" style="position:static" data-act="giftclose" aria-label="Kapat">✕</button></div>${body}</div></div>`;
 }
 
+/* ================= bildirim günlüğü (bu cihazda) ================= */
+const nlogGet = () => { try { return JSON.parse(ls.get('zuqio-nlog') || '[]'); } catch (e) { return []; } };
+const nlogSeen = () => { try { return JSON.parse(ls.get('zuqio-nseen') || '[]'); } catch (e) { return []; } };
+function nlogAdd(k, x, ico) {
+  const seen = nlogSeen(); if (seen.includes(k)) return;
+  seen.push(k); ls.set('zuqio-nseen', JSON.stringify(seen.slice(-200)));
+  const l = nlogGet(); l.push({k, x, ico: ico || 'bell', t: Date.now()}); ls.set('zuqio-nlog', JSON.stringify(l.slice(-20)));
+  if (['home', 'notifs'].includes(S.screen)) render();
+}
+function nlogDel(k) { ls.set('zuqio-nlog', JSON.stringify(nlogGet().filter(e => e.k !== k))); render(); }
+const nfrSet = () => { try { return JSON.parse(ls.get('zuqio-nfr') || '[]'); } catch (e) { return []; } };
+function frNotices(out) {
+  if (!(S.frGot && S.frGot.a && S.frGot.b)) return;
+  const set0 = nfrSet(), init = ls.get('zuqio-nfr-init') === '1', add = [];
+  out.forEach(f => { if (f.st === 'ok' && f.by === uid() && !set0.includes(f.pid)) { add.push(f.pid); if (init) nlogAdd('fr:' + f.pid, `${f.name || 'Bir oyuncu'} arkadaşlık isteğini kabul etti`, 'users'); } });
+  if (add.length || !init) { ls.set('zuqio-nfr', JSON.stringify(set0.concat(add).slice(-200))); ls.set('zuqio-nfr-init', '1'); }
+}
+// meydan okumalarımın sonuçları
+const MYCH_MAX = 10;
+const mychGet = () => { try { return JSON.parse(ls.get('zuqio-mych') || '[]'); } catch (e) { return []; } };
+function mychAdd(id, score, lbl) { const l = mychGet(); l.push({id, s: score, l: lbl, t: Date.now()}); ls.set('zuqio-mych', JSON.stringify(l.slice(-MYCH_MAX))); }
+async function checkChalResults() {
+  if (S.chalChk && Date.now() - S.chalChk < 60000) return; S.chalChk = Date.now();
+  const l = mychGet().filter(e => Date.now() - e.t < 13 * 86400000);
+  for (const e of l) {
+    try {
+      const res = (await get(ref(db, 'challenges/' + e.id + '/res'))).val() || {};
+      for (const [u, v] of Object.entries(res)) {
+        if (!v || u === uid()) continue;
+        nlogAdd(`ch:${e.id}:${u}`, v.s > e.s ? `${v.n} meydan okumanı çözdü ve seni geçti (${fmt(v.s)} · senin ${fmt(e.s)})` : `${v.n} meydan okumanı çözdü (${fmt(v.s)} puan)`, 'target');
+      }
+    } catch (er) { /* sessizce geç */ }
+  }
+}
+async function chalReport(R) {
+  if (!R || !R.chal || !R.gid || S.chalRep === R.gid) return; S.chalRep = R.gid;
+  if (S.chalData && S.chalData.from === uid()) return;
+  const sc = Math.max(0, Math.min(60000, Math.round((R.scores || {})[uid()] || 0)));
+  try { await set(ref(db, 'challenges/' + R.chal + '/res/' + uid()), {n: String(S.me.name || 'Oyuncu').slice(0, 25), s: sc, t: serverTimestamp()}); } catch (e) { /* ilk sonuç yazılmıştır */ }
+}
+
 /* ================= arkadaşlar ve kurabiye hediyesi ================= */
 const FR_MAX = 50, CK_DAILY = 10, CK_LV = 3;
 const pidOf = (x, y) => x < y ? x + '_' + y : y + '_' + x;
@@ -789,6 +830,7 @@ function frBuild() {
       my: {n: mineA ? r.na : r.nb, a: mineA ? r.aa : r.ab, f: mineA ? r.fa : r.fb}, mineA});
   }
   S.frs = out;
+  frNotices(out);
   // kendi ad ve avatarımı kayıtlarda güncel tut
   const me2 = S.me || {};
   S.frSig = S.frSig || {};
@@ -889,7 +931,8 @@ async function settleCookies() {
         const w = await freshWallet();
         await update(ref(db), {['cgifts/' + id]: null, ['users/' + uid() + '/wallet/coins']: (w.coins || 0) + g.amt, ['users/' + uid() + '/wallet/rf']: id});
         await freshWallet(); toast(`${g.tn || 'Arkadaşın'} kurabiyeni kabul etmedi, ${g.amt} kurabiyen iade edildi`);
-      } else remove(ref(db, 'cgifts/' + id)).catch(() => {});
+        nlogAdd(`ck:${id}:${g.t}`, `${g.tn || 'Arkadaşın'} kurabiyeni kabul etmedi, ${g.amt} kurabiyen iade edildi`, 'coin');
+      } else { remove(ref(db, 'cgifts/' + id)).catch(() => {}); nlogAdd(`ck:${id}:${g.t}`, `${g.tn || 'Arkadaşın'} ${g.amt} kurabiyeni kabul etti`, 'coin'); }
     } catch (e) { console.error(e); ckDone.delete(id); }
   }
   if (S.screen === 'home' || S.screen === 'frlist') render();
@@ -917,7 +960,6 @@ async function answerCookies(id, yes) {
     if (yes) {
       const w = await freshWallet();
       await update(ref(db), {['cgifts/' + id + '/st']: 'a', ['users/' + uid() + '/wallet/coins']: (w.coins || 0) + g.amt, ['users/' + uid() + '/wallet/cf']: id});
-      remove(ref(db, 'cgifts/' + id)).catch(() => {});
       await freshWallet(); SFX.play('coin'); toast(`+${g.amt} kurabiye kazandın!`);
     } else { await update(ref(db, 'cgifts/' + id), {st: 'x'}); toast('Kurabiye geri çevrildi'); }
   } catch (e) { console.error(e); toast('İşlem yapılamadı, tekrar dene'); }
@@ -1000,7 +1042,7 @@ function presTick() {
   set(ref(db, 'presence/' + uid()), {t: serverTimestamp()}).catch(() => {});
 }
 function presClear() { if (uid()) remove(ref(db, 'presence/' + uid())).catch(() => {}); }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') presTick(); else presClear(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { presTick(); if (uid()) checkChalResults(); } else presClear(); });
 async function refreshOnl() {
   try {
     const sn = await get(query(ref(db, 'presence'), orderByChild('t'), startAt(now() - PRES_FRESH)));
@@ -2016,7 +2058,7 @@ onAuthStateChanged(auth, async u => {
 });
 
 async function afterLogin() {
-  watchMe(); watchQuick(); loadHidden().then(presTick);
+  watchMe(); watchQuick(); loadHidden().then(presTick); setTimeout(checkChalResults, 2500);
   if (S.pendingFriend) {
     const f = S.pendingFriend; S.pendingFriend = null;
     await Promise.race([S.frP, new Promise(r => setTimeout(r, 3500))]);
@@ -2172,7 +2214,7 @@ function onRoom(R) {
       SFX.play(g > 0 ? 'correct' : (ansOf(R, R.qi)[uid()] ? 'wrong' : 'timeup'));
     }
     if (R.status === 'final') {
-      claimBoard(R); claimXp(R); claimStats(R);
+      claimBoard(R); claimXp(R); claimStats(R); chalReport(R);
       const sc = R.scores || {}, mine = sc[uid()] || 0, top = Math.max(0, ...Object.values(sc));
       SFX.play(mine > 0 && mine >= top ? 'win' : 'end');
     }
@@ -2938,6 +2980,8 @@ app.addEventListener('click', e => {
   else if (a === 'statsreset') resetStats();
   else if (a === 'openfrlist') { go('frlist'); refreshOnl(); }
   else if (a === 'frshare') shareFriend();
+  else if (a === 'nclear') nlogDel(el.dataset.k);
+  else if (a === 'winbhide') { if (S.win) ls.set('zuqio-winb-' + S.win.key, '1'); render(); }
   else if (a === 'frlater') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.frLater = S.frLater || {}; S.frLater[el.dataset.id] = true; render(); }
   else if (a === 'fradd') { S.frUI = true; render(); }
   else if (a === 'frclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.frUI = false; render(); }
@@ -2987,16 +3031,21 @@ V.stats = statsView;
 const notifGifts = () => Object.entries(S.gIn || {}).filter(([id, g]) => g.st === 'p' && shopItem(g.item));
 const notifCookies = () => Object.entries(S.cIn || {}).filter(([id, g]) => g.st === 'p');
 const notifDaily = () => { const d = dailyState(); return {claim: !d.claimed, q: !d.qDone}; };
-const notifCount = () => frIn().length + notifCookies().length + notifGifts().length + (notifDaily().claim ? 1 : 0) + (notifDaily().q ? 1 : 0);
+const notifStreak = () => { const w = (S.me && S.me.wallet) || {}; return !dailyState().claimed && w.claimDay === dayIdx() - 1 && (w.streak || 0) >= 1 ? w.streak : 0; };
+const notifWin = () => S.win && ls.get('zuqio-winb-' + S.win.key) !== '1' ? S.win : null;
+const notifCount = () => frIn().length + notifCookies().length + notifGifts().length + (notifDaily().claim ? 1 : 0) + (notifDaily().q ? 1 : 0) + (notifWin() ? 1 : 0) + nlogGet().length;
 V.notifs = () => {
   const fr = frIn(), ck = notifCookies(), gf = notifGifts();
   const row = (ico, text, btns) => `<div class="card nrow"><span class="nico">${ico}</span><p>${text}</p><span class="fbtns">${btns}</span></div>`;
   const list = fr.map(f => row(avatar(f.av, '', f.fr), `<b>${esc(f.name || 'Bir oyuncu')}</b> seni arkadaş olarak eklemek istiyor`, `<button class="fbtn p" data-act="fraccept" data-id="${esc(f.pid)}">Kabul</button><button class="fbtn" data-act="frno" data-id="${esc(f.pid)}">Reddet</button>`))
     .concat(ck.map(([id, g]) => row(COIN, `<b>${esc(g.fn)}</b> sana ${g.amt} kurabiye gönderdi`, `<button class="fbtn p" data-act="ckyes" data-id="${esc(id)}">Kabul</button><button class="fbtn" data-act="ckno" data-id="${esc(id)}">Reddet</button>`)))
     .concat(gf.map(([id, g]) => { const it = shopItem(g.item); return row(giftPreview(g.item), `<b>${esc(g.fn)}</b> sana <b>${esc(it.name)}</b> hediye etti`, `<button class="fbtn p" data-act="giftyes" data-id="${esc(id)}">Kabul</button><button class="fbtn" data-act="giftno" data-id="${esc(id)}">Reddet</button>`); }));
-  const dl = notifDaily();
-  if (dl.claim) list.push(row(`<span class="ico" style="margin:0;width:32px;height:32px;color:var(--yellow)">${ICON.giftnav}</span>`, 'Günlük kurabiyeni almayı unutma', '<button class="fbtn p" data-go="daily">Al</button>'));
-  if (dl.q) list.push(row(`<span class="ico" style="margin:0;width:32px;height:32px;color:var(--yellow)">${ICON.help}</span>`, 'Günün sorusunu yanıtlamayı unutma', '<button class="fbtn p" data-go="daily">Yanıtla</button>'));
+  const dl = notifDaily(), st = notifStreak(), win = notifWin(), yel = 'margin:0;width:32px;height:32px;color:var(--yellow)';
+  const nic = k => k === 'coin' ? COIN : `<span class="ico" style="${yel}">${ICON[k] || ICON.bell}</span>`;
+  if (win) list.push(row(`<span class="ico" style="${yel}">${ICON.trophy}</span>`, `<b>${esc(monthLabel(win.key))}</b> ayının kitap ödülünü kazandın!`, `<button class="fbtn p" data-act="bookdl">İndir</button><button class="fbtn" data-act="winbhide">Tamam</button>`));
+  nlogGet().slice().reverse().forEach(e => list.push(row(nic(e.ico), esc(e.x), `<button class="fbtn" data-act="nclear" data-k="${esc(e.k)}">Tamam</button>`)));
+  if (dl.claim) list.push(row(nic('giftnav'), st ? `<b>Serin bozulmak üzere!</b> Bugün kurabiyeni almazsan ${st} günlük serin sıfırlanır` : 'Günlük kurabiyeni almayı unutma', '<button class="fbtn p" data-go="daily">Al</button>'));
+  if (dl.q) list.push(row(nic('help'), 'Günün sorusunu yanıtlamayı unutma', '<button class="fbtn p" data-go="daily">Yanıtla</button>'));
   return `
   <div class="screen">
     <div class="top">${backBtn('data-go="home"')}</div>
