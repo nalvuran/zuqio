@@ -48,6 +48,7 @@ const onDisconnect = r => r && r.__local ? {set: () => Promise.resolve(), cancel
 const ICON = {
   plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   key:'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 12h.01M11 12h.01M15 12h.01"/></svg>',
+  spark:'<svg viewBox="0 0 24 24"><path d="M10 4l1.8 5.2L17 11l-5.2 1.8L10 18l-1.8-5.2L3 11l5.2-1.8zM18 3v4M16 5h4M18 16v4M16 18h4"/></svg>',
   list:'<svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',
   bolt:'<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
   compass:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/></svg>',
@@ -189,7 +190,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 158';
+const APP_VERSION = '0.5 (test) · yapı 159';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1454,6 +1455,39 @@ function rankList(R, qi) {
       <span class="pts">${fmt(sc[p.id] || 0)}</span><span class="delta">${gains[p.id] ? '+' + fmt(gains[p.id]) : ''}</span></div>`).join('');
 }
 
+/* ================= neden yanıldım? (yapay zeka) ================= */
+const WHY_DAILY = 10;
+function whyCount() { try { const o = JSON.parse(localStorage.getItem('zuqio-why') || '{}'); return o.d === dayIdx() ? (o.n || 0) : 0; } catch (e) { return 0; } }
+function whyBump() { try { localStorage.setItem('zuqio-why', JSON.stringify({d: dayIdx(), n: whyCount() + 1})); } catch (e) {} }
+function whyBox(key, d) {
+  if (!d || d.info) return '';
+  const w = (S.why || {})[key];
+  if (w && w.text) return `<div class="card infocard whybox"><b>Neden yanıldım?</b><p>${esc(w.text)}</p><p class="small muted" style="margin-top:6px">Yapay zeka yorumudur, yanılabilir.</p></div>`;
+  if (w && w.busy) return `<button class="btn outline" disabled>${ic('spark')}Düşünüyorum…</button>`;
+  return `<button class="btn outline" data-act="why" data-k="${esc(key)}" data-q="${d.qi}">${ic('spark')}Neden yanıldım?</button>` +
+    (w && w.err ? `<p class="small" style="color:#FF9DA0;text-align:center">${esc(w.err)}</p>` : '');
+}
+async function askWhy(key, d) {
+  S.why = S.why || {};
+  if (whyCount() >= WHY_DAILY) { S.why[key] = {err: 'Bugünkü hakkın doldu. Yarın tekrar dene.'}; render(); return; }
+  S.why[key] = {busy: true}; render();
+  try {
+    const {explainWrong} = await import('./ai.js');
+    const text = await Promise.race([explainWrong(d), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))]);
+    whyBump(); S.why[key] = {text};
+  } catch (e) {
+    console.error(e);
+    const m = String((e && e.message) || '') + String((e && e.code) || '');
+    S.why[key] = {err: /429|quota|RESOURCE|rate/i.test(m) ? 'Şu an çok yoğunuz. Biraz sonra tekrar dene.' : 'Açıklama alınamadı, tekrar dene.'};
+  }
+  render();
+}
+function whyData(R, qi) {
+  const q = R.questions[qi], rv = (R.reveal && R.reveal[qi]) || {}, x = ansOf(R, qi)[uid()];
+  const val = v => q.t === 'mc' ? q.o[v] : fmt(v);
+  return {qi, q: q.q, options: q.t === 'mc' ? q.o : null, mine: x && x.v != null ? val(x.v) : '', right: val(rv.a), unit: q.t === 'mc' ? '' : (q.unit || ''), info: rv.info || ''};
+}
+
 V.reveal = () => {
   const R = S.R, qi = R.qi, q = R.questions[qi], rv = (R.reveal && R.reveal[qi]) || {};
   const mine = ansOf(R, qi)[uid()], gain = (rv.gains || {})[uid()] || 0, a = rv.a;
@@ -1474,6 +1508,7 @@ V.reveal = () => {
   <div class="screen">
     <div class="verdict ${cls}"><b>${title}</b><p>${sub}</p></div>
     ${rv.info ? `<div class="card infocard"><b>${q.cat === 'İngilizce' ? 'Öğren' : q.cat === 'Ders notu' ? 'Açıklama' : 'Biliyor muydun?'}</b><p>${esc(rv.info)}</p></div>` : ''}
+    ${cls !== 'good' && q.cat !== 'İngilizce' ? `<div class="stack" style="margin-top:12px">${whyBox((R.gid || R.code) + ':' + qi, whyData(R, qi))}</div>` : ''}
     ${R.wr ? `<p class="small muted" style="text-align:center;margin-top:16px">Soru ${qi + 1} / ${R.questions.length}</p>` : `<div class="row between" style="margin:20px 0 10px"><b>Sıralama</b><span class="small muted">Soru ${qi + 1} / ${R.questions.length}</span></div>
     <div class="stack" style="gap:8px">${rankList(R, qi)}</div>
     ${reactBar()}`}
@@ -1591,7 +1626,7 @@ function wrongList(R) {
     const rv = R.reveal && R.reveal[qi]; if (!rv) return;
     if ((rv.gains && rv.gains[uid()]) > 0) return;
     const x = ansOf(R, qi)[uid()];
-    out.push({n: qi + 1, q: q.q, mine: x && x.v != null ? val(q, x.v) : '', right: val(q, rv.a), info: rv.info || ''});
+    out.push({n: qi + 1, qi, q: q.q, mine: x && x.v != null ? val(q, x.v) : '', right: val(q, rv.a), info: rv.info || ''});
   });
   return out;
 }
@@ -1601,7 +1636,7 @@ function wrongBlock(R) {
     <div class="card stack" style="gap:6px"><span class="small muted">${x.n}. soru</span><b>${esc(x.q)}</b>
       <p class="small" style="color:#FF9DA0">Senin cevabın: ${x.mine ? esc(x.mine) : 'Cevap vermedin'}</p>
       <p class="small" style="color:#8BE3A8">Doğru cevap: ${esc(x.right)}</p>
-      ${x.info ? `<p class="small muted">${esc(x.info)}</p>` : ''}</div>`).join('')}</div>` : '');
+      ${x.info ? `<p class="small muted">${esc(x.info)}</p>` : whyBox((R.gid || R.code) + ':' + x.qi, whyData(R, x.qi))}</div>`).join('')}</div>` : '');
 }
 V.final = () => {
   const R = S.R, sc = R.scores || {};
@@ -2680,6 +2715,7 @@ app.addEventListener('click', e => {
   else if (a === 'qzwithdraw') { (async () => { try { await update(ref(db, 'quizzes/' + S.qz.id), {status: 'draft', t: serverTimestamp()}); S.qz.status = 'draft'; S.myQuizzes[S.qz.id].status = 'draft'; render(); } catch (e) { toast('Geri çekilemedi'); } })(); }
   else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
   else if (a === 'wrstart') startWrongs();
+  else if (a === 'why') { if (S.R) askWhy(el.dataset.k, whyData(S.R, +el.dataset.q)); }
   else if (a === 'chalnew') createChallenge();
   else if (a === 'chalgo') startChallenge();
   else if (a === 'tdet') { S.showDet = !S.showDet; render(); }
