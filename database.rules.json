@@ -629,6 +629,18 @@
         ".write": "auth != null && auth.uid === $uid && !root.child('bans').child(auth.uid).exists()",
         ".validate": "newData.hasChildren(['dd','t']) && newData.child('dd').val() * 86400000 - 10800000 <= now && now < (newData.child('dd').val() + 1) * 86400000 - 10800000 && newData.child('t').val() === now && (!data.exists() || data.child('dd').val() <= newData.child('dd').val())"
       }
+    },
+    "chinv": {
+      "$to": {
+        ".read": "auth != null && (auth.uid === $to || root.child('admins').child(auth.uid).exists())",
+        "$cid": {
+          ".write": "auth != null && ((!data.exists() && newData.child('from').val() === auth.uid && !root.child('bans').child(auth.uid).exists()) || (data.exists() && !newData.exists() && (auth.uid === $to || data.child('from').val() === auth.uid)) || root.child('admins').child(auth.uid).exists())",
+          ".validate": "!newData.exists() || ($cid.matches(/^[a-z0-9]{6,16}$/) && newData.hasChildren(['from','fn','lbl','s','t']) && newData.child('from').isString() && newData.child('from').val() !== $to && newData.child('fn').isString() && newData.child('fn').val().length >= 1 && newData.child('fn').val().length <= 25 && newData.child('lbl').isString() && newData.child('lbl').val().length <= 60 && newData.child('s').isNumber() && newData.child('s').val() >= 0 && newData.child('s').val() <= 60000 && newData.child('t').val() === (data.exists() ? data.child('t').val() : now) && root.child('challenges').child($cid).child('from').val() === newData.child('from').val() && root.child('fships').child(newData.child('from').val() < $to ? newData.child('from').val() + '_' + $to : $to + '_' + newData.child('from').val()).child('st').val() === 'ok')",
+          "$other": {
+            ".validate": "$other === 'from' || $other === 'fn' || $other === 'lbl' || $other === 's' || $other === 't'"
+          }
+        }
+      }
     }
   }
 }

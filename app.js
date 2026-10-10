@@ -191,7 +191,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 178';
+const APP_VERSION = '0.5 (test) · yapı 179';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -612,24 +612,80 @@ function chalQuestions(R) {
   }
   return out;
 }
-async function createChallenge() {
+// Meydan okuma kaydını bir kez oluşturur (arkadaşa gönder + bağlantı paylaş aynı kaydı kullanır)
+async function ensureChallenge() {
+  const R = S.R; if (!R || R.study || !(R.questions || []).length) return null;
+  if (S.chUI && S.chUI.made) return S.chUI.made;
+  if (chalDayCount() >= CHAL_DAILY) { toast('Bugünlük meydan okuma hakkın doldu'); return null; }
+  const ids = R.questions.map(q => q.id), data = {from: uid(), fn: S.me.name, score: (R.scores || {})[uid()] || 0, n: R.questions.length, lbl: String(chalLabel(R)).slice(0, 60), t: serverTimestamp()};
+  if (ids.every(i => i && bankQ(i))) data.ids = ids.join(',');
+  else { const qs = chalQuestions(R); if (!qs) throw new Error('chal-q'); data.qs = qs; }
+  const id = Math.random().toString(36).slice(2, 10).padEnd(6, 'x');
+  await set(ref(db, 'challenges/' + id), data);
+  chalDayAdd(); mychAdd(id, data.score, data.lbl);
+  const made = {id, score: data.score, lbl: data.lbl};
+  if (S.chUI) S.chUI.made = made;
+  return made;
+}
+async function shareChallenge(made) {
+  const url = CHAL_URL + made.id, text = `${S.me.name} Zuqio’da ${made.lbl} konusunda ${fmt(made.score)} puan yaptı. Onu geçebilir misin?`;
+  try { if (navigator.share) { await navigator.share({title: 'Zuqio meydan okuması', text, url}); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
+  try { await navigator.clipboard.writeText(text + ' ' + url); toast('Bağlantı kopyalandı, arkadaşına gönderebilirsin'); }
+  catch (e) { prompt('Bu bağlantıyı arkadaşına gönder:', text + ' ' + url); }
+}
+// "Arkadaşına meydan oku": arkadaşın varsa önce seçim penceresi açılır, yoksa doğrudan bağlantı paylaşılır
+function chalOpen() {
   const R = S.R; if (!R || S.busy || R.study || !(R.questions || []).length) return;
-  if (chalDayCount() >= CHAL_DAILY) { toast('Bugünlük meydan okuma hakkın doldu'); return; }
+  if (!S.chUI && chalDayCount() >= CHAL_DAILY) { toast('Bugünlük meydan okuma hakkın doldu'); return; }
+  if (!frFriends().length) { chalLink(); return; }
+  S.chUI = {sel: {}, made: null}; render();
+}
+async function chalLink() {
+  if (S.busy) return; S.busy = true; render();
+  try { const m = await ensureChallenge(); S.busy = false; if (m) { render(); await shareChallenge(m); } }
+  catch (e) { console.error(e); toast('Meydan okuma hazırlanamadı, tekrar dene'); }
+  S.busy = false; render();
+}
+async function chalSend() {
+  const u = S.chUI; if (!u || S.busy) return;
+  const to = frFriends().filter(f => u.sel[f.other]); if (!to.length) { toast('Önce en az bir arkadaş seç'); return; }
   S.busy = true; render();
   try {
-    const ids = R.questions.map(q => q.id), data = {from: uid(), fn: S.me.name, score: (R.scores || {})[uid()] || 0, n: R.questions.length, lbl: String(chalLabel(R)).slice(0, 60), t: serverTimestamp()};
-    if (ids.every(i => i && bankQ(i))) data.ids = ids.join(',');
-    else { const qs = chalQuestions(R); if (!qs) throw new Error('chal-q'); data.qs = qs; }
-    const id = Math.random().toString(36).slice(2, 10);
-    await set(ref(db, 'challenges/' + id), data);
-    chalDayAdd(); mychAdd(id, data.score, data.lbl);
-    const url = CHAL_URL + id, text = `${S.me.name} Zuqio’da ${data.lbl} konusunda ${fmt(data.score)} puan yaptı. Onu geçebilir misin?`;
-    S.busy = false; render();
-    try { if (navigator.share) { await navigator.share({title: 'Zuqio meydan okuması', text, url}); return; } } catch (e) { if (e && e.name === 'AbortError') return; }
-    try { await navigator.clipboard.writeText(text + ' ' + url); toast('Bağlantı kopyalandı, arkadaşına gönderebilirsin'); }
-    catch (e) { prompt('Bu bağlantıyı arkadaşına gönder:', text + ' ' + url); }
-  } catch (e) { console.error(e); toast('Meydan okuma hazırlanamadı, tekrar dene'); }
+    const m = await ensureChallenge(); if (!m) { S.busy = false; render(); return; }
+    const rec = {from: uid(), fn: String(S.me.name).slice(0, 25), lbl: m.lbl, s: m.score, t: serverTimestamp()};
+    const up = {}; to.forEach(f => { up['chinv/' + f.other + '/' + m.id] = rec; });
+    await update(ref(db), up);
+    const names = to.map(f => f.name || 'arkadaşın');
+    nlogLog('h:cn:' + m.id + ':' + now(), `${names.length > 2 ? names.slice(0, 2).join(', ') + ' ve ' + (names.length - 2) + ' kişi' : names.join(' ve ')} için meydan okuma gönderdin`, 'target');
+    toast(to.length === 1 ? `${names[0]} için meydan okuma gönderildi` : `${to.length} arkadaşına meydan okuma gönderildi`);
+    S.chUI = null;
+  } catch (e) { console.error(e); toast('Gönderilemedi, tekrar dene'); }
   S.busy = false; render();
+}
+function chalSheet() {
+  const u = S.chUI, R = S.R; if (!u || !R) return '';
+  const fl = frFriends(), n = fl.filter(f => u.sel[f.other]).length;
+  const rows = fl.map(f => `<button class="rank chpick ${u.sel[f.other] ? 'on' : ''}" data-act="chtoggle" data-id="${esc(f.other)}" aria-pressed="${u.sel[f.other] ? 'true' : 'false'}">${onlAv(f.other, f.av, f.fr)}<b class="frn">${esc(f.name || 'Oyuncu')}</b><span class="chk">${u.sel[f.other] ? '✓' : ''}</span></button>`).join('');
+  return `<div class="annmodal" data-act="chclose"><div class="giftsheet" role="dialog" aria-label="Meydan oku" data-stop="1">
+    <div class="row between" style="margin-bottom:6px"><h3 style="margin:0">Kime meydan okuyorsun?</h3><button class="annx" style="position:static" data-act="chclose" aria-label="Kapat">✕</button></div>
+    <p class="small muted" style="margin:0 0 10px">Çevrimiçi olmaları gerekmez; uygulamaya girince bildirimlerinde görürler.</p>
+    <div class="stack" style="gap:8px;max-height:46vh;overflow:auto">${rows}</div>
+    <div class="stack" style="gap:8px;margin-top:12px"><button class="btn primary" data-act="chsend" ${S.busy || !n ? 'disabled' : ''}>${n ? `${n} arkadaşa gönder` : 'Arkadaş seç'}</button>
+    <button class="btn outline" data-act="chlink" ${S.busy ? 'disabled' : ''}>${ic('share')}Bağlantıyla paylaş</button></div></div></div>`;
+}
+// bana gelen meydan okumalar
+let chinvSub = null;
+function watchChinv() {
+  if (chinvSub) return;
+  chinvSub = onValue(ref(db, 'chinv/' + uid()), sn => { S.chIn = sn.val() || {}; if (S.screen === 'home' || S.screen === 'notifs') render(); }, () => {});
+}
+function stopChinv() { if (chinvSub) { try { chinvSub(); } catch (e) {} chinvSub = null; } S.chIn = {}; }
+const notifChal = () => Object.entries(S.chIn || {}).filter(([id, c]) => c && c.fn && now() - (c.t || 0) < 13 * 86400000).sort((a, b) => (b[1].t || 0) - (a[1].t || 0));
+function chalDismiss(id, log) {
+  const c = (S.chIn || {})[id]; remove(ref(db, 'chinv/' + uid() + '/' + id)).catch(() => {});
+  if (S.chIn) delete S.chIn[id];
+  if (c && log) nlogLog('h:cd:' + id, `${c.fn} sana meydan okudu (${c.lbl})`, 'target');
+  render();
 }
 const chalBtn = R => (R && !R.study && (R.questions || []).length && R.status === 'final') ? `<button class="btn outline" data-act="chalnew" ${S.busy ? 'disabled' : ''}>${ic('share')}Arkadaşına meydan oku</button>` : '';
 async function openChallenge(id) {
@@ -1986,7 +2042,7 @@ V.final = () => {
     <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>${lvBadge(p)}<span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
     ${reactBar()}
     ${wrongBlock(R)}
-    ${chalBtn(R)}${giftBtn(R)}${frBtn(R)}${giftSheet()}${frAddSheet()}
+    ${chalBtn(R)}${giftBtn(R)}${frBtn(R)}${giftSheet()}${frAddSheet()}${chalSheet()}
     <div class="grow" style="min-height:20px"></div>
     <div class="stack">
       ${R.chal
@@ -2084,8 +2140,8 @@ onAuthStateChanged(auth, async u => {
   S.user = u;
   S.isOwner = false;
   if (u) checkOwner(u.email).then(ok => { if (ok) { S.isOwner = true; if (S.screen === 'settings') render(); } });
-  if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } if (annSub) { annSub(); annSub = null; } stopGifts(); stopCookies(); stopFriends(); S.me = null; go('login'); return; }
-  watchAnn(); watchGifts(); watchCookies(); watchFriends(); checkWin(); loadApproved().then(loadFixes);
+  if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } if (annSub) { annSub(); annSub = null; } stopGifts(); stopCookies(); stopChinv(); stopFriends(); S.me = null; go('login'); return; }
+  watchAnn(); watchGifts(); watchCookies(); watchChinv(); watchFriends(); checkWin(); loadApproved().then(loadFixes);
   try {
     const snap = await get(ref(db, 'users/' + u.uid));
     const ban = await get(ref(db, 'bans/' + u.uid)).catch(() => null);
@@ -3044,7 +3100,13 @@ app.addEventListener('click', e => {
   else if (a === 'ckno') { if (confirm('Kurabiye gönderene geri çevrilsin mi?')) answerCookies(el.dataset.id, false); }
   else if (a === 'cklater') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.ckLater = S.ckLater || {}; S.ckLater[el.dataset.id] = true; render(); }
   else if (a === 'why') { if (S.R) askWhy(el.dataset.k, whyData(S.R, +el.dataset.q)); }
-  else if (a === 'chalnew') createChallenge();
+  else if (a === 'chalnew') chalOpen();
+  else if (a === 'chtoggle') { if (S.chUI) { S.chUI.sel[el.dataset.id] = !S.chUI.sel[el.dataset.id]; render(); } }
+  else if (a === 'chclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.chUI = null; render(); }
+  else if (a === 'chsend') chalSend();
+  else if (a === 'chlink') chalLink();
+  else if (a === 'chplay') { const id = el.dataset.id; chalDismiss(id, true); openChallenge(id); }
+  else if (a === 'chno') chalDismiss(el.dataset.id, true);
   else if (a === 'chalgo') startChallenge();
   else if (a === 'tdet') { S.showDet = !S.showDet; render(); }
   else if (a === 'giftopen') { if (giftDayCount() >= GIFT_DAILY) { toast('Bugünlük hediye hakkın doldu'); return; } S.giftUI = {step: 'player'}; render(); }
@@ -3079,12 +3141,13 @@ const notifCookies = () => Object.entries(S.cIn || {}).filter(([id, g]) => g.st 
 const notifDaily = () => { const d = dailyState(); return {claim: !d.claimed, q: !d.qDone}; };
 const notifStreak = () => { const w = (S.me && S.me.wallet) || {}; return !dailyState().claimed && w.claimDay === dayIdx() - 1 && (w.streak || 0) >= 1 ? w.streak : 0; };
 const notifWin = () => S.win && ls.get('zuqio-winb-' + S.win.key) !== '1' ? S.win : null;
-const notifCount = () => frIn().length + notifCookies().length + notifGifts().length + (notifDaily().claim ? 1 : 0) + (notifDaily().q ? 1 : 0) + (notifWin() ? 1 : 0) + nlogGet().length;
+const notifCount = () => frIn().length + notifChal().length + notifCookies().length + notifGifts().length + (notifDaily().claim ? 1 : 0) + (notifDaily().q ? 1 : 0) + (notifWin() ? 1 : 0) + nlogGet().length;
 V.notifs = () => {
   const fr = frIn(), ck = notifCookies(), gf = notifGifts();
   const row = (ico, text, btns) => `<div class="card nrow"><span class="nico">${ico}</span><p>${text}</p><span class="fbtns">${btns}</span></div>`;
   const list = fr.map(f => row(avatar(f.av, '', f.fr), `<b>${esc(f.name || 'Bir oyuncu')}</b> seni arkadaş olarak eklemek istiyor`, `<button class="fbtn p" data-act="fraccept" data-id="${esc(f.pid)}">Kabul</button><button class="fbtn" data-act="frno" data-id="${esc(f.pid)}">Reddet</button>`))
     .concat(ck.map(([id, g]) => row(COIN, `<b>${esc(g.fn)}</b> sana ${g.amt} kurabiye gönderdi`, `<button class="fbtn p" data-act="ckyes" data-id="${esc(id)}">Kabul</button><button class="fbtn" data-act="ckno" data-id="${esc(id)}">Reddet</button>`)))
+    .concat(notifChal().map(([id, c]) => row(`<span class="ico" style="margin:0;width:32px;height:32px;color:var(--yellow)">${ICON.target || ICON.bell}</span>`, `<b>${esc(c.fn)}</b> sana meydan okudu · ${esc(c.lbl)} (${fmt(c.s)} puan)`, `<button class="fbtn p" data-act="chplay" data-id="${esc(id)}">Oyna</button><button class="fbtn" data-act="chno" data-id="${esc(id)}">Tamam</button>`)))
     .concat(gf.map(([id, g]) => { const it = shopItem(g.item); return row(giftPreview(g.item), `<b>${esc(g.fn)}</b> sana <b>${esc(it.name)}</b> hediye etti`, `<button class="fbtn p" data-act="giftyes" data-id="${esc(id)}">Kabul</button><button class="fbtn" data-act="giftno" data-id="${esc(id)}">Reddet</button>`); }));
   const hist = nlogHist(), dl = notifDaily(), st = notifStreak(), win = notifWin(), yel = 'margin:0;width:32px;height:32px;color:var(--yellow)';
   const nic = k => k === 'coin' ? COIN : `<span class="ico" style="${yel}">${ICON[k] || ICON.bell}</span>`;
