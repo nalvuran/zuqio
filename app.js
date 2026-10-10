@@ -190,7 +190,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 170';
+const APP_VERSION = '0.5 (test) · yapı 171';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -2605,7 +2605,7 @@ V.pdfgen = () => {
       ${P.dur === 0 ? '<p class="small muted">Süresiz seçersen oda açılmaz; tek başına, acele etmeden çalışırsın.</p>' : ''}
       ${P.err ? `<div class="card"><p class="small" style="color:#FF9DA0">${esc(P.err)}</p></div>` : ''}
       ${P.busy ? '<div class="card"><p class="small">Notun okunuyor, özet ve sorular hazırlanıyor… Bu 20–40 saniye sürebilir, ekranı kapatma.</p></div>' : ''}
-      <p class="small muted">Günde 1 PDF üretebilirsin. Üretilen sorular yapay zekâ ile hazırlanır ve hata içerebilir; oynamadan önce mutlaka kontrol et. PDF’in içeriği soru üretmek için Google’ın Gemini hizmetine gönderilir ve bizde saklanmaz. Kişisel ya da gizli belge yükleme, yalnızca kendi notlarını yükle.</p>
+      <p class="small muted">Günde 1 PDF üretebilirsin. Üretilen sorular PDF’inden hazırlanır; oynamadan önce mutlaka kontrol et. PDF’in içeriği soru üretmek için Google’ın Gemini hizmetine gönderilir ve bizde saklanmaz. Kişisel ya da gizli belge yükleme, yalnızca kendi notlarını yükle.</p>
     </div>
     <div class="grow" style="min-height:16px"></div>
     <button class="btn primary big" data-act="pdfgo" ${P.busy || !P.file ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">${P.busy ? 'HAZIRLANIYOR…' : 'ÜRET'}</span></button>
@@ -2653,7 +2653,7 @@ V.qzedit = () => {
       ${locked ? '<div class="card"><p class="small">Bu Zuqio onay bekliyor. Düzenlemek için önce gönderimi geri çek.</p><button class="btn outline" data-act="qzwithdraw" style="margin-top:8px">Gönderimi geri çek</button></div>' : ''}
       <label class="small muted" for="qzt">Zuqio adı</label>
       <input class="field" id="qzt" maxlength="40" value="${esc(Z.title)}" placeholder="Örn. 90'lar dizileri" ${locked ? 'disabled' : ''}>
-      ${Z.summary != null ? `<label class="small muted" for="qzs">Özet (yapay zekâ hazırladı, hataları düzeltebilirsin)</label>
+      ${Z.summary != null ? `<label class="small muted" for="qzs">Özet (hataları düzeltebilirsin)</label>
       <textarea class="field" id="qzs" rows="9" maxlength="3000" ${locked ? 'disabled' : ''}>${esc(Z.summary)}</textarea>` : ''}
       <span class="small muted lbl">Cevaplama süresi</span>
       <div class="chips">${[15, 30, 45, 0].map(n => `<button class="${Z.dur === n ? 'on' : ''}" data-act="qzdur" data-n="${n}" ${locked ? 'disabled' : ''}>${n ? n + ' sn' : 'Süresiz'}</button>`).join('')}</div>
