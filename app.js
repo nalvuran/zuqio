@@ -48,7 +48,7 @@ const onDisconnect = r => r && r.__local ? {set: () => Promise.resolve(), cancel
 const ICON = {
   plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   key:'<svg viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3"/><path d="M7 12h.01M11 12h.01M15 12h.01"/></svg>',
-  spark:'<svg viewBox="0 0 24 24"><path d="M10 4l1.8 5.2L17 11l-5.2 1.8L10 18l-1.8-5.2L3 11l5.2-1.8zM18 3v4M16 5h4M18 16v4M16 18h4"/></svg>',
+  think:'<svg viewBox="0 0 24 24"><circle cx="9" cy="10" r="3.4"/><path d="M3 22c0-3.8 2.7-6.4 6-6.4s6 2.6 6 6.4M14.6 13.4h.01M16 11.6h.01"/><circle cx="18.6" cy="6.4" r="3"/></svg>',
   list:'<svg viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>',
   bolt:'<svg viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>',
   compass:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15.6 8.4l-2.1 5.1-5.1 2.1 2.1-5.1z"/></svg>',
@@ -190,7 +190,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 162';
+const APP_VERSION = '0.5 (test) · yapı 163';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1462,9 +1462,9 @@ function whyBump() { try { localStorage.setItem('zuqio-why', JSON.stringify({d: 
 function whyBox(key, d) {
   if (!d || d.info) return '';
   const w = (S.why || {})[key];
-  if (w && w.text) return `<div class="card infocard whybox"><b>Neden yanıldım?</b><p>${esc(w.text)}</p><p class="small muted" style="margin-top:6px">Yapay zeka yorumudur, yanılabilir.</p></div>`;
-  if (w && w.busy) return `<button class="btn outline" disabled>${ic('spark')}Düşünüyorum…</button>`;
-  return `<button class="btn outline" data-act="why" data-k="${esc(key)}" data-q="${d.qi}">${ic('spark')}Neden yanıldım?</button>` +
+  if (w && w.text) return `<div class="card infocard whybox"><b>Neden yanıldım?</b><p>${esc(w.text)}</p></div>`;
+  if (w && w.busy) return `<button class="btn outline" disabled>${ic('think')}Düşünüyorum…</button>`;
+  return `<button class="btn outline" data-act="why" data-k="${esc(key)}" data-q="${d.qi}">${ic('think')}Neden yanıldım?</button>` +
     (w && w.err ? `<p class="small" style="color:#FF9DA0;text-align:center">${esc(w.err)}</p>` : '');
 }
 async function askWhy(key, d) {
