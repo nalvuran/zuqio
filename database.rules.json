@@ -18,7 +18,7 @@
         },
         "wallet": {
           "coins": {
-            ".validate": "newData.isNumber() && newData.val() >= 0 && ((!data.exists() && newData.val() <= 60) || (data.exists() && (newData.val() <= data.val() || (newData.val() <= data.val() + 60 && (newData.parent().child('claimDay').val() !== data.parent().child('claimDay').val() || newData.parent().child('qDay').val() !== data.parent().child('qDay').val())) || (newData.parent().child('rf').isString() && root.child('gifts').child(newData.parent().child('rf').val()).child('from').val() === auth.uid && (root.child('gifts').child(newData.parent().child('rf').val()).child('st').val() === 'x' || root.child('gifts').child(newData.parent().child('rf').val()).child('st').val() === 'p') && !newData.parent().parent().parent().parent().child('gifts').child(newData.parent().child('rf').val()).exists() && newData.val() <= data.val() + root.child('gifts').child(newData.parent().child('rf').val()).child('price').val()) || (newData.parent().child('lv').val() > (data.parent().child('lv').exists() ? data.parent().child('lv').val() : 1) && newData.val() <= data.val() + 10 * (newData.parent().child('lv').val() - (data.parent().child('lv').exists() ? data.parent().child('lv').val() : 1))))))"
+            ".validate": "newData.isNumber() && newData.val() >= 0 && ((!data.exists() && newData.val() <= 60) || (data.exists() && (newData.val() <= data.val() || (newData.val() <= data.val() + 60 && (newData.parent().child('claimDay').val() !== data.parent().child('claimDay').val() || newData.parent().child('qDay').val() !== data.parent().child('qDay').val())) || (newData.parent().child('rf').isString() && root.child('gifts').child(newData.parent().child('rf').val()).child('from').val() === auth.uid && (root.child('gifts').child(newData.parent().child('rf').val()).child('st').val() === 'x' || root.child('gifts').child(newData.parent().child('rf').val()).child('st').val() === 'p') && !newData.parent().parent().parent().parent().child('gifts').child(newData.parent().child('rf').val()).exists() && newData.val() <= data.val() + root.child('gifts').child(newData.parent().child('rf').val()).child('price').val()) || (newData.parent().child('cf').isString() && root.child('cgifts').child(newData.parent().child('cf').val()).child('to').val() === auth.uid && root.child('cgifts').child(newData.parent().child('cf').val()).child('st').val() === 'p' && newData.parent().parent().parent().parent().child('cgifts').child(newData.parent().child('cf').val()).child('st').val() === 'a' && newData.val() <= data.val() + root.child('cgifts').child(newData.parent().child('cf').val()).child('amt').val()) || (newData.parent().child('rf').isString() && root.child('cgifts').child(newData.parent().child('rf').val()).child('from').val() === auth.uid && (root.child('cgifts').child(newData.parent().child('rf').val()).child('st').val() === 'x' || root.child('cgifts').child(newData.parent().child('rf').val()).child('st').val() === 'p') && !newData.parent().parent().parent().parent().child('cgifts').child(newData.parent().child('rf').val()).exists() && newData.val() <= data.val() + root.child('cgifts').child(newData.parent().child('rf').val()).child('amt').val()) || (newData.parent().child('lv').val() > (data.parent().child('lv').exists() ? data.parent().child('lv').val() : 1) && newData.val() <= data.val() + 10 * (newData.parent().child('lv').val() - (data.parent().child('lv').exists() ? data.parent().child('lv').val() : 1))))))"
           },
           "claimDay": {
             ".validate": "newData.isNumber() && (!data.exists() || newData.val() > data.val()) && newData.val() <= (now + 10800000) / 86400000"
@@ -30,6 +30,9 @@
             ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 7"
           },
           "rf": {
+            ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,80}$/)"
+          },
+          "cf": {
             ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,80}$/)"
           },
           "qRes": {
@@ -90,6 +93,12 @@
               "$other": {".validate": false}
             }
           },
+          "$other": {".validate": false}
+        },
+        "cg": {
+          ".validate": "newData.hasChildren(['d','n']) && newData.child('d').val() <= (now + 10800000) / 86400000 && newData.child('d').val() > (now + 10800000) / 86400000 - 1 && newData.child('n').val() >= 0 && newData.child('n').val() <= 10 && newData.child('n').val() % 1 === 0",
+          "d": {".validate": "newData.isNumber()"},
+          "n": {".validate": "newData.isNumber()"},
           "$other": {".validate": false}
         },
         "sz": {
@@ -286,6 +295,36 @@
         ".validate": "!newData.exists() || (newData.hasChildren(['from','to','item','price','st','fn','t']) && newData.child('from').isString() && newData.child('to').isString() && newData.child('to').val() !== newData.child('from').val() && newData.child('item').isString() && newData.child('item').val().matches(/^(av|fr)[0-9]+$/) && $gid === newData.child('to').val() + '_' + newData.child('item').val() && newData.child('price').isNumber() && newData.child('price').val() >= 1 && newData.child('price').val() <= 500 && newData.child('fn').isString() && newData.child('fn').val().length >= 1 && newData.child('fn').val().length <= 25 && (!newData.child('tn').exists() || (newData.child('tn').isString() && newData.child('tn').val().length <= 25)) && (data.exists() ? (newData.child('from').val() === data.child('from').val() && newData.child('to').val() === data.child('to').val() && newData.child('item').val() === data.child('item').val() && newData.child('price').val() === data.child('price').val() && newData.child('fn').val() === data.child('fn').val() && newData.child('t').val() === data.child('t').val() && (newData.child('st').val() === 'a' || newData.child('st').val() === 'x')) : (newData.child('st').val() === 'p' && newData.child('t').val() === now && root.child('users').child(newData.child('to').val()).child('name').exists() && !root.child('users').child(newData.child('to').val()).child('owned').child(newData.child('item').val()).exists() && newData.parent().parent().child('users').child(auth.uid).child('wallet').child('coins').val() <= root.child('users').child(auth.uid).child('wallet').child('coins').val() - newData.child('price').val())))",
         "$other": {
           ".validate": "$other === 'from' || $other === 'to' || $other === 'item' || $other === 'price' || $other === 'st' || $other === 'fn' || $other === 'tn' || $other === 't'"
+        }
+      }
+    },
+    "fships": {
+      ".read": "auth != null && ((query.orderByChild === 'a' && query.equalTo === auth.uid) || (query.orderByChild === 'b' && query.equalTo === auth.uid) || root.child('admins').child(auth.uid).exists())",
+      ".indexOn": [
+        "a",
+        "b"
+      ],
+      "$pid": {
+        ".read": "auth != null && (data.child('a').val() === auth.uid || data.child('b').val() === auth.uid)",
+        ".write": "auth != null && ((!data.exists() && newData.child('by').val() === auth.uid && !root.child('bans').child(auth.uid).exists()) || (data.exists() && newData.exists() && (data.child('a').val() === auth.uid || data.child('b').val() === auth.uid)) || (data.exists() && !newData.exists() && (data.child('a').val() === auth.uid || data.child('b').val() === auth.uid) && (data.child('st').val() !== 'b' || data.child('by').val() !== auth.uid)) || root.child('admins').child(auth.uid).exists())",
+        ".validate": "!newData.exists() || (newData.hasChildren(['a','b','by','st','t']) && newData.child('a').isString() && newData.child('b').isString() && newData.child('a').val() < newData.child('b').val() && $pid === newData.child('a').val() + '_' + newData.child('b').val() && (newData.child('by').val() === newData.child('a').val() || newData.child('by').val() === newData.child('b').val()) && (newData.child('st').val() === 'p' || newData.child('st').val() === 'ok' || newData.child('st').val() === 'b') && newData.child('t').isNumber() && (!newData.child('na').exists() || (newData.child('na').isString() && newData.child('na').val().length <= 25)) && (!newData.child('nb').exists() || (newData.child('nb').isString() && newData.child('nb').val().length <= 25)) && (!newData.child('aa').exists() || (newData.child('aa').isNumber() && newData.child('aa').val() >= 0 && newData.child('aa').val() <= 21)) && (!newData.child('ab').exists() || (newData.child('ab').isNumber() && newData.child('ab').val() >= 0 && newData.child('ab').val() <= 21)) && (!newData.child('fa').exists() || (newData.child('fa').isString() && newData.child('fa').val().length <= 12)) && (!newData.child('fb').exists() || (newData.child('fb').isString() && newData.child('fb').val().length <= 12)) && (data.exists() ? (newData.child('a').val() === data.child('a').val() && newData.child('b').val() === data.child('b').val() && newData.child('by').val() === data.child('by').val() && newData.child('t').val() === data.child('t').val() && (newData.child('st').val() === data.child('st').val() || (data.child('st').val() === 'p' && auth.uid !== data.child('by').val() && (newData.child('st').val() === 'ok' || newData.child('st').val() === 'b'))) && (auth.uid === newData.child('a').val() || (newData.child('na').val() === data.child('na').val() && newData.child('aa').val() === data.child('aa').val() && newData.child('fa').val() === data.child('fa').val())) && (auth.uid === newData.child('b').val() || (newData.child('nb').val() === data.child('nb').val() && newData.child('ab').val() === data.child('ab').val() && newData.child('fb').val() === data.child('fb').val()))) : (newData.child('st').val() === 'p' && newData.child('by').val() === auth.uid && newData.child('t').val() === now))))",
+        "$other": {
+          ".validate": "$other === 'a' || $other === 'b' || $other === 'by' || $other === 'st' || $other === 't' || $other === 'na' || $other === 'nb' || $other === 'aa' || $other === 'ab' || $other === 'fa' || $other === 'fb'"
+        }
+      }
+    },
+    "cgifts": {
+      ".read": "auth != null && ((query.orderByChild === 'to' && query.equalTo === auth.uid) || (query.orderByChild === 'from' && query.equalTo === auth.uid) || root.child('admins').child(auth.uid).exists())",
+      ".indexOn": [
+        "to",
+        "from"
+      ],
+      "$cid": {
+        ".read": "auth != null && (data.child('to').val() === auth.uid || data.child('from').val() === auth.uid)",
+        ".write": "auth != null && ((!data.exists() && newData.child('from').val() === auth.uid && !root.child('bans').child(auth.uid).exists()) || (data.exists() && newData.exists() && data.child('to').val() === auth.uid && data.child('st').val() === 'p') || (data.exists() && !newData.exists() && (data.child('from').val() === auth.uid || (data.child('to').val() === auth.uid && data.child('st').val() === 'a'))) || root.child('admins').child(auth.uid).exists())",
+        ".validate": "!newData.exists() || (newData.hasChildren(['from','to','amt','st','fn','t']) && newData.child('from').isString() && newData.child('to').isString() && newData.child('to').val() !== newData.child('from').val() && $cid === newData.child('to').val() + '_' + newData.child('from').val() && newData.child('amt').isNumber() && newData.child('amt').val() >= 1 && newData.child('amt').val() <= 10 && newData.child('amt').val() % 1 === 0 && newData.child('fn').isString() && newData.child('fn').val().length >= 1 && newData.child('fn').val().length <= 25 && (!newData.child('tn').exists() || (newData.child('tn').isString() && newData.child('tn').val().length <= 25)) && (data.exists() ? (newData.child('from').val() === data.child('from').val() && newData.child('to').val() === data.child('to').val() && newData.child('amt').val() === data.child('amt').val() && newData.child('fn').val() === data.child('fn').val() && newData.child('t').val() === data.child('t').val() && (newData.child('st').val() === 'a' || newData.child('st').val() === 'x')) : (newData.child('st').val() === 'p' && newData.child('t').val() === now && root.child('users').child(newData.child('to').val()).child('name').exists() && root.child('users').child(auth.uid).child('lv').val() >= 3 && root.child('fships').child(newData.child('from').val() < newData.child('to').val() ? newData.child('from').val() + '_' + newData.child('to').val() : newData.child('to').val() + '_' + newData.child('from').val()).child('st').val() === 'ok' && newData.parent().parent().child('users').child(auth.uid).child('cg').child('n').val() === ((root.child('users').child(auth.uid).child('cg').child('d').val() === newData.parent().parent().child('users').child(auth.uid).child('cg').child('d').val()) ? root.child('users').child(auth.uid).child('cg').child('n').val() : 0) + newData.child('amt').val() && newData.parent().parent().child('users').child(auth.uid).child('wallet').child('coins').val() <= root.child('users').child(auth.uid).child('wallet').child('coins').val() - newData.child('amt').val()))",
+        "$other": {
+          ".validate": "$other === 'from' || $other === 'to' || $other === 'amt' || $other === 'st' || $other === 'fn' || $other === 'tn' || $other === 't'"
         }
       }
     },

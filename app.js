@@ -190,7 +190,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 167';
+const APP_VERSION = '0.5 (test) · yapı 168';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -763,6 +763,177 @@ function giftSheet() {
     <div class="row between" style="margin-bottom:10px">${u.step === 'item' ? '<button class="btn ghost" data-act="giftback">‹ Geri</button>' : '<span></span>'}<span class="coinbar"><b>${coins()}</b>${COIN}</span><button class="annx" style="position:static" data-act="giftclose" aria-label="Kapat">✕</button></div>${body}</div></div>`;
 }
 
+/* ================= arkadaşlar ve kurabiye hediyesi ================= */
+const FR_MAX = 50, CK_DAILY = 10, CK_LV = 3;
+const pidOf = (x, y) => x < y ? x + '_' + y : y + '_' + x;
+let frSubs = [];
+const frDayCount = () => { try { const o = JSON.parse(ls.get('zuqio-frq') || '{}'); return o.d === dayIdx() ? (o.n || 0) : 0; } catch (e) { return 0; } };
+const frDayAdd = () => ls.set('zuqio-frq', JSON.stringify({d: dayIdx(), n: frDayCount() + 1}));
+function watchFriends() {
+  if (frSubs.length) return;
+  const me = uid(); S.frRaw = {a: {}, b: {}}; S.frGot = {};
+  S.frP = new Promise(res => { S.frRes = res; setTimeout(res, 3500); });
+  ['a', 'b'].forEach(k => frSubs.push(onValue(query(ref(db, 'fships'), orderByChild(k), equalTo(me)), sn => {
+    S.frRaw[k] = sn.val() || {}; S.frGot[k] = true; if (S.frGot.a && S.frGot.b && S.frRes) S.frRes();
+    frBuild();
+  }, () => { S.frGot[k] = true; if (S.frGot.a && S.frGot.b && S.frRes) S.frRes(); })));
+}
+function stopFriends() { frSubs.forEach(f => { try { f(); } catch (e) {} }); frSubs = []; S.frs = []; S.frRaw = {a: {}, b: {}}; S.frSig = {}; }
+function frBuild() {
+  const me = uid(), out = [];
+  for (const k of ['a', 'b']) for (const [pid, r] of Object.entries(S.frRaw[k] || {})) {
+    if (!r || !r.a || !r.b) continue;
+    const mineA = r.a === me;
+    out.push({pid, st: r.st, by: r.by, other: mineA ? r.b : r.a, name: (mineA ? r.nb : r.na) || '', av: (mineA ? r.ab : r.aa) | 0, fr: (mineA ? r.fb : r.fa) || '',
+      my: {n: mineA ? r.na : r.nb, a: mineA ? r.aa : r.ab, f: mineA ? r.fa : r.fb}, mineA});
+  }
+  S.frs = out;
+  // kendi ad ve avatarımı kayıtlarda güncel tut
+  const me2 = S.me || {};
+  S.frSig = S.frSig || {};
+  out.forEach(f => {
+    if (f.st === 'b') return;
+    const n = String(me2.name || '').slice(0, 25), a = me2.av | 0, fr = String(me2.fr || '').slice(0, 12), sig = n + '|' + a + '|' + fr;
+    if (!n || (f.my.n === n && (f.my.a | 0) === a && (f.my.f || '') === fr) || S.frSig[f.pid] === sig) return;
+    S.frSig[f.pid] = sig;
+    update(ref(db, 'fships/' + f.pid), f.mineA ? {na: n, aa: a, fa: fr} : {nb: n, ab: a, fb: fr}).catch(() => {});
+  });
+  if (['home', 'friends', 'frlist'].includes(S.screen)) render();
+}
+const frFriends = () => (S.frs || []).filter(f => f.st === 'ok').sort((a, b) => (a.name || '').localeCompare(b.name || '', 'tr'));
+const frIn = () => (S.frs || []).filter(f => f.st === 'p' && f.by !== uid());
+const frOut = () => (S.frs || []).filter(f => f.st === 'p' && f.by === uid());
+const frBlocked = () => (S.frs || []).filter(f => f.st === 'b' && f.by !== uid());
+const frOf = pid => (S.frs || []).find(f => f.pid === pid);
+const myFrFields = f => { const n = String(S.me.name || '').slice(0, 25), a = S.me.av | 0, fr = String(S.me.fr || '').slice(0, 12); return f.mineA ? {na: n, aa: a, fa: fr} : {nb: n, ab: a, fb: fr}; };
+
+async function friendRequest(to, name, av, fr, quiet) {
+  const me = uid(); if (!to || to === me) return false;
+  const ex = (S.frs || []).find(f => f.other === to);
+  if (ex) {
+    if (ex.st === 'ok') { if (!quiet) toast('Zaten arkadaşsınız'); return false; }
+    if (ex.st === 'p' && ex.by !== me) { await friendAccept(ex.pid); return true; }
+    if (ex.st === 'p') { if (!quiet) toast('İstek zaten gönderildi'); return false; }
+    if (!quiet) toast('İstek gönderilemedi'); return false;
+  }
+  if (frFriends().length + frOut().length >= FR_MAX) { toast('Arkadaş listen dolu'); return false; }
+  if (frDayCount() >= 20) { toast('Bugünlük istek hakkın doldu'); return false; }
+  const isA = me < to, rec = {a: isA ? me : to, b: isA ? to : me, by: me, st: 'p', t: serverTimestamp()};
+  rec[isA ? 'na' : 'nb'] = String(S.me.name || '').slice(0, 25); rec[isA ? 'aa' : 'ab'] = S.me.av | 0; rec[isA ? 'fa' : 'fb'] = String(S.me.fr || '').slice(0, 12);
+  if (name) { rec[isA ? 'nb' : 'na'] = String(name).slice(0, 25); rec[isA ? 'ab' : 'aa'] = av | 0; rec[isA ? 'fb' : 'fa'] = String(fr || '').slice(0, 12); }
+  try { await set(ref(db, 'fships/' + pidOf(me, to)), rec); frDayAdd(); if (!quiet) toast('Arkadaşlık isteği gönderildi'); return true; }
+  catch (e) { console.error(e); if (!quiet) toast('İstek gönderilemedi'); return false; }
+}
+async function friendAccept(pid) {
+  const f = frOf(pid); if (!f || S.busy) return;
+  S.busy = true;
+  try { await update(ref(db, 'fships/' + pid), Object.assign({st: 'ok'}, myFrFields(f))); SFX.play('coin'); toast(`${f.name || 'Oyuncu'} artık arkadaşın`); }
+  catch (e) { console.error(e); toast('İşlem yapılamadı, tekrar dene'); }
+  S.busy = false; render();
+}
+async function friendDrop(pid, how) {
+  const f = frOf(pid); if (!f || S.busy) return;
+  if (how === 'del' && !confirm(`${f.name || 'Bu oyuncu'} arkadaşlıktan çıkarılsın mı?`)) return;
+  if (how === 'block' && !confirm(`${f.name || 'Bu oyuncu'} engellensin mi? Sana tekrar istek gönderemez.`)) return;
+  S.busy = true;
+  try { if (how === 'block') await update(ref(db, 'fships/' + pid), {st: 'b'}); else await remove(ref(db, 'fships/' + pid)); }
+  catch (e) { console.error(e); toast('İşlem yapılamadı, tekrar dene'); }
+  S.busy = false; render();
+}
+async function shareFriend() {
+  const url = 'https://playzuqio.com/?f=' + uid(), text = 'Zuqio’da beni arkadaş olarak ekle:';
+  if (navigator.share) { try { await navigator.share({title: 'Zuqio', text, url}); return; } catch (e) { if (e && e.name === 'AbortError') return; } }
+  try { await navigator.clipboard.writeText(url); toast('Bağlantı kopyalandı'); } catch (e) { prompt('Bağlantıyı kopyala:', url); }
+}
+const frBtn = R => (R && !R.bot && !R.study && !R.wr && players(R).some(p => p.id !== uid() && !String(p.id).startsWith('bot'))) ? `<button class="btn outline" data-act="fradd">${ic('users')}Arkadaş ekle</button>` : '';
+function frAddSheet() {
+  const R = S.R; if (!S.frUI || !R) return '';
+  const rows = players(R).filter(p => p.id !== uid() && !String(p.id).startsWith('bot')).map(p => {
+    const f = (S.frs || []).find(x => x.other === p.id);
+    const act = f && f.st === 'ok' ? '<span class="small muted">Arkadaşsın</span>' : f && f.st === 'p' ? `<span class="small muted">${f.by === uid() ? 'İstek gönderildi' : 'Seni ekledi'}</span>` : f ? '' : `<button class="fbtn p" data-act="frsend" data-id="${esc(p.id)}">Ekle</button>`;
+    return `<div class="rank">${avatar(p.av, '', p.fr)}<b class="frn">${esc(p.name)}</b>${act}</div>`;
+  }).join('');
+  return `<div class="annmodal" data-act="frclose"><div class="giftsheet" role="dialog" aria-label="Arkadaş ekle" data-stop="1">
+    <div class="row between" style="margin-bottom:10px"><h3 style="margin:0">Arkadaş ekle</h3><button class="annx" style="position:static" data-act="frclose" aria-label="Kapat">✕</button></div>
+    <div class="stack" style="gap:8px">${rows}</div></div></div>`;
+}
+
+// kurabiye hediyesi
+const ckLeft = () => { const c = S.me && S.me.cg; return CK_DAILY - (c && c.d === dayIdx() ? (c.n || 0) : 0); };
+let ckSubs = [];
+const ckDone = new Set();
+function watchCookies() {
+  if (ckSubs.length) return;
+  const me = uid();
+  ckSubs.push(onValue(query(ref(db, 'cgifts'), orderByChild('to'), equalTo(me)), sn => { S.cIn = sn.val() || {}; if (S.screen === 'home') render(); }, () => {}));
+  ckSubs.push(onValue(query(ref(db, 'cgifts'), orderByChild('from'), equalTo(me)), sn => { S.cOut = sn.val() || {}; settleCookies(); }, () => {}));
+}
+function stopCookies() { ckSubs.forEach(f => { try { f(); } catch (e) {} }); ckSubs = []; S.cIn = {}; S.cOut = {}; ckDone.clear(); }
+async function settleCookies() {
+  for (const [id, g] of Object.entries(S.cOut || {})) {
+    if (ckDone.has(id) || (g.st !== 'x' && g.st !== 'a')) continue;
+    ckDone.add(id);
+    try {
+      if (g.st === 'x') {
+        const w = await freshWallet();
+        await update(ref(db), {['cgifts/' + id]: null, ['users/' + uid() + '/wallet/coins']: (w.coins || 0) + g.amt, ['users/' + uid() + '/wallet/rf']: id});
+        await freshWallet(); toast(`${g.tn || 'Arkadaşın'} kurabiyeni kabul etmedi, ${g.amt} kurabiyen iade edildi`);
+      } else remove(ref(db, 'cgifts/' + id)).catch(() => {});
+    } catch (e) { console.error(e); ckDone.delete(id); }
+  }
+  if (S.screen === 'home' || S.screen === 'frlist') render();
+}
+async function sendCookies(to, toName, amt) {
+  if (S.busy) return;
+  if (myLv() < CK_LV) { toast(`Kurabiye göndermek için seviye ${CK_LV} gerekli`); return; }
+  if (amt > ckLeft()) { toast('Bugünlük gönderme hakkın yetmiyor'); return; }
+  const w = await freshWallet();
+  if ((w.coins || 0) < amt) { toast(`Yeterli kurabiyen yok (${amt} gerekli)`); render(); return; }
+  if (!confirm(`${toName || 'Arkadaşına'} ${amt} kurabiye gönderilsin mi? Kabul etmezse kurabiyelerin iade edilir.`)) return;
+  const used = S.me.cg && S.me.cg.d === dayIdx() ? (S.me.cg.n || 0) : 0;
+  S.busy = true;
+  try {
+    await update(ref(db), {['cgifts/' + to + '_' + uid()]: {from: uid(), to, amt, st: 'p', fn: S.me.name, tn: String(toName || '').slice(0, 25), t: serverTimestamp()},
+      ['users/' + uid() + '/wallet/coins']: (w.coins || 0) - amt, ['users/' + uid() + '/cg']: {d: dayIdx(), n: used + amt}});
+    await freshWallet(); S.ckUI = null; SFX.play('coin'); toast(`${amt} kurabiye ${toName || 'arkadaşın'} için gönderildi`);
+  } catch (e) { console.error(e); toast('Gönderilemedi. Bekleyen bir kurabiye hediyen olabilir'); }
+  S.busy = false; render();
+}
+async function answerCookies(id, yes) {
+  const g = (S.cIn || {})[id]; if (!g || S.busy) return;
+  S.busy = true;
+  try {
+    if (yes) {
+      const w = await freshWallet();
+      await update(ref(db), {['cgifts/' + id + '/st']: 'a', ['users/' + uid() + '/wallet/coins']: (w.coins || 0) + g.amt, ['users/' + uid() + '/wallet/cf']: id});
+      remove(ref(db, 'cgifts/' + id)).catch(() => {});
+      await freshWallet(); SFX.play('coin'); toast(`+${g.amt} kurabiye kazandın!`);
+    } else { await update(ref(db, 'cgifts/' + id), {st: 'x'}); toast('Kurabiye geri çevrildi'); }
+  } catch (e) { console.error(e); toast('İşlem yapılamadı, tekrar dene'); }
+  S.busy = false; render();
+}
+function ckPop() {
+  S.ckLater = S.ckLater || {};
+  const e = Object.entries(S.cIn || {}).find(([id, g]) => g.st === 'p' && !S.ckLater[id]); if (!e) return '';
+  const [id, g] = e;
+  return `<div class="annmodal" data-act="cklater" data-id="${esc(id)}"><div class="giftcard" role="dialog" aria-label="Kurabiye hediyesi" data-stop="1">
+    <button class="annx" data-act="cklater" data-id="${esc(id)}" aria-label="Sonra bak">✕</button>
+    <div class="giftprev ckbig">${COIN}</div>
+    <p><b>${esc(g.fn)}</b> sana kurabiye gönderdi</p><p class="giftname">${g.amt} kurabiye</p>
+    <div class="stack" style="gap:8px;width:100%"><button class="btn primary big" data-act="ckyes" data-id="${esc(id)}" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.gift}</span><span class="lb">KABUL ET</span></button>
+    <button class="btn ghost" data-act="ckno" data-id="${esc(id)}" ${S.busy ? 'disabled' : ''}>Kabul etmiyorum</button></div></div></div>`;
+}
+function ckSheet() {
+  const u = S.ckUI; if (!u) return '';
+  const left = ckLeft(), opts = [1, 2, 5, 10].filter(x => x <= left);
+  const body = myLv() < CK_LV ? `<p class="muted" style="margin:0">Kurabiye göndermek için seviye ${CK_LV} olmalısın.</p>`
+    : left <= 0 ? '<p class="muted" style="margin:0">Bugünlük gönderme hakkın doldu. Yarın tekrar gönderebilirsin.</p>'
+    : `<p class="small muted" style="margin:0 0 10px">Kurabiyelerin hemen düşer. ${esc(u.name || 'Arkadaşın')} kabul etmezse iade edilir. Bugün en fazla ${left} kurabiye daha gönderebilirsin.</p>
+      <div class="ckopts">${opts.map(x => `<button class="shopitem" data-act="ckamt" data-n="${x}"><span class="price">${COIN}${x}</span></button>`).join('')}</div>`;
+  return `<div class="annmodal" data-act="ckclose"><div class="giftsheet" role="dialog" aria-label="Kurabiye gönder" data-stop="1">
+    <div class="row between" style="margin-bottom:10px"><h3 style="margin:0">${esc(u.name || 'Arkadaşına')} için kurabiye</h3><button class="annx" style="position:static" data-act="ckclose" aria-label="Kapat">✕</button></div>${body}</div></div>`;
+}
+
 async function equipItem(id) {
   const it = shopItem(id) || (id === 'fr0' ? {kind: 'fr'} : null);
   if (!it || (id !== 'fr0' && !owned(id))) return;
@@ -825,11 +996,11 @@ async function refreshOnl() {
     const o = {}; sn.forEach(c => { const v = c.val(); if (v && typeof v.t === 'number' && v.t >= now() - PRES_FRESH) o[c.key] = true; });
     if (presOn() && uid() && !hiddenMe() && document.visibilityState === 'visible') o[uid()] = true;
     const sig = Object.keys(o).sort().join(',');
-    if (sig !== S.onlSig) { S.onlSig = sig; S.onl = o; if (S.screen === 'board') render(); }
+    if (sig !== S.onlSig) { S.onlSig = sig; S.onl = o; if (S.screen === 'board' || S.screen === 'frlist') render(); }
   } catch (e) { /* sessizce geç */ }
 }
 const onlAv = (id, av, fr) => `<span class="avo">${avatar(av, '', fr)}${S.onl && S.onl[id] ? '<i class="onl" title="Çevrimiçi"></i>' : ''}</span>`;
-setInterval(() => { presTick(); if (S.screen === 'board') refreshOnl(); }, 30000);
+setInterval(() => { presTick(); if (S.screen === 'board' || S.screen === 'frlist') refreshOnl(); }, 30000);
 
 /* ================= kalma süresi (yönetici istatistiği için) ================= */
 function actTick() {
@@ -998,7 +1169,7 @@ V.profile = () => `
 
 V.home = () => `
   <div class="screen home2">
-    ${giftPop() || winPop() || annBanner()}${a2Sheet()}
+    ${ckPop() || giftPop() || winPop() || annBanner()}${a2Sheet()}
     <div class="top home-top"><button class="gearbtn" data-go="settings" aria-label="Ayarlar">${ICON.gear}</button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle"><span class="mn">${esc(S.me.name)}</span>${avatar(S.me.av, '', S.me.fr)}<span class="mlv">Seviye ${myLv()}</span></button><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} kurabiye" style="justify-self:end"><b>${coins()}</b>${COIN}</button></div>
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px">${a2Link()}</div>
@@ -1147,6 +1318,7 @@ V.friends = () => `
         <button class="btn" data-go="join">${ICON.key}Kodla katıl</button>
         <button class="btn" data-act="openrooms">${ICON.list}Açık odalar</button>
       </div>
+      <button class="btn outline frbtn" data-act="openfrlist">${ic('users')}Arkadaşlarım${frFriends().length ? ` (${frFriends().length})` : ''}${frIn().length ? `<i class="reddot" aria-label="${frIn().length} yeni istek"></i>` : ''}</button>
     </div>
   </div>`;
 
@@ -1715,7 +1887,7 @@ V.final = () => {
     <div class="stack" style="gap:8px;margin-top:8px">${s.slice(3).map((p, i) => `<div class="rank ${p.id === uid() ? 'me' : ''}"><span class="n">${i + 4}</span>${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b>${lvBadge(p)}<span class="pts">${fmt(sc[p.id] || 0)}</span></div>`).join('')}</div>
     ${reactBar()}
     ${wrongBlock(R)}
-    ${chalBtn(R)}${giftBtn(R)}${giftSheet()}
+    ${chalBtn(R)}${giftBtn(R)}${frBtn(R)}${giftSheet()}${frAddSheet()}
     <div class="grow" style="min-height:20px"></div>
     <div class="stack">
       ${R.chal
@@ -1736,7 +1908,7 @@ V.final = () => {
   </div>`;
 };
 
-const NAV_SCREENS = ['home', 'friends', 'settings', 'shop', 'board', 'daily', 'quizzes', 'rooms', 'join', 'how', 'profile', 'stats'];
+const NAV_SCREENS = ['home', 'friends', 'frlist', 'settings', 'shop', 'board', 'daily', 'quizzes', 'rooms', 'join', 'how', 'profile', 'stats'];
 function gnav() {
   if (!NAV_SCREENS.includes(S.screen) || S.R || (S.screen === 'profile' && S.firstProfile)) return '';
   const on = k => S.screen === k ? ' on' : '';
@@ -1813,8 +1985,8 @@ onAuthStateChanged(auth, async u => {
   S.user = u;
   S.isOwner = false;
   if (u) checkOwner(u.email).then(ok => { if (ok) { S.isOwner = true; if (S.screen === 'settings') render(); } });
-  if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } if (annSub) { annSub(); annSub = null; } stopGifts(); S.me = null; go('login'); return; }
-  watchAnn(); watchGifts(); checkWin(); loadApproved().then(loadFixes);
+  if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } if (annSub) { annSub(); annSub = null; } stopGifts(); stopCookies(); stopFriends(); S.me = null; go('login'); return; }
+  watchAnn(); watchGifts(); watchCookies(); watchFriends(); checkWin(); loadApproved().then(loadFixes);
   try {
     const snap = await get(ref(db, 'users/' + u.uid));
     const ban = await get(ref(db, 'bans/' + u.uid)).catch(() => null);
@@ -1834,6 +2006,11 @@ onAuthStateChanged(auth, async u => {
 
 async function afterLogin() {
   watchMe(); watchQuick(); loadHidden().then(presTick);
+  if (S.pendingFriend) {
+    const f = S.pendingFriend; S.pendingFriend = null;
+    await Promise.race([S.frP, new Promise(r => setTimeout(r, 3500))]);
+    if (f !== uid()) { await friendRequest(f, '', 0, ''); go('frlist'); refreshOnl(); return; }
+  }
   if (S.pendingChal) { const m = S.pendingChal; S.pendingChal = null; ls.set('zuqio-room', ''); openChallenge(m); return; }
   // Uygulama yeniden açılınca her zaman ana ekran gelir. Sadece davet bağlantısıyla gelinirse odaya girilir.
   const code = S.pendingCode;
@@ -1885,6 +2062,11 @@ async function deleteAccount() {
       const qs = await get(query(ref(db, 'quizzes'), orderByChild('owner'), equalTo(id)));
       const rm = []; qs.forEach(c => { rm.push(remove(ref(db, 'quizzes/' + c.key))); });
       await Promise.allSettled(rm);
+    } catch (e) { console.error(e); }
+    try {
+      const fs = await Promise.all(['a', 'b'].map(k => get(query(ref(db, 'fships'), orderByChild(k), equalTo(id)))));
+      const rm2 = []; fs.forEach(sn => sn.forEach(c => { rm2.push(remove(ref(db, 'fships/' + c.key))); }));
+      await Promise.allSettled(rm2);
     } catch (e) { console.error(e); }
     await remove(ref(db, 'users/' + id));
     await deleteUser(u);
@@ -2743,6 +2925,22 @@ app.addEventListener('click', e => {
   else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
   else if (a === 'wrstart') startWrongs();
   else if (a === 'statsreset') resetStats();
+  else if (a === 'openfrlist') { go('frlist'); refreshOnl(); }
+  else if (a === 'frshare') shareFriend();
+  else if (a === 'fradd') { S.frUI = true; render(); }
+  else if (a === 'frclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.frUI = false; render(); }
+  else if (a === 'frsend') { const p = players(S.R).find(x => x.id === el.dataset.id); if (p) friendRequest(p.id, p.name, p.av, p.fr).then(() => render()); }
+  else if (a === 'fraccept') friendAccept(el.dataset.id);
+  else if (a === 'frno') friendDrop(el.dataset.id, 'no');
+  else if (a === 'frblock') friendDrop(el.dataset.id, 'block');
+  else if (a === 'frdel') friendDrop(el.dataset.id, 'del');
+  else if (a === 'frunblock') friendDrop(el.dataset.id, 'no');
+  else if (a === 'ckopen') { const f = frOf(el.dataset.id); if (f) { S.ckUI = {to: f.other, name: f.name}; render(); } }
+  else if (a === 'ckclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.ckUI = null; render(); }
+  else if (a === 'ckamt') { if (S.ckUI) sendCookies(S.ckUI.to, S.ckUI.name, +el.dataset.n); }
+  else if (a === 'ckyes') answerCookies(el.dataset.id, true);
+  else if (a === 'ckno') { if (confirm('Kurabiye gönderene geri çevrilsin mi?')) answerCookies(el.dataset.id, false); }
+  else if (a === 'cklater') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.ckLater = S.ckLater || {}; S.ckLater[el.dataset.id] = true; render(); }
   else if (a === 'why') { if (S.R) askWhy(el.dataset.k, whyData(S.R, +el.dataset.q)); }
   else if (a === 'chalnew') createChallenge();
   else if (a === 'chalgo') startChallenge();
@@ -2774,9 +2972,31 @@ app.addEventListener('keydown', e => {
 
 V.challenge = chalView;
 V.stats = statsView;
+V.frlist = () => {
+  const inc = frIn(), fl = frFriends(), out = frOut(), blk = frBlocked();
+  const row = (f, btns) => `<div class="rank">${onlAv(f.other, f.av, f.fr)}<b class="frn">${esc(f.name || 'Oyuncu')}</b><span class="fbtns">${btns}</span></div>`;
+  return `
+  <div class="screen">
+    <div class="top">${backBtn('data-go="friends"')}</div>
+    <div class="phead"><span class="pico">${ICON.users}</span><h2>Arkadaşlarım</h2></div>
+    <div class="stack" style="gap:14px">
+      <button class="btn outline" data-act="frshare">${ic('share')}Arkadaşlık bağlantını paylaş</button>
+      ${inc.length ? `<div class="stack" style="gap:8px"><b>Gelen istekler</b>${inc.map(f => `<div class="stack" style="gap:2px">${row(f, `<button class="fbtn p" data-act="fraccept" data-id="${esc(f.pid)}">Kabul</button><button class="fbtn" data-act="frno" data-id="${esc(f.pid)}">Reddet</button>`)}<button class="linkbtn" style="align-self:flex-end;min-height:32px" data-act="frblock" data-id="${esc(f.pid)}">Engelle</button></div>`).join('')}</div>` : ''}
+      <div class="stack" style="gap:8px"><b>Arkadaşlar${fl.length ? ` (${fl.length})` : ''}</b>
+        ${fl.length ? fl.map(f => row(f, `<button class="fbtn p" data-act="ckopen" data-id="${esc(f.pid)}" aria-label="Kurabiye gönder">${COIN}Gönder</button><button class="fbtn" data-act="frdel" data-id="${esc(f.pid)}" aria-label="Arkadaşlıktan çıkar">✕</button>`)).join('')
+          : '<div class="card"><p class="small muted" style="margin:0">Henüz arkadaşın yok. Oyun bitince sonuç ekranından ya da paylaşma bağlantınla arkadaş ekleyebilirsin.</p></div>'}</div>
+      ${out.length ? `<div class="stack" style="gap:8px"><b>Bekleyen istekler</b>${out.map(f => row(f, `<span class="small muted">Bekliyor</span><button class="fbtn" data-act="frno" data-id="${esc(f.pid)}">Geri çek</button>`)).join('')}</div>` : ''}
+      ${blk.length ? `<div class="stack" style="gap:8px"><b>Engellenenler</b>${blk.map(f => row(f, `<button class="fbtn" data-act="frunblock" data-id="${esc(f.pid)}">Engeli kaldır</button>`)).join('')}</div>` : ''}
+    </div>
+    ${ckSheet()}
+  </div>`;
+};
+
 /* ================= başlangıç ================= */
 const qm = new URLSearchParams(location.search).get('m');
 if (qm && /^[a-z0-9]{6,16}$/.test(qm)) { S.pendingChal = qm; history.replaceState(null, '', location.pathname); }
+const qf = new URLSearchParams(location.search).get('f');
+if (qf && /^[A-Za-z0-9]{20,40}$/.test(qf)) { S.pendingFriend = qf; history.replaceState(null, '', location.pathname); }
 const qp = new URLSearchParams(location.search).get('oda');
 if (qp && /^\d{6}$/.test(qp)) { S.pendingCode = qp; history.replaceState(null, '', location.pathname); }
 render();
