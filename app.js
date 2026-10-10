@@ -190,7 +190,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 161';
+const APP_VERSION = '0.5 (test) · yapı 162';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1508,7 +1508,6 @@ V.reveal = () => {
   <div class="screen">
     <div class="verdict ${cls}"><b>${title}</b><p>${sub}</p></div>
     ${rv.info ? `<div class="card infocard"><b>${q.cat === 'İngilizce' ? 'Öğren' : q.cat === 'Ders notu' ? 'Açıklama' : 'Biliyor muydun?'}</b><p>${esc(rv.info)}</p></div>` : ''}
-    ${cls !== 'good' && q.cat !== 'İngilizce' ? `<div class="stack" style="margin-top:12px">${whyBox((R.gid || R.code) + ':' + qi, whyData(R, qi))}</div>` : ''}
     ${R.wr ? `<p class="small muted" style="text-align:center;margin-top:16px">Soru ${qi + 1} / ${R.questions.length}</p>` : `<div class="row between" style="margin:20px 0 10px"><b>Sıralama</b><span class="small muted">Soru ${qi + 1} / ${R.questions.length}</span></div>
     <div class="stack" style="gap:8px">${rankList(R, qi)}</div>
     ${reactBar()}`}
