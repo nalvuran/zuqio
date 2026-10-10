@@ -190,7 +190,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 159';
+const APP_VERSION = '0.5 (test) · yapı 160';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -337,8 +337,8 @@ onValue(ref(db, '.info/connected'), s => { if (s.val()) markOnline(); });
 
 function go(screen) { S.screen = screen; render(); app.scrollTop = 0; }
 
-/* ================= jeton, günlük ödül, mağaza ================= */
-const COIN = `<svg class="coin" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="cgA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFE98A"/><stop offset=".5" stop-color="#FFC21A"/><stop offset="1" stop-color="#D98C00"/></linearGradient><linearGradient id="cgB" x1="1" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#F2A900"/><stop offset="1" stop-color="#FFD84D"/></linearGradient><linearGradient id="cgC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs><circle cx="12" cy="13" r="10.5" fill="#B36B00"/><circle cx="12" cy="12" r="10.5" fill="url(#cgA)" stroke="#E39A00" stroke-width="1.2"/><circle cx="12" cy="12" r="6.9" fill="url(#cgB)" stroke="#C97F00" stroke-width="1.2"/><circle cx="12" cy="12.5" r="6.9" fill="none" stroke="#FFF0A6" stroke-opacity=".8" stroke-width=".7" clip-path="inset(50% 0 0 0)"/><path d="M12 8.4l1.1 2.4 2.6.3-1.9 1.8.5 2.6-2.3-1.3-2.3 1.3.5-2.6-1.9-1.8 2.6-.3z" fill="#E39A00" stroke="#B36B00" stroke-width=".5" stroke-linejoin="round"/><path d="M12 8.4l1.1 2.4 2.6.3-1.9 1.8.5 2.6-2.3-1.3-2.3 1.3.5-2.6-1.9-1.8 2.6-.3z" fill="none" stroke="#FFEFA0" stroke-opacity=".7" stroke-width=".4" transform="translate(0 .5)"/><path d="M4.2 8.6A9 9 0 0 1 12 3.2c2.6 0 4.7 1 6.2 2.6-3.6-1.4-9.6-.4-14 2.8z" fill="url(#cgC)" opacity=".8"/></svg>`;
+/* ================= kurabiye, günlük ödül, mağaza ================= */
+const COIN = `<svg class="coin" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="ckA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#F6C777"/><stop offset=".55" stop-color="#E0A04A"/><stop offset="1" stop-color="#BE7A26"/></linearGradient><linearGradient id="ckC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><linearGradient id="ckD" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6B3A1C"/><stop offset="1" stop-color="#3E1F0D"/></linearGradient><mask id="ckM" ><rect width="24" height="24" fill="#fff"/><circle cx="20.4" cy="5" r="3.1" fill="#000"/><circle cx="17.3" cy="3.3" r="2.2" fill="#000"/><circle cx="21.6" cy="8.5" r="2.2" fill="#000"/></mask></defs><g mask="url(#ckM)"><circle cx="12" cy="13.2" r="10.4" fill="#8E5416"/><circle cx="12" cy="12" r="10.4" fill="url(#ckA)" stroke="#B9731F" stroke-width="1.1"/><path d="M3.6 8.2A9 9 0 0 1 12 2.9c2.4 0 4.4.8 5.9 2.2-3.6-1.2-9.2-.2-14.3 3.1z" fill="url(#ckC)" opacity=".75"/></g><g fill="url(#ckD)" stroke="#2E1608" stroke-width=".4" stroke-linejoin="round"><path d="M7 6.6l2.1-.3.9 1.9-1.6 1.5-1.8-.8z"/><path d="M12.6 10.2l2.2.4.3 2.1-1.9 1-1.7-1.3z"/><path d="M6.6 13l2 .5.4 2-1.9 1-1.5-1.5z"/><path d="M12 16.6l2.2-.2.8 1.8-1.7 1.3-1.8-.9z"/><path d="M16.6 14.3l1.7.7-.2 1.9-1.8.2-.6-1.6z"/><path d="M11.2 5.4l1.5.5-.1 1.6-1.6.2-.5-1.3z"/></g><g fill="#fff" fill-opacity=".45"><circle cx="8" cy="7.2" r=".45"/><circle cx="13.6" cy="10.8" r=".45"/><circle cx="7.4" cy="13.6" r=".45"/><circle cx="12.9" cy="17" r=".45"/></g></svg>`;
 const DAILY = [10, 10, 15, 15, 20, 25, 50];
 const QUESTION_REWARD = {right: 20, wrong: 5};
 const SHOP = [
@@ -401,7 +401,7 @@ async function claimDaily() {
     const up = {'wallet/coins': (w.coins || 0) + amt, 'wallet/claimDay': t, 'wallet/streak': streak};
     if (saved) up['wallet/shield'] = w.shield - 1;
     await update(ref(db, 'users/' + uid()), up);
-    SFX.play('coin'); buzz(30); toast(saved ? `Seri koruyucu serini kurtardı! +${amt} jeton` : `+${amt} jeton kazandın!`);
+    SFX.play('coin'); buzz(30); toast(saved ? `Seri koruyucu serini kurtardı! +${amt} kurabiye` : `+${amt} kurabiye kazandın!`);
   } catch (e) { console.error(e); toast('Ödül alınamadı, tekrar dene'); }
   S.busy = false; render();
 }
@@ -422,7 +422,7 @@ async function answerDaily(i) {
     if (w.qDay === t) { S.busy = false; render(); return; }
     await update(ref(db, 'users/' + uid()), {'wallet/coins': (w.coins || 0) + amt, 'wallet/qDay': t, 'wallet/qRes': right ? 1 : 0});
     SFX.play(right ? 'correct' : 'wrong'); buzz(right ? [30, 40, 30] : 120);
-    toast(right ? `Doğru! +${amt} jeton` : i < 0 ? `Süre doldu, +${amt} jeton kazandın` : `Yanlış, ama +${amt} jeton kazandın`);
+    toast(right ? `Doğru! +${amt} kurabiye` : i < 0 ? `Süre doldu, +${amt} kurabiye kazandın` : `Yanlış, ama +${amt} kurabiye kazandın`);
   } catch (e) { console.error(e); S.dqPick = null; S.dqRetry = Date.now() + 4000; toast('Cevap kaydedilemedi, tekrar dene'); }
   S.busy = false; render();
 }
@@ -439,8 +439,8 @@ async function buyItem(id) {
   const it = shopItem(id); if (!it || S.busy) return;
   const w = await freshWallet();
   if (it.kind === 'shield' ? (w.shield || 0) >= SHIELD.max : owned(id)) return;
-  if ((w.coins || 0) < it.price) { toast(`Yeterli jetonun yok (${it.price} gerekli)`); render(); return; }
-  if (!confirm(`${it.name} için ${it.price} jeton harcamak istiyor musun?`)) return;
+  if ((w.coins || 0) < it.price) { toast(`Yeterli kurabiyen yok (${it.price} gerekli)`); render(); return; }
+  if (!confirm(`${it.name} için ${it.price} kurabiye harcamak istiyor musun?`)) return;
   S.busy = true;
   try {
     const up = {'wallet/coins': (w.coins || 0) - it.price};
@@ -478,7 +478,7 @@ async function claimXp(R) {
       S.me = Object.assign({}, S.me, {xp: xp1, xpd: d, xpt: used + gain}, up.lv ? {lv: up.lv} : {});
       if (up['wallet/coins'] != null) S.me.wallet = Object.assign({}, S.me.wallet, {coins: up['wallet/coins']});
       S.xpGain = {gid, gain, up: lv1 > lv0 ? lv1 : 0};
-      if (lv1 > lv0) { SFX.play('coin'); toast(`Seviye atladın: ${lvTitle(lv1)}! +${LV_COIN * (lv1 - lv0)} jeton`); }
+      if (lv1 > lv0) { SFX.play('coin'); toast(`Seviye atladın: ${lvTitle(lv1)}! +${LV_COIN * (lv1 - lv0)} kurabiye`); }
     } else S.xpGain = {gid, gain: 0, up: 0, cap: used >= XP_DAILY};
     S.xpDone = gid;
   } catch (e) { console.error(e); }
@@ -489,7 +489,7 @@ function lvCard() {
   const xp = (S.me && S.me.xp) || 0, L = levelOf(xp), a = xpAt(L), b = xpAt(L + 1), pct = Math.round((xp - a) / (b - a) * 100);
   return `<div class="card stack lvcard" style="gap:8px"><div class="row between"><b>Seviye ${L} · ${lvTitle(L)}</b><span class="small muted">${xp} XP</span></div>
     <div class="lvbar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div>
-    <p class="small muted" style="margin:0">Sonraki seviyeye ${b - xp} XP. Rakiplerle ve arkadaşlarınla oynadığın oyunlardan XP kazanırsın, her seviye ${LV_COIN} jeton verir.</p></div>`;
+    <p class="small muted" style="margin:0">Sonraki seviyeye ${b - xp} XP. Rakiplerle ve arkadaşlarınla oynadığın oyunlardan XP kazanırsın, her seviye ${LV_COIN} kurabiye verir.</p></div>`;
 }
 
 /* ================= istatistikler ================= */
@@ -676,7 +676,7 @@ function watchGifts() {
   giftSubs.push(onValue(query(ref(db, 'gifts'), orderByChild('from'), equalTo(me)), sn => { S.gOut = sn.val() || {}; settleGifts(); }, () => {}));
 }
 function stopGifts() { giftSubs.forEach(f => { try { f(); } catch (e) {} }); giftSubs = []; S.gIn = {}; S.gOut = {}; giftDone.clear(); }
-// Gönderdiğim hediyeler: reddedildiyse jeton iadesi, kabul edildiyse kayıt temizliği
+// Gönderdiğim hediyeler: reddedildiyse kurabiye iadesi, kabul edildiyse kayıt temizliği
 async function settleGifts() {
   for (const [id, g] of Object.entries(S.gOut || {})) {
     if (giftDone.has(id) || (g.st !== 'x' && g.st !== 'a')) continue;
@@ -686,7 +686,7 @@ async function settleGifts() {
       if (g.st === 'x') {
         const w = await freshWallet();
         await update(ref(db), {['gifts/' + id]: null, ['users/' + uid() + '/wallet/coins']: (w.coins || 0) + g.price, ['users/' + uid() + '/wallet/rf']: id});
-        await freshWallet(); toast(`${who} hediyeni kabul etmedi, jetonların iade edildi`);
+        await freshWallet(); toast(`${who} hediyeni kabul etmedi, kurabiyelerin iade edildi`);
       } else { await remove(ref(db, 'gifts/' + id)); toast(`${who} hediyeni kabul etti`); }
     } catch (e) { console.error(e); giftDone.delete(id); }
     render();
@@ -696,8 +696,8 @@ async function sendGift(to, toName, item) {
   const it = shopItem(item); if (!it || !it.price || S.busy || (it.kind !== 'av' && it.kind !== 'fr')) return;
   if (giftDayCount() >= GIFT_DAILY) { toast('Bugünlük hediye hakkın doldu'); return; }
   const w = await freshWallet();
-  if ((w.coins || 0) < it.price) { toast(`Yeterli jetonun yok (${it.price} gerekli)`); render(); return; }
-  if (!confirm(`${toName} adlı oyuncuya ${it.name} hediye etmek için ${it.price} jeton harcanacak. Kabul etmezse jetonların iade edilir. Gönderilsin mi?`)) return;
+  if ((w.coins || 0) < it.price) { toast(`Yeterli kurabiyen yok (${it.price} gerekli)`); render(); return; }
+  if (!confirm(`${toName} adlı oyuncuya ${it.name} hediye etmek için ${it.price} kurabiye harcanacak. Kabul etmezse kurabiyelerin iade edilir. Gönderilsin mi?`)) return;
   S.busy = true;
   try {
     const id = giftId(to, item);
@@ -738,7 +738,7 @@ function giftSheet() {
   if (u.step === 'player') body = `<h3>Kime göndermek istiyorsun?</h3><div class="stack" style="gap:8px">${giftTargets(R).map(p => `<button class="rank" data-act="giftpick" data-id="${esc(p.id)}">${avatar(p.av, '', p.fr)}<b>${esc(p.name)}</b></button>`).join('')}</div>`;
   else {
     const items = SHOP.map(x => x.id).concat(FRAMES.map(x => x.id)).map(shopItem).filter(Boolean);
-    body = `<h3>${esc(u.name)} için bir hediye seç</h3><p class="small muted" style="margin:0 0 10px">Jetonların hemen düşer. Kabul edilmezse iade edilir.</p><div class="shopgrid">${items.map(it => `<button class="shopitem" data-act="giftitem" data-id="${it.id}" aria-label="${esc(it.name)}" ${coins() < it.price ? 'disabled' : ''}>
+    body = `<h3>${esc(u.name)} için bir hediye seç</h3><p class="small muted" style="margin:0 0 10px">Kurabiyelerin hemen düşer. Kabul edilmezse iade edilir.</p><div class="shopgrid">${items.map(it => `<button class="shopitem" data-act="giftitem" data-id="${it.id}" aria-label="${esc(it.name)}" ${coins() < it.price ? 'disabled' : ''}>
       ${giftPreview(it.id)}${it.kind === 'fr' ? `<b class="small">${esc(it.name)}</b>` : ''}<span class="price">${COIN}${it.price}</span></button>`).join('')}</div>`;
   }
   return `<div class="annmodal" data-act="giftclose"><div class="giftsheet" role="dialog" aria-label="Hediye gönder" data-stop="1">
@@ -981,7 +981,7 @@ V.profile = () => `
 V.home = () => `
   <div class="screen home2">
     ${giftPop() || winPop() || annBanner()}${a2Sheet()}
-    <div class="top home-top"><button class="gearbtn" data-go="settings" aria-label="Ayarlar">${ICON.gear}</button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle"><span class="mn">${esc(S.me.name)}</span>${avatar(S.me.av, '', S.me.fr)}<span class="mlv">Seviye ${myLv()}</span></button><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} jeton" style="justify-self:end"><b>${coins()}</b>${COIN}</button></div>
+    <div class="top home-top"><button class="gearbtn" data-go="settings" aria-label="Ayarlar">${ICON.gear}</button><button class="me-chip" data-act="openprofile" aria-label="Profili düzenle"><span class="mn">${esc(S.me.name)}</span>${avatar(S.me.av, '', S.me.fr)}<span class="mlv">Seviye ${myLv()}</span></button><button class="coinchip" data-go="shop" aria-label="Mağaza, ${coins()} kurabiye" style="justify-self:end"><b>${coins()}</b>${COIN}</button></div>
     <div class="grow"></div>${LOGO()}
     <div class="grow" style="min-height:24px">${a2Link()}</div>
     <div class="stack home-btns" style="gap:14px">
@@ -1019,13 +1019,13 @@ V.daily = () => {
       ${st.claimed
         ? `<div class="donebox">✓ Bugünün ödülü alındı</div>`
         : `<button class="btn primary big" data-act="claim" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.gift}</span><span class="lb">ÖDÜLÜ AL · +${DAILY[st.next - 1]}</span></button>`}
-      <p class="small muted" style="text-align:center">${st.claimed ? `Yarın gel, +${nextAmt} jeton seni bekliyor. Seri bozulmasın!` : (st.saved ? 'Dün gelemedin ama seri koruyucun serini kurtaracak!' : 'Her gün gelirsen ödül büyür, 7. gün en büyük ödül.')}${shields() ? ` · Seri koruyucu: ${shields()}` : ''}</p>
+      <p class="small muted" style="text-align:center">${st.claimed ? `Yarın gel, +${nextAmt} kurabiye seni bekliyor. Seri bozulmasın!` : (st.saved ? 'Dün gelemedin ama seri koruyucun serini kurtaracak!' : 'Her gün gelirsen ödül büyür, 7. gün en büyük ödül.')}${shields() ? ` · Seri koruyucu: ${shields()}` : ''}</p>
       ${st.qDone ? (() => {
         const ok = st.qRes === 1;
         return `<div class="card stack dqdone" style="gap:10px">
           <div class="row between"><span class="tag">Günün sorusu</span><span class="small muted" id="dqcd">${untilTomorrow()}</span></div>
           <p class="small muted">${esc(dq.q.q)}</p>
-          <div class="dqres ${ok ? 'ok' : 'no'}"><b>${ok ? '✓ Doğru bildin' : S.dqPick && S.dqPick.day === dayIdx() && S.dqPick.i < 0 ? 'Süre doldu' : '✗ Bu sefer olmadı'}</b><span>${ok ? `+${QUESTION_REWARD.right} jeton` : `Doğrusu: ${esc(dq.o[dq.a])} · +${QUESTION_REWARD.wrong} jeton`}</span></div>
+          <div class="dqres ${ok ? 'ok' : 'no'}"><b>${ok ? '✓ Doğru bildin' : S.dqPick && S.dqPick.day === dayIdx() && S.dqPick.i < 0 ? 'Süre doldu' : '✗ Bu sefer olmadı'}</b><span>${ok ? `+${QUESTION_REWARD.right} kurabiye` : `Doğrusu: ${esc(dq.o[dq.a])} · +${QUESTION_REWARD.wrong} kurabiye`}</span></div>
           <button class="btn outline" data-act="dqshare">Sonucu paylaş</button>
         </div>`;
       })() : (dqLeft() == null
@@ -1066,7 +1066,7 @@ V.shop = () => {
       <b>Seri koruyucu</b>
       <p class="small muted">Günlük ödülü bir gün kaçırırsan serin bozulmaz; koruyucu kendiliğinden kullanılır. En fazla ${SHIELD.max} tane taşıyabilirsin.</p>
       <p><b>Sende: ${shields()} / ${SHIELD.max}</b></p>
-      <button class="btn primary big" data-act="buy" data-id="shield" ${shields() >= SHIELD.max ? 'disabled' : ''}><span class="ic">${COIN}</span><span class="lb">${shields() >= SHIELD.max ? 'DOLU' : `AL · ${SHIELD.price} JETON`}</span></button>
+      <button class="btn primary big" data-act="buy" data-id="shield" ${shields() >= SHIELD.max ? 'disabled' : ''}><span class="ic">${COIN}</span><span class="lb">${shields() >= SHIELD.max ? 'DOLU' : `AL · ${SHIELD.price} KURABİYE`}</span></button>
     </div>`;
   return `
   <div class="screen">
@@ -1075,7 +1075,7 @@ V.shop = () => {
       <div class="phead"><span class="pico">${ICON.shop}</span><h2>Mağaza</h2></div>
       <div class="tabs four" role="tablist" style="grid-template-columns:repeat(3,1fr)">${Object.keys(tabs).map(k => `<button role="tab" class="${tab === k ? 'on' : ''}" aria-selected="${tab === k}" data-act="shoptab" data-t="${k}">${tabs[k]}</button>`).join('')}</div>
       ${body}
-      <p class="small muted">Mağazadaki her şey sadece görünüş ve eğlence içindir; puana ve sıralamaya etkisi yoktur. Jetonları günlük ödül ve günün sorusuyla kazanırsın.</p>
+      <p class="small muted">Mağazadaki her şey sadece görünüş ve eğlence içindir; puana ve sıralamaya etkisi yoktur. Kurabiyeleri günlük ödül ve günün sorusuyla kazanırsın.</p>
     </div>
   </div>`;
 };
@@ -1113,7 +1113,7 @@ V.settings = () => `
         <button class="btn ghost" data-act="logout">Çıkış yap</button>
         <button class="btn ghost" data-act="delacct" style="color:var(--red)" ${S.busy ? 'disabled' : ''}>Hesabımı sil</button>
       </div>
-      <span class="small muted fine" style="text-align:center">Hesabını silersen profilin, jetonların, puanların ve hazırladığın quizler kalıcı olarak silinir.</span>
+      <span class="small muted fine" style="text-align:center">Hesabını silersen profilin, kurabiyelerin, puanların ve hazırladığın quizler kalıcı olarak silinir.</span>
     </div>
   </div>`;
 
@@ -1194,7 +1194,7 @@ V.how = () => `
         <p><b>${ic('bolt')}Hızlı ve Doğru Cevap:</b> Ne kadar erken cevap verirsen o kadar çok puan alırsın.</p>
         <p><b>${ic('target')}Tahmin Soruları:</b> Şık yoktur. Sayıyı yaz, doğruya ne kadar yakınsan o kadar çok puan alırsın.</p>
         <p><b>${ic('list')}Konu Paketleri:</b> Tek bir konuya odaklanan hazır sorulardır. Örneğin Türkiye plakaları.</p>
-        <p><b>${ic('gift')}Jeton Kazan:</b> Her gün günlük ödülü al ve günün sorusunu cevapla. Jetonlarla mağazadan yeni avatarlar açabilirsin. Jetonlar oyunda avantaj sağlamaz.</p>
+        <p><b>${ic('gift')}Kurabiye Kazan:</b> Her gün günlük ödülü al ve günün sorusunu cevapla. Kurabiyelerle mağazadan yeni avatarlar açabilirsin. Kurabiyeler oyunda avantaj sağlamaz.</p>
         <p><b>${ic('half')}Jokerler:</b> Her oyunda birer kez kullanılır. Yarı yarıya, çifte puan, buz ve tahmin sorularında ipucu jokerleri vardır.</p>
       </div>
     </div>
@@ -1832,7 +1832,7 @@ async function login() {
 
 async function deleteAccount() {
   const u = auth.currentUser; if (!u || S.busy) return;
-  if (!confirm('Hesabın ve tüm verilerin (profil, jetonlar, puanlar, hazırladığın quizler) kalıcı olarak silinecek. Bu işlem geri alınamaz.\n\nDevam etmek istiyor musun?')) return;
+  if (!confirm('Hesabın ve tüm verilerin (profil, kurabiyeler, puanlar, hazırladığın quizler) kalıcı olarak silinecek. Bu işlem geri alınamaz.\n\nDevam etmek istiyor musun?')) return;
   S.busy = true; render();
   try {
     const provider = new GoogleAuthProvider(); provider.setCustomParameters({prompt: 'select_account', login_hint: u.email || ''});

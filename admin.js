@@ -163,7 +163,7 @@ function vUsers() {
       return `<button class="row item" data-act="user" data-id="${u.id}">
         <div class="grow"><b>${esc(u.name || '(adsız)')}</b> ${adm ? `<span class="tag">${adm === 'super' ? 'süper yönetici' : 'yönetici'}</span>` : ''}${banned ? '<span class="tag bad">askıda</span>' : ''}
           <div class="small muted">${esc(u.email || 'e-posta bilinmiyor')}</div></div>
-        <div class="right small muted">🪙 ${fmt(u.wallet && u.wallet.coins)}<br>${ago(u.seen)}</div>
+        <div class="right small muted">🍪 ${fmt(u.wallet && u.wallet.coins)}<br>${ago(u.seen)}</div>
       </button>`;
     }).join('')}</div>`;
 }
@@ -178,7 +178,7 @@ function vUser(id) {
       <dt>E-posta</dt><dd>${esc(u.email || '–')}</dd>
       <dt>Üyelik</dt><dd>${dt(u.createdAt)}</dd>
       <dt>Son görülme</dt><dd>${dt(u.seen)} (${ago(u.seen)})</dd>
-      <dt>Jeton</dt><dd>${fmt(u.wallet && u.wallet.coins)} · seri ${u.wallet && u.wallet.streak || 0} gün · koruyucu ${u.wallet && u.wallet.shield || 0}</dd>
+      <dt>Kurabiye</dt><dd>${fmt(u.wallet && u.wallet.coins)} · seri ${u.wallet && u.wallet.streak || 0} gün · koruyucu ${u.wallet && u.wallet.shield || 0}</dd>
       <dt>Seviye</dt><dd>${u.lv || 1} · ${fmt(u.xp || 0)} XP</dd>
       <dt>Oyun</dt><dd>${u.st ? `${fmt(u.st.g || 0)} oyun · ${fmt(u.st.n || 0)} soru · %${u.st.n ? Math.round((u.st.ok || 0) / u.st.n * 100) : 0} doğru · en iyi seri ${u.st.bs || 0}${u.st.mn ? ` · ort. ${(u.st.ms / u.st.mn / 1000).toFixed(1).replace('.', ',')} sn/cevap` : ''}` : 'kayıt yok'}</dd>
       <dt>Süre</dt><dd>bugün ${mm(actOf(u, dayIdx()))} · son 7 gün ${mm(Array.from({length: 7}, (_, i) => actOf(u, dayIdx() - i)).reduce((s, x) => s + x, 0))}</dd>
