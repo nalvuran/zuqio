@@ -217,7 +217,13 @@ function vReports() {
   const list = Object.entries(S.reports).map(([id, r]) => Object.assign({id}, r)).sort((a, b) => (b.t || 0) - (a.t || 0));
   if (!list.length) return '<div class="card"><b>Bekleyen bildirim yok</b><p class="muted small">Oyuncular "Bu soruda hata var" dediğinde burada görünür.</p></div>';
   return `<p class="muted small">Soruları düzeltmek için bildirimi kopyalayıp Claude'a gönderebilirsin; düzeltilince "Çözüldü" de.</p>
-    <div class="list">${list.map(r => `<div class="card stack rep">
+    <div class="list">${list.map(r => r.pu ? `<div class="card stack rep">
+      <div class="row between"><span class="tag">Oyuncu bildirimi</span><span class="small muted">${dt(r.t)}</span></div>
+      <b>${esc(r.pn || (S.users[r.pu] || {}).name || '?')}</b>
+      <div class="note">“${esc(r.note || '')}”</div>
+      <div class="small muted">Bildiren: ${esc(r.name || '')}</div>
+      <div class="row gap"><button class="btn" data-act="user" data-id="${esc(r.pu)}">Üyeyi aç</button><button class="btn primary" data-act="resolve" data-id="${r.id}">Çözüldü</button></div>
+    </div>` : `<div class="card stack rep">
       <div class="row between"><span class="tag">${esc(r.cat || 'Kategori yok')}</span><span class="small muted">${dt(r.t)}</span></div>
       <b>${esc(r.q)}</b>
       ${r.opts ? `<div class="small muted">Şıklar: ${esc(r.opts)}</div>` : ''}

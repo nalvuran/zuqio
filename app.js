@@ -191,7 +191,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 182';
+const APP_VERSION = '0.5 (test) · yapı 183';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1004,11 +1004,11 @@ function frAddSheet() {
   const rows = players(R).filter(p => p.id !== uid() && !String(p.id).startsWith('bot')).map(p => {
     const f = (S.frs || []).find(x => x.other === p.id);
     const act = f && f.st === 'ok' ? '<span class="small muted">Arkadaşsın</span>' : f && f.st === 'p' ? `<span class="small muted">${f.by === uid() ? 'İstek gönderildi' : 'Seni ekledi'}</span>` : f ? '' : `<button class="fbtn p" data-act="frsend" data-id="${esc(p.id)}">Ekle</button>`;
-    return `<div class="rank">${avatar(p.av, '', p.fr)}<b class="frn">${esc(p.name)}</b>${act}</div>`;
+    return `<div class="rank">${avatar(p.av, '', p.fr)}<b class="frn">${esc(p.name)}</b>${act}<button class="linkbtn" style="min-height:32px" data-act="rpopen" data-id="${esc(p.id)}" data-n="${esc(p.name)}">Bildir</button></div>`;
   }).join('');
   return `<div class="annmodal" data-act="frclose"><div class="giftsheet" role="dialog" aria-label="Arkadaş ekle" data-stop="1">
     <div class="row between" style="margin-bottom:10px"><h3 style="margin:0">Arkadaş ekle</h3><button class="annx" style="position:static" data-act="frclose" aria-label="Kapat">✕</button></div>
-    <div class="stack" style="gap:8px">${rows}</div></div></div>`;
+    <div class="stack" style="gap:8px">${rows}</div></div></div>${rpSheet()}`;
 }
 
 // kurabiye hediyesi
@@ -2247,9 +2247,20 @@ async function syncBoardProfile() {
   } catch (e) { console.error(e); }
 }
 
+// takma ad filtresi: küçük harf, Türkçe harfleri sadeleştirme, rakamla yazılmış harfler, tekrar eden harfler
+const BAD_ROOT = ['orospu', 'yarrak', 'yarak', 'siktir', 'sikik', 'sikis', 'amcik', 'amina', 'aminak', 'gotveren', 'pezevenk', 'ibne', 'gavat', 'kahpe', 'fuck', 'shit', 'bitch', 'cunt', 'nigg', 'porn', 'hitler', 'nazi', 'asshole'];
+const BAD_WORD = ['sik', 'amk', 'aq', 'mk', 'oc', 'pic', 'sex', 'seks'];
+function nameBad(v) {
+  const t = String(v || '').toLocaleLowerCase('tr').replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ç/g, 'c').replace(/ğ/g, 'g')
+    .replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e').replace(/4/g, 'a').replace(/5/g, 's').replace(/@/g, 'a').replace(/\$/g, 's');
+  const flat = t.replace(/[^a-z]/g, '').replace(/(.)\1+/g, '$1');
+  if (BAD_ROOT.some(w => flat.includes(w.replace(/(.)\1+/g, '$1')))) return true;
+  return t.split(/[^a-z]+/).some(w => w && BAD_WORD.includes(w.replace(/(.)\1+/g, '$1')));
+}
 async function saveProfile() {
   const v = (document.getElementById('pnm').value || '').trim().slice(0, 25);
   if (!v) { toast('Bir ad yaz'); return; }
+  if (nameBad(v)) { toast('Bu ad uygun değil, başka bir ad seç'); return; }
   S.busy = true; render();
   try {
     const data = {name: v, av: S.pick, plan: (S.me && S.me.plan) || 'free', email: (S.user && S.user.email) || '', seen: serverTimestamp()};
@@ -2903,6 +2914,28 @@ async function reportQuestion() {
   } catch (e) { console.error(e); toast('Bildirim gönderilemedi'); }
 }
 
+/* ================= oyuncuyu bildir ================= */
+const RP_WHY = ['Uygunsuz ad veya avatar', 'Taciz veya hakaret', 'Sahte hesap ya da istenmeyen davet', 'Diğer'];
+function rpSheet() {
+  const u = S.rpUI; if (!u) return '';
+  const done = S.reported && S.reported['p' + u.uid];
+  return `<div class="annmodal" data-act="rpclose" style="z-index:60"><div class="giftsheet" role="dialog" aria-label="Oyuncuyu bildir" data-stop="1">
+    <div class="row between" style="margin-bottom:6px"><h3 style="margin:0">${esc(u.name || 'Oyuncu')} bildirilsin mi?</h3><button class="annx" style="position:static" data-act="rpclose" aria-label="Kapat">✕</button></div>
+    <p class="small muted" style="margin:0 0 10px">Sebebi seç. Bildirim yöneticiye iletilir; istersen oyuncuyu ayrıca engelleyebilirsin.</p>
+    <div class="stack" style="gap:8px">${done ? '<p class="small muted">Bu oyuncuyu zaten bildirdin, teşekkürler.</p>' : RP_WHY.map((w, i) => `<button class="btn outline" data-act="rpsend" data-i="${i}" ${S.busy ? 'disabled' : ''}>${esc(w)}</button>`).join('')}</div></div></div>`;
+}
+async function reportPlayer(i) {
+  const u = S.rpUI; if (!u || S.busy) return;
+  S.reported = S.reported || {}; if (S.reported['p' + u.uid]) { S.rpUI = null; render(); return; }
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  S.busy = true; render();
+  try {
+    await set(ref(db, 'reports/' + id), {q: ('Oyuncu bildirimi: ' + (u.name || '')).slice(0, 100), cat: 'Oyuncu', note: RP_WHY[i] || 'Diğer', pu: u.uid, pn: String(u.name || '').slice(0, 25), by: uid(), name: S.me.name, t: serverTimestamp()});
+    S.reported['p' + u.uid] = true; toast('Teşekkürler! Bildirim yöneticiye iletildi.'); S.rpUI = null;
+  } catch (e) { console.error(e); toast('Bildirim gönderilemedi'); }
+  S.busy = false; render();
+}
+
 /* ================= oyuncu eylemleri ================= */
 async function answer(v) {
   const R = S.R; if (!R || R.status !== 'question' || !S.q || remaining() <= 0) return;
@@ -3102,6 +3135,9 @@ app.addEventListener('click', e => {
   else if (a === 'cklater') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.ckLater = S.ckLater || {}; S.ckLater[el.dataset.id] = true; render(); }
   else if (a === 'why') { if (S.R) askWhy(el.dataset.k, whyData(S.R, +el.dataset.q)); }
   else if (a === 'pdfok') { if (S.pdf) { S.pdf.ok = !S.pdf.ok; ls.set('zuqio-pdfok', S.pdf.ok ? '1' : '0'); render(); } }
+  else if (a === 'rpopen') { S.rpUI = {uid: el.dataset.id, name: el.dataset.n}; render(); }
+  else if (a === 'rpclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.rpUI = null; render(); }
+  else if (a === 'rpsend') reportPlayer(+el.dataset.i);
   else if (a === 'chalnew') chalOpen();
   else if (a === 'chtoggle') { if (S.chUI) { S.chUI.sel[el.dataset.id] = !S.chUI.sel[el.dataset.id]; render(); } }
   else if (a === 'chclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.chUI = null; render(); }
@@ -3174,14 +3210,14 @@ V.frlist = () => {
     <div class="phead"><span class="pico">${ICON.users}</span><h2>Arkadaşlarım</h2></div>
     <div class="stack" style="gap:14px">
       <button class="btn outline" data-act="frshare">${ic('share')}Arkadaşlık bağlantını paylaş</button>
-      ${inc.length ? `<div class="stack" style="gap:8px"><b>Gelen istekler</b>${inc.map(f => `<div class="stack" style="gap:2px">${row(f, `<button class="fbtn p" data-act="fraccept" data-id="${esc(f.pid)}">Kabul</button><button class="fbtn" data-act="frno" data-id="${esc(f.pid)}">Reddet</button>`)}<button class="linkbtn" style="align-self:flex-end;min-height:32px" data-act="frblock" data-id="${esc(f.pid)}">Engelle</button></div>`).join('')}</div>` : ''}
+      ${inc.length ? `<div class="stack" style="gap:8px"><b>Gelen istekler</b>${inc.map(f => `<div class="stack" style="gap:2px">${row(f, `<button class="fbtn p" data-act="fraccept" data-id="${esc(f.pid)}">Kabul</button><button class="fbtn" data-act="frno" data-id="${esc(f.pid)}">Reddet</button>`)}<span class="row" style="align-self:flex-end;gap:14px"><button class="linkbtn" style="min-height:32px" data-act="rpopen" data-id="${esc(f.other)}" data-n="${esc(f.name)}">Bildir</button><button class="linkbtn" style="min-height:32px" data-act="frblock" data-id="${esc(f.pid)}">Engelle</button></span></div>`).join('')}</div>` : ''}
       <div class="stack" style="gap:8px"><b>Arkadaşlar${fl.length ? ` (${fl.length})` : ''}</b>
         ${fl.length ? fl.map(f => row(f, `<button class="fbtn p" data-act="ckopen" data-id="${esc(f.pid)}" aria-label="Kurabiye gönder">${COIN}Gönder</button><button class="fbtn" data-act="frdel" data-id="${esc(f.pid)}" aria-label="Arkadaşlıktan çıkar">✕</button>`)).join('')
           : '<div class="card"><p class="small muted" style="margin:0">Henüz arkadaşın yok. Oyun bitince sonuç ekranından ya da paylaşma bağlantınla arkadaş ekleyebilirsin.</p></div>'}</div>
       ${out.length ? `<div class="stack" style="gap:8px"><b>Bekleyen istekler</b>${out.map(f => row(f, `<span class="small muted">Bekliyor</span><button class="fbtn" data-act="frno" data-id="${esc(f.pid)}">Geri çek</button>`)).join('')}</div>` : ''}
       ${blk.length ? `<div class="stack" style="gap:8px"><b>Engellenenler</b>${blk.map(f => row(f, `<button class="fbtn" data-act="frunblock" data-id="${esc(f.pid)}">Engeli kaldır</button>`)).join('')}</div>` : ''}
     </div>
-    ${ckSheet()}
+    ${ckSheet()}${rpSheet()}
   </div>`;
 };
 
