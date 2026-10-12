@@ -191,7 +191,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 181';
+const APP_VERSION = '0.5 (test) · yapı 182';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -2760,14 +2760,15 @@ V.pdfgen = () => {
       ${P.dur === 0 ? '<p class="small muted">Süresiz seçersen oda açılmaz; tek başına, acele etmeden çalışırsın.</p>' : ''}
       ${P.err ? `<div class="card"><p class="small" style="color:#FF9DA0">${esc(P.err)}</p></div>` : ''}
       ${P.busy ? '<div class="card"><p class="small">Notun okunuyor, özet ve sorular hazırlanıyor… Bu 20–40 saniye sürebilir, ekranı kapatma.</p></div>' : ''}
+      <button class="rank chpick ${P.ok ? 'on' : ''}" data-act="pdfok" aria-pressed="${P.ok ? 'true' : 'false'}" ${P.busy ? 'disabled' : ''} style="align-items:flex-start"><span class="chk" style="flex:none">${P.ok ? '✓' : ''}</span><span class="small" style="text-align:left">Seçtiğim PDF’in içeriğinin soru ve özet hazırlamak için Google’ın Gemini yapay zekâ hizmetine gönderilmesine izin veriyorum.</span></button>
       <p class="small muted">Günde 1 PDF üretebilirsin. Üretilen sorular PDF’inden hazırlanır; oynamadan önce mutlaka kontrol et. PDF’in içeriği soru üretmek için Google’ın Gemini hizmetine gönderilir ve bizde saklanmaz. Kişisel ya da gizli belge yükleme, yalnızca kendi notlarını yükle.</p>
     </div>
     <div class="grow" style="min-height:16px"></div>
-    <button class="btn primary big" data-act="pdfgo" ${P.busy || !P.file ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">${P.busy ? 'HAZIRLANIYOR…' : 'ÜRET'}</span></button>
+    <button class="btn primary big" data-act="pdfgo" ${P.busy || !P.file || !P.ok ? 'disabled' : ''}><span class="ic">${ICON.play}</span><span class="lb">${P.busy ? 'HAZIRLANIYOR…' : 'ÜRET'}</span></button>
   </div>`;
 };
 async function pdfGenerate() {
-  const P = S.pdf; if (!P || P.busy || !P.file) return;
+  const P = S.pdf; if (!P || P.busy || !P.file || !P.ok) return;
   if (P.file.size > PDF_MAX) { P.err = 'Dosya 5 MB’tan büyük. Daha küçük bir PDF seç.'; render(); return; }
   P.busy = true; P.err = ''; render();
   try {
@@ -3068,7 +3069,7 @@ app.addEventListener('click', e => {
       qs: Object.values(q.qs || {}).map(x => x.t === 'num' ? {t: 'num', q: x.q, a: String(x.a), unit: x.unit, cat: x.cat || q.cat} : {t: 'mc', q: x.q, o: x.o.slice(), cat: x.cat || q.cat})}; go('qzedit'); }
   else if (a === 'qzback') { go('quizzes'); }
   else if (a === 'qzdur') { readQz(); S.qz.dur = S.qz.dur === +el.dataset.n ? null : +el.dataset.n; render(); }
-  else if (a === 'pdfnew') { S.pdf = {file: null, count: 5, dur: 30, busy: false, err: ''}; go('pdfgen'); }
+  else if (a === 'pdfnew') { S.pdf = {file: null, count: 5, dur: 30, busy: false, err: '', ok: ls.get('zuqio-pdfok') === '1'}; go('pdfgen'); }
   else if (a === 'pdfcount') { S.pdf.count = +el.dataset.n; render(); }
   else if (a === 'pdfdur') { S.pdf.dur = +el.dataset.n; render(); }
   else if (a === 'pdfgo') pdfGenerate();
@@ -3100,6 +3101,7 @@ app.addEventListener('click', e => {
   else if (a === 'ckno') { if (confirm('Kurabiye gönderene geri çevrilsin mi?')) answerCookies(el.dataset.id, false); }
   else if (a === 'cklater') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.ckLater = S.ckLater || {}; S.ckLater[el.dataset.id] = true; render(); }
   else if (a === 'why') { if (S.R) askWhy(el.dataset.k, whyData(S.R, +el.dataset.q)); }
+  else if (a === 'pdfok') { if (S.pdf) { S.pdf.ok = !S.pdf.ok; ls.set('zuqio-pdfok', S.pdf.ok ? '1' : '0'); render(); } }
   else if (a === 'chalnew') chalOpen();
   else if (a === 'chtoggle') { if (S.chUI) { S.chUI.sel[el.dataset.id] = !S.chUI.sel[el.dataset.id]; render(); } }
   else if (a === 'chclose') { if (e.target.closest('[data-stop]') && !e.target.closest('.annx')) return; S.chUI = null; render(); }
