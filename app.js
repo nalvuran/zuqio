@@ -3,7 +3,7 @@ import { QUESTIONS } from './questions.js';
 import { PACKS } from './questions-packs.js';
 const BASE_QS = QUESTIONS.slice(); // günün sorusu herkeste aynı olsun diye sadece hazır sorulardan seçilir
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, reauthenticateWithPopup, deleteUser } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, reauthenticateWithPopup, deleteUser, signInAnonymously, linkWithPopup, signInWithCredential } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getDatabase, ref as fbRef, get as fbGet, set as fbSet, update as fbUpdate, remove as fbRemove, onValue as fbOnValue, onDisconnect as fbOnDisconnect, serverTimestamp, query, orderByChild, equalTo, limitToLast, startAt } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js';
 
 const fb = initializeApp(firebaseConfig);
@@ -191,7 +191,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 183';
+const APP_VERSION = '0.5 (test) · yapı 184';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -808,7 +808,7 @@ function giftPop() {
     <div class="stack" style="gap:8px;width:100%"><button class="btn primary big" data-act="giftyes" data-id="${esc(id)}" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.gift}</span><span class="lb">KABUL ET</span></button>
     <button class="btn ghost" data-act="giftno" data-id="${esc(id)}" ${S.busy ? 'disabled' : ''}>Kabul etmiyorum</button></div></div></div>`;
 }
-const giftBtn = R => (R && !R.bot && !R.study && giftTargets(R).length) ? `<button class="btn outline" data-act="giftopen">${ic('gift')}Hediye gönder</button>` : '';
+const giftBtn = R => (R && !isGuest() && !R.bot && !R.study && giftTargets(R).length) ? `<button class="btn outline" data-act="giftopen">${ic('gift')}Hediye gönder</button>` : '';
 function giftSheet() {
   const u = S.giftUI, R = S.R; if (!u || !R) return '';
   let body = '';
@@ -998,7 +998,7 @@ function frPop() {
     <div class="stack" style="gap:8px;width:100%"><button class="btn primary big" data-act="fraccept" data-id="${esc(f.pid)}" ${S.busy ? 'disabled' : ''}><span class="ic">${ICON.users}</span><span class="lb">KABUL ET</span></button>
     <button class="btn ghost" data-act="frno" data-id="${esc(f.pid)}" ${S.busy ? 'disabled' : ''}>Reddet</button></div></div></div>`;
 }
-const frBtn = R => (R && !R.bot && !R.study && !R.wr && players(R).some(p => p.id !== uid() && !String(p.id).startsWith('bot'))) ? `<button class="btn outline" data-act="fradd">${ic('users')}Arkadaş ekle</button>` : '';
+const frBtn = R => (R && !isGuest() && !R.bot && !R.study && !R.wr && players(R).some(p => p.id !== uid() && !String(p.id).startsWith('bot'))) ? `<button class="btn outline" data-act="fradd">${ic('users')}Arkadaş ekle</button>` : '';
 function frAddSheet() {
   const R = S.R; if (!S.frUI || !R) return '';
   const rows = players(R).filter(p => p.id !== uid() && !String(p.id).startsWith('bot')).map(p => {
@@ -1294,7 +1294,8 @@ V.login = () => `
     <div class="grow"></div>${LOGO()}<div class="grow"></div>
     <div class="stack">
       <button class="btn gbtn" data-act="login" ${S.busy ? 'disabled' : ''}><img class="glogo" src="google-g.svg" alt="" onerror="this.style.display='none'">Google ile devam et</button>
-      <p class="small muted" style="text-align:center">Hesabın yoksa ilk girişte otomatik oluşturulur.</p>
+      <button class="btn outline" data-act="guest" ${S.busy ? 'disabled' : ''}>Misafir olarak oyna</button>
+      <p class="small muted" style="text-align:center">Hesabın yoksa ilk girişte otomatik oluşturulur. Misafirlerde arkadaş, kendi Zuqio’n, PDF ve liderlik tablosu yoktur.</p>
       <p class="small muted" style="text-align:center">Devam ederek <a href="kosullar.html" target="_blank" rel="noopener">Kullanım Koşulları</a>’nı ve <a href="gizlilik.html" target="_blank" rel="noopener">Gizlilik Politikası</a>’nı kabul etmiş olursun.</p>
     </div>
   </div>`;
@@ -1453,9 +1454,10 @@ V.settings = () => `
         <span class="small muted">Sürüm ${APP_VERSION}</span>
         <span class="small muted">Şu an test aşamasındayız. Gördüğün hataları ve önerilerini bize ilet, birlikte geliştirelim.</span>
       </div>
+      ${isGuest() ? `<div class="card stack" style="gap:8px"><b>Misafir olarak oynuyorsun</b><span class="small muted">İlerlemen yalnızca bu cihazda durur. Google ile bağlarsan arkadaş ekleme, kendi Zuqio’n, PDF ve liderlik tablosu da açılır.</span><button class="btn gbtn" data-act="upgrade" ${S.busy ? 'disabled' : ''}><img class="glogo" src="google-g.svg" alt="" onerror="this.style.display='none'">Google ile bağla</button></div>` : ''}
       <div class="menu-grid setbtns">
         <button class="btn ghost" data-act="logout">Çıkış yap</button>
-        <button class="btn ghost" data-act="delacct" style="color:var(--red)" ${S.busy ? 'disabled' : ''}>Hesabımı sil</button>
+        <button class="btn ghost" data-act="delacct" style="color:var(--red)" ${S.busy ? 'disabled' : ''}>${isGuest() ? 'Verilerimi sil' : 'Hesabımı sil'}</button>
       </div>
       <span class="small muted fine" style="text-align:center">Hesabını silersen profilin, kurabiyelerin, puanların ve hazırladığın quizler kalıcı olarak silinir.</span>
     </div>
@@ -1805,7 +1807,7 @@ const WHY_DAILY = 10, WHY_PRICE = 2; // günlük ücretsiz hak, bitince her aç�
 function whyCount() { try { const o = JSON.parse(localStorage.getItem('zuqio-why') || '{}'); return o.d === dayIdx() ? (o.n || 0) : 0; } catch (e) { return 0; } }
 function whyBump() { try { localStorage.setItem('zuqio-why', JSON.stringify({d: dayIdx(), n: whyCount() + 1})); } catch (e) {} }
 function whyBox(key, d) {
-  if (!d || d.info) return '';
+  if (!d || d.info || isGuest()) return '';
   const w = (S.why || {})[key];
   if (w && w.text) return `<div class="card infocard whybox"><b>Neden yanıldım?</b><p>${esc(w.text)}</p></div>`;
   if (w && w.busy) return `<button class="btn outline" disabled>${ic('think')}Düşünüyorum…</button>`;
@@ -1883,7 +1885,7 @@ function periods() {
 }
 const PRIZE_MIN = 3, PRIZE_DAILY_CAP = 5000; // ödül yarışı kuralları
 async function claimBoard(R) {
-  if (R.bot || R.quiz || hiddenMe()) return; // antrenman, kendi quiz oyunları ve gizlenen hesaplar tabloya sayılmaz
+  if (R.bot || R.quiz || hiddenMe() || isGuest()) return; // antrenman, kendi quiz oyunları ve gizlenen hesaplar tabloya sayılmaz
   const me = uid(), gid = R.gid, mine = (R.scores || {})[me] || 0;
   if (!gid || !mine || S.lbDone === gid || S.lbBusy === gid) return;
   S.lbBusy = gid;
@@ -1968,6 +1970,7 @@ V.board = () => {
     <div class="top">${backBtn('data-go="home"')}</div>
     <div class="phead"><span class="pico">${ICON.trophy}</span><h2>Liderlik tablosu</h2></div>
     <div class="tabs" role="tablist" style="grid-template-columns:repeat(4,1fr)">${Object.keys(labels).map(k => `<button role="tab" class="${S.lbTab === k ? 'on' : ''}" aria-selected="${S.lbTab === k}" data-act="lbtab" data-t="${k}">${labels[k]}</button>`).join('')}</div>
+    ${isGuest() ? '<div class="card"><p class="small muted" style="margin:0">Misafirler tabloda yer almaz. Google ile bağlanırsan puanların sayılır.</p></div>' : ''}
     ${prize}${S.lbTab === 'p' ? '' : `<p class="small muted" style="margin-bottom:12px">${sub} Bilgisayara karşı antrenman oyunları sayılmaz.</p>`}
     ${body}
   </div>`;
@@ -2139,21 +2142,21 @@ async function checkOwner(email) {
 onAuthStateChanged(auth, async u => {
   S.user = u;
   S.isOwner = false;
-  if (u) checkOwner(u.email).then(ok => { if (ok) { S.isOwner = true; if (S.screen === 'settings') render(); } });
+  if (u && !u.isAnonymous) checkOwner(u.email).then(ok => { if (ok) { S.isOwner = true; if (S.screen === 'settings') render(); } });
   if (!u) { if (unsubMe) { unsubMe(); unsubMe = null; } if (annSub) { annSub(); annSub = null; } stopGifts(); stopCookies(); stopChinv(); stopFriends(); S.me = null; go('login'); return; }
-  watchAnn(); watchGifts(); watchCookies(); watchChinv(); watchFriends(); checkWin(); loadApproved().then(loadFixes);
+  watchAnn(); watchGifts(); if (!u.isAnonymous) { watchCookies(); watchChinv(); watchFriends(); } checkWin(); loadApproved().then(loadFixes);
   try {
     const snap = await get(ref(db, 'users/' + u.uid));
     const ban = await get(ref(db, 'bans/' + u.uid)).catch(() => null);
     if (ban && ban.exists()) { S.banned = ban.val(); go('banned'); return; }
     if (snap.exists()) {
       S.me = snap.val();
-      update(ref(db, 'users/' + u.uid), {email: u.email || '', seen: serverTimestamp()}).catch(() => {});
+      update(ref(db, 'users/' + u.uid), u.isAnonymous ? {seen: serverTimestamp()} : {email: u.email || '', seen: serverTimestamp()}).catch(() => {});
       afterLogin();
     }
     else {
       S.firstProfile = true; S.pick = Math.floor(Math.random() * 8);
-      S.draft = (u.displayName || '').split(' ')[0].slice(0, 25);
+      S.draft = u.isAnonymous ? '' : (u.displayName || '').split(' ')[0].slice(0, 25);
       go('profile');
     }
   } catch (e) { console.error(e); toast('Profil yüklenemedi. Sayfayı yenile.'); }
@@ -2161,6 +2164,7 @@ onAuthStateChanged(auth, async u => {
 
 async function afterLogin() {
   watchMe(); watchQuick(); loadHidden().then(presTick); setTimeout(() => { nlogMigrate(); if (S.frRaw) frBuild(); }, 1500); setTimeout(checkChalResults, 2500);
+  if (S.pendingFriend && isGuest()) { S.pendingFriend = null; setTimeout(() => toast('Arkadaş eklemek için Google ile giriş yapmalısın'), 600); }
   if (S.pendingFriend) {
     const f = S.pendingFriend; S.pendingFriend = null;
     await Promise.race([S.frP, new Promise(r => setTimeout(r, 3500))]);
@@ -2172,6 +2176,40 @@ async function afterLogin() {
   S.pendingCode = null; ls.del('zuqio-room');
   if (code) { const ok = await joinRoom(code, true); if (ok) return; }
   go('home');
+}
+
+const isGuest = () => !!(S.user && S.user.isAnonymous);
+async function guestLogin() {
+  S.busy = true; render();
+  try { await signInAnonymously(auth); }
+  catch (e) { console.error(e); toast(e.code === 'auth/operation-not-allowed' || e.code === 'auth/admin-restricted-operation' ? 'Misafir girişi henüz açık değil' : 'Misafir girişi yapılamadı (' + (e.code || 'hata') + ')'); }
+  S.busy = false; render();
+}
+function guestGate() {
+  if (!confirm('Bu özellik için Google ile giriş yapmalısın. İlerlemen kaybolmaz, hesabına bağlanır. Şimdi bağlayalım mı?')) return;
+  upgradeGuest();
+}
+async function upgradeGuest() {
+  const u = auth.currentUser; if (!u || !u.isAnonymous || S.busy) return;
+  const provider = new GoogleAuthProvider(); provider.setCustomParameters({prompt: 'select_account'});
+  S.busy = true; render();
+  try {
+    await linkWithPopup(u, provider);
+    await u.getIdToken(true);
+    S.user = auth.currentUser;
+    try { await update(ref(db, 'users/' + u.uid), {email: S.user.email || ''}); } catch (e) { console.error(e); }
+    checkOwner(S.user.email).then(ok => { if (ok) S.isOwner = true; });
+    watchCookies(); watchChinv(); watchFriends();
+    toast('Google hesabına bağlandı');
+  } catch (e) {
+    if (e.code === 'auth/credential-already-in-use' || e.code === 'auth/email-already-in-use') {
+      const cred = GoogleAuthProvider.credentialFromError(e);
+      if (cred && confirm('Bu Google hesabı daha önce kullanılmış. Onunla girersen bu misafir ilerlemen silinir ve eski hesabın açılır. Devam edelim mi?')) {
+        try { leaveLocal(); await signInWithCredential(auth, cred); } catch (e2) { toast('Giriş yapılamadı (' + (e2.code || 'hata') + ')'); }
+      }
+    } else if (!['auth/popup-closed-by-user', 'auth/cancelled-popup-request'].includes(e.code)) toast('Bağlanamadı (' + (e.code || 'hata') + ')');
+  }
+  S.busy = false; render();
 }
 
 async function login() {
@@ -2194,8 +2232,7 @@ async function deleteAccount() {
   if (!confirm('Hesabın ve tüm verilerin (profil, kurabiyeler, puanlar, hazırladığın quizler) kalıcı olarak silinecek. Bu işlem geri alınamaz.\n\nDevam etmek istiyor musun?')) return;
   S.busy = true; render();
   try {
-    const provider = new GoogleAuthProvider(); provider.setCustomParameters({prompt: 'select_account', login_hint: u.email || ''});
-    await reauthenticateWithPopup(u, provider);
+    if (!u.isAnonymous) { const provider = new GoogleAuthProvider(); provider.setCustomParameters({prompt: 'select_account', login_hint: u.email || ''}); await reauthenticateWithPopup(u, provider); }
   } catch (e) {
     S.busy = false; render();
     if (!['auth/popup-closed-by-user', 'auth/cancelled-popup-request'].includes(e.code)) toast('Kimlik doğrulanamadı (' + (e.code || 'hata') + ')');
@@ -2263,7 +2300,8 @@ async function saveProfile() {
   if (nameBad(v)) { toast('Bu ad uygun değil, başka bir ad seç'); return; }
   S.busy = true; render();
   try {
-    const data = {name: v, av: S.pick, plan: (S.me && S.me.plan) || 'free', email: (S.user && S.user.email) || '', seen: serverTimestamp()};
+    const data = {name: v, av: S.pick, plan: (S.me && S.me.plan) || 'free', seen: serverTimestamp()};
+    if (S.user && S.user.email) data.email = S.user.email;
     if (!(S.me && S.me.createdAt)) data.createdAt = serverTimestamp();
     await update(ref(db, 'users/' + uid()), data);   // update: cüzdan ve satın alınanlar silinmesin
     S.me = Object.assign({}, S.me, {name: v, av: S.pick, plan: data.plan});
@@ -3023,7 +3061,7 @@ app.addEventListener('click', e => {
   else if (a === 'av') { const nm = document.getElementById('pnm'); if (nm) S.draft = nm.value; S.pick = +el.dataset.i; buzz(15); render(); }
   else if (a === 'saveprof') saveProfile();
   else if (a === 'delacct') deleteAccount();
-  else if (a === 'logout') { if (confirm('Çıkış yapmak istiyor musun?')) { leaveLocal(); signOut(auth); } }
+  else if (a === 'logout') { if (confirm(isGuest() ? 'Misafir olarak çıkış yaparsan bu ilerlemen kaybolur. Önce Google hesabına bağlayabilirsin. Yine de çıkılsın mı?' : 'Çıkış yapmak istiyor musun?')) { leaveLocal(); signOut(auth); } }
   else if (a === 'soon') toast(el.dataset.n + ' çok yakında');
   else if (a === 'claim') claimDaily();
   else if (a === 'dqstart') dqStart();
@@ -3096,7 +3134,9 @@ app.addEventListener('click', e => {
   else if (a === 'roomsback') { stopOpenRooms(); go('friends'); }
   else if (a === 'joinopen') { stopOpenRooms(); joinRoom(el.dataset.code); }
   else if (a === 'tpublic') { const on = !S.R.public; update(roomRef(), {public: on || null, pub: on ? 'open' : null}).then(() => toast(on ? 'Oda artık açık odalar listesinde' : 'Oda gizlendi')).catch(() => toast('Değiştirilemedi')); }
-  else if (a === 'myquizzes') { S.myQuizzes = S.myQuizzes || null; go('quizzes'); loadMyQuizzes(); }
+  else if (a === 'guest') guestLogin();
+  else if (a === 'upgrade') upgradeGuest();
+  else if (a === 'myquizzes') { if (isGuest()) { guestGate(); return; } S.myQuizzes = S.myQuizzes || null; go('quizzes'); loadMyQuizzes(); }
   else if (a === 'qznew') { S.qz = {title: '', cat: NON_EN[0], qs: [blankQ('mc')], status: 'draft', dur: null}; go('qzedit'); }
   else if (a === 'qzedit') { const q = S.myQuizzes[el.dataset.id]; S.qz = {id: el.dataset.id, title: q.title, cat: q.cat, status: q.status, why: q.why, summary: q.summary != null ? q.summary : null, dur: q.dur != null ? q.dur : null, src: q.src || null,
       qs: Object.values(q.qs || {}).map(x => x.t === 'num' ? {t: 'num', q: x.q, a: String(x.a), unit: x.unit, cat: x.cat || q.cat} : {t: 'mc', q: x.q, o: x.o.slice(), cat: x.cat || q.cat})}; go('qzedit'); }
@@ -3114,7 +3154,7 @@ app.addEventListener('click', e => {
   else if (a === 'qzremove') { if (confirm('Bu Zuqio silinsin mi?')) (async () => { try { await remove(ref(db, 'quizzes/' + S.qz.id)); delete S.myQuizzes[S.qz.id]; toast('Silindi'); go('quizzes'); } catch (e) { toast('Silinemedi'); } })(); }
   else if (a === 'wrstart') startWrongs();
   else if (a === 'statsreset') resetStats();
-  else if (a === 'openfrlist') { go('frlist'); refreshOnl(); }
+  else if (a === 'openfrlist') { if (isGuest()) { guestGate(); return; } go('frlist'); refreshOnl(); }
   else if (a === 'frshare') shareFriend();
   else if (a === 'nclear') nlogDel(el.dataset.k);
   else if (a === 'winbhide') { if (S.win) ls.set('zuqio-winb-' + S.win.key, '1'); render(); }
