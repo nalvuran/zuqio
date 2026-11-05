@@ -191,7 +191,7 @@ const buzz = ms => { try {
     for (let i = 0; i < n; i++) setTimeout(() => { try { hapLbl.click(); } catch (e) {} }, i * 38);
   }
 } catch (e) {} };
-const APP_VERSION = '0.5 (test) · yapı 184';
+const APP_VERSION = '0.5 (test) · yapı 185';
 const icon = i => `<img src="ic${i}.png" alt="" draggable="false">`;
 const avatar = (av, cls = '', fr = '') => `<div class="avatar ${cls} ${/^fr[0-9]+$/.test(fr || '') ? fr : ''}">${avSVG(av || 0)}</div>`;
 const backBtn = (act, label = 'Geri') => `<button class="back" ${act}>${ICON.back}${label}</button>`;
@@ -1921,6 +1921,11 @@ async function loadPrizeInfo() {
   } catch (e) { S.tabP = false; }
   if (S.screen === 'board') render();
 }
+async function loadBookMeta() {
+  S.bookMeta = null;
+  try { const v = (await get(ref(db, 'bookmeta/' + periods().m))).val(); S.bookMeta = v && v.t ? {t: String(v.t).slice(0, 60), c: /^data:image\/(jpeg|png|webp);base64,/.test(v.c || '') ? v.c : ''} : false; } catch (e) { S.bookMeta = false; }
+  if (S.screen === 'board') render();
+}
 async function loadHidden() {
   try { S.lbHide = (await get(ref(db, 'lbhide'))).val() || {}; } catch (e) { S.lbHide = S.lbHide || {}; }
   return S.lbHide;
@@ -1931,6 +1936,7 @@ async function loadBoard() {
   refreshOnl();
   S.lbCache = S.lbCache || {};
   if (S.tabP === undefined) loadPrizeInfo();
+  if (S.bookMeta === undefined) loadBookMeta();
   if (S.lbCache[key]) return;
   S.lbCache[key] = 'loading'; render();
   try {
@@ -1960,7 +1966,7 @@ V.board = () => {
     </div>`;
   const sub = {d: 'Bugün gece yarısı sıfırlanır.', w: 'Her pazartesi sıfırlanır.', m: 'Her ayın başında sıfırlanır.', p: ''}[S.lbTab];
   const prize = S.lbTab !== 'p' ? '' : `<div class="card stack" style="gap:6px;margin-bottom:12px;border-color:rgba(255,194,26,.6)">
-      <div class="row" style="gap:12px;align-items:center"><img src="kitap-kapak.png" alt="Kitap kapağı" width="64" style="width:64px;height:auto;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.4)"><b>${ic('trophy')}Bu ayın ödülü: “100 İlginç Bilgi” kitabı</b></div>
+      <div class="row" style="gap:12px;align-items:center">${S.bookMeta && S.bookMeta.c ? `<img src="${S.bookMeta.c}" alt="Kitap kapağı" width="64" style="width:64px;height:auto;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.4)">` : ''}<b>${ic('trophy')}Bu ayın ödülü: ${S.bookMeta && S.bookMeta.t ? `“${esc(S.bookMeta.t)}” kitabı` : 'kitap'}</b></div>
       <p class="small" style="margin:0">Ay sonunda ödül puanında 1. olan, kitabın PDF’ini e-postayla alır. Bitmesine <b>${monthLeft()} gün</b> var.</p>
       <p class="small muted" style="margin:0">Sayılan oyunlar: en az 3 gerçek oyuncunun olduğu odalar. Günde en fazla ${fmt(PRIZE_DAILY_CAP)} puan sayılır. Antrenman ve Zuqio’larım oyunları sayılmaz. Kazanan, yönetici kontrolünden sonra kesinleşir.</p>
       ${S.tabP ? `<p class="small" style="margin:0">Geçen ayın kazananı: <b>${esc(S.tabP.name)}</b></p>` : ''}

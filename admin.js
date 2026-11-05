@@ -257,7 +257,8 @@ function vApprove() {
 const monthKey = off => { const x = new Date(Date.now() + 10800000); x.setUTCMonth(x.getUTCMonth() + off, 1); return 'm' + x.getUTCFullYear() + '-' + String(x.getUTCMonth() + 1).padStart(2, '0'); };
 const curPrizeKey = () => monthKey(S.prizeM === 'prev' ? -1 : 0);
 async function loadPrize() {
-  S.prizeRows = null; S.bookInfo = null; render();
+  S.prizeRows = null; S.bookInfo = null; S.bmCover = null; render();
+  try { const m = (await get(ref(db, 'bookmeta/' + curPrizeKey()))).val(); S.bm = m && m.t ? m : false; S.bmTitle = m && m.t ? m.t : ''; S.bmCover = m && m.c ? m.c : null; } catch (e) { S.bm = false; S.bmTitle = ''; }
   try { const bk = curPrizeKey(), bn = (await get(ref(db, 'bookfile/' + bk + '/n'))).val(), bs = (await get(ref(db, 'bookfile/' + bk + '/size'))).val(); S.bookInfo = bn ? {n: bn, size: bs || 0} : false; } catch (e) { S.bookInfo = false; }
   try { const v = (await get(ref(db, 'lbp/' + curPrizeKey()))).val() || {}; S.prizeRows = Object.entries(v).map(([id, r]) => Object.assign({id}, r)).sort((x, y) => y.s - x.s).slice(0, 15); }
   catch (e) { console.error(e); S.prizeRows = []; }
@@ -268,11 +269,17 @@ function vPrize() {
   const mail = (p) => { const u = S.users[p.uid] || {}; return u.email || ''; };
   const win = pz ? `<div class="card stack"><b>Kazanan: ${esc(pz.name)} ${pz.sent ? '<span class="tag">Gönderildi</span>' : '<span class="tag bad">Gönderilmedi</span>'}</b>
       <div class="small muted">${esc(mail(pz) || 'e-posta bulunamadı')} · ${fmt(pz.s)} puan · ${fmt(pz.g)} oyun</div>
-      <div class="row gap">${mail(pz) ? `<a class="btn" href="mailto:${encodeURIComponent(mail(pz))}?subject=${encodeURIComponent('Zuqio aylık ödülün: kitap hediyesi 🎉')}&body=${encodeURIComponent('Merhaba ' + pz.name + ',\n\nZuqio’da geçen ayın ödül yarışında 1. oldun, tebrikler! “100 İlginç Bilgi” kitabının PDF’i ekte.\n\nKeyifli okumalar,\nZuqio')}" style="display:inline-flex;align-items:center;text-decoration:none;color:inherit">E-posta yaz</a>` : ''}
+      <div class="row gap">${mail(pz) ? `<a class="btn" href="mailto:${encodeURIComponent(mail(pz))}?subject=${encodeURIComponent('Zuqio aylık ödülün: kitap hediyesi 🎉')}&body=${encodeURIComponent('Merhaba ' + pz.name + ',\n\nZuqio’da geçen ayın ödül yarışında 1. oldun, tebrikler! “' + ((S.bm && S.bm.t) || 'ödül') + '” kitabının PDF’i ekte.\n\nKeyifli okumalar,\nZuqio')}" style="display:inline-flex;align-items:center;text-decoration:none;color:inherit">E-posta yaz</a>` : ''}
       <button class="btn primary" data-act="prsent" data-id="${k}">${pz.sent ? 'Gönderilmedi yap' : 'Gönderildi'}</button><button class="btn danger" data-act="prclear" data-id="${k}">Kazananı kaldır</button></div></div>` : '';
   return `<div class="seg" style="grid-template-columns:repeat(2,1fr)">${[['cur', 'Bu ay'], ['prev', 'Geçen ay']].map(([m, l]) => `<button class="${S.prizeM === m ? 'on' : ''}" data-act="przm" data-t="${m}">${l}</button>`).join('')}</div>
     <p class="muted small">Ödül yarışı: en az 3 gerçek oyunculu odalar, günlük 5.000 puan sınırı. Kazananı kesinleştirmeden önce oyun sayısına ve puanın makul olup olmadığına bak; şüpheli satırı silebilirsin.</p>
     ${win}
+    <div class="card stack"><b>Kitabın görünen adı ve kapağı (${esc(curPrizeKey())})</b>
+      <div class="small muted">Oyuncuların “Ödül” sekmesinde göreceği ad ve kapak. Her ay yeni kitap için güncelle.</div>
+      <input id="bmtitle" class="input" maxlength="60" placeholder="Kitabın adı" value="${esc(S.bmTitle || '')}" style="width:100%">
+      <div class="row gap" style="align-items:center">${S.bmCover ? `<img src="${S.bmCover}" alt="Kapak" width="56" style="border-radius:6px">` : '<span class="small muted">Kapak yok</span>'}
+        <label class="btn" style="cursor:pointer">Kapak seç<input type="file" id="bookcover" accept="image/*" hidden></label>
+        <button class="btn primary" data-act="bmsave" ${S.bmBusy ? 'disabled' : ''}>Kaydet</button></div></div>
     <div class="card stack"><b>Kitap dosyası (${esc(curPrizeKey())})</b>
       <div class="small muted">${S.bookInfo === null ? 'Yükleniyor…' : S.bookInfo ? `Yüklü: ${esc(S.bookInfo.n)} · ${Math.round(S.bookInfo.size / 1024)} KB. Kazanan uygulamadan indirebilir.` : 'Henüz yüklenmedi. PDF yükle (en çok 8 MB); kazanan uygulamada “Kitabını indir” düğmesini görür.'}</div>
       <div class="row gap"><label class="btn primary" style="cursor:pointer">${S.bookBusy ? 'Yükleniyor…' : S.bookInfo ? 'Dosyayı değiştir' : 'PDF yükle'}<input type="file" id="bookfile" accept="application/pdf" hidden></label>
@@ -404,9 +411,20 @@ app.addEventListener('submit', async e => {
 });
 app.addEventListener('focusout', () => setTimeout(() => { if (S.dirty) render(); }, 0));
 app.addEventListener('input', e => {
+  if (e.target.id === 'bmtitle') { S.bmTitle = e.target.value; return; }
   if (e.target.id === 'psearch') { S.pq = e.target.value; render(); return; }
   if (e.target.dataset && e.target.dataset.e && S.edit) { const k = e.target.dataset.e; if (/^o\d$/.test(k)) S.edit.f.o[+k[1]] = e.target.value; else S.edit.f[k] = e.target.value; return; } if (e.target.id === 'search') { S.q = e.target.value; render(); } });
 app.addEventListener('change', async e => {
+  if (e.target.id === 'bookcover') {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    try {
+      const url = await new Promise((ok, no) => { const r = new FileReader(); r.onload = () => ok(r.result); r.onerror = no; r.readAsDataURL(f); });
+      const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = url; });
+      const w = 240, h = Math.round(img.height * w / img.width), c = document.createElement('canvas'); c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h); S.bmCover = c.toDataURL('image/jpeg', 0.82); render();
+    } catch (err) { toast('Görsel okunamadı'); }
+    return;
+  }
   if (e.target.id !== 'bookfile') return;
   const f = e.target.files && e.target.files[0]; if (!f) return;
   if (f.type !== 'application/pdf' && !/\.pdf$/i.test(f.name)) { toast('Yalnızca PDF'); return; }
@@ -440,6 +458,11 @@ app.addEventListener('click', async e => {
       const txt = `Hatalı soru bildirimi\nKategori: ${r.cat}\nSoru: ${r.q}\n${r.opts ? 'Şıklar: ' + r.opts + '\n' : ''}Kayıtlı doğru cevap: ${r.ans}\nNot: ${r.note || '-'}`;
       await navigator.clipboard.writeText(txt); toast('Kopyalandı');
     }
+    else if (a === 'bmsave') {
+      const t = (S.bmTitle || '').trim(); if (!t) { toast('Kitabın adını yaz'); return; }
+      S.bmBusy = true; render();
+      try { const o = {t: t.slice(0, 60)}; if (S.bmCover) o.c = S.bmCover; await set(ref(db, 'bookmeta/' + curPrizeKey()), o); S.bm = o; toast('Kaydedildi'); } catch (err) { console.error(err); toast('Kaydedilemedi: ' + (err && err.code || 'hata')); }
+      S.bmBusy = false; render(); return; }
     else if (a === 'bookdel') { if (!confirm('Kitap dosyası silinsin mi?')) return; await remove(ref(db, 'bookfile/' + curPrizeKey())); S.bookInfo = false; render(); return; }
     else if (a === 'przm') { S.prizeM = el.dataset.t; loadPrize(); return; }
     else if (a === 'prwin') {
